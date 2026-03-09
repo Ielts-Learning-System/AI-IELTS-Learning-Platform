@@ -34,11 +34,13 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:3001
       - READING_SERVICE_URL=http://reading-service:3002
       - LISTENING_SERVICE_URL=http://listening-service:3003
+      - WRITING_SERVICE_URL=http://writing-service:3004
     depends_on:
       - redis
       - auth-service
       - reading-service # Đảm bảo reading-service chạy trước api-gateway
       - listening-service # Đảm bảo listening-service chạy trước api-gateway
+      - writing-service # Đảm bảo writing-service chạy trước api-gateway
     restart: unless-stopped
 
   auth-service:
@@ -64,6 +66,15 @@ services:
     container_name: ielts_listening
     ports:
       - "3003:3003"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  writing-service:
+    build: ./writing-service
+    container_name: ielts_writing
+    ports:
+      - "3004:3004"
     env_file:
       - .env
     restart: unless-stopped
