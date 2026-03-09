@@ -29,8 +29,12 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      # Sử dụng tên service "auth-service" thay cho localhost/127.0.0.1
+      - AUTH_SERVICE_URL=http://auth-service:3001
     depends_on:
       - redis
+      - auth-service # Đảm bảo auth-service chạy trước api-gateway
     restart: unless-stopped
 
   auth-service:
