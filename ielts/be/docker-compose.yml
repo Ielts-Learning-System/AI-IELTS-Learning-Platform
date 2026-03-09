@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # --- HẠ TẦNG ---
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ielts_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: ielts_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # --- MICROSERVICES ---
+  api-gateway:
+    build: ./api-gateway
+    container_name: ielts_gateway
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  auth-service:
+    build: ./auth-service
+    container_name: ielts_auth
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  # (Tạm thời map 2 service Gateway và Auth trước để test. 
+  # Khi nào code xong các service khác, ta sẽ copy block trên paste xuống và đổi tên)
+
+volumes:
+  rabbitmq_data:
+  redis_data:
