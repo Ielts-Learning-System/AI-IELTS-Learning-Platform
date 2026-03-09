@@ -52,13 +52,28 @@ app.use(
 );
 
 /**
+ * Reading Service
+ * URL gọi trên Postman: http://localhost:3000/api/reading/...
+ */
+app.use(
+  '/api/reading',
+  createProxyMiddleware({
+    target: process.env.READING_SERVICE_URL || 'http://127.0.0.1:3002',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/reading': '',
+    },
+  })
+);
+
+/**
  * Listening Service
  * URL gọi trên Postman: http://localhost:3000/api/listening/...
  */
 app.use(
   '/api/listening',
   createProxyMiddleware({
-    target: process.env.LISTENING_SERVICE_URL || 'http://127.0.0.1:3002',
+    target: process.env.LISTENING_SERVICE_URL || 'http://127.0.0.1:3003',
     changeOrigin: true,
     pathRewrite: {
       '^/api/listening': '',
@@ -66,20 +81,7 @@ app.use(
   })
 );
 
-/**
- * Reading Service
- * URL gọi trên Postman: http://localhost:3000/api/reading/...
- */
-app.use(
-  '/api/reading',
-  createProxyMiddleware({
-    target: process.env.READING_SERVICE_URL || 'http://127.0.0.1:3003',
-    changeOrigin: true,
-    pathRewrite: {
-      '^/api/reading': '',
-    },
-  })
-);
+
 
 /**
  * Writing Service
