@@ -32,6 +32,7 @@ services:
     environment:
       # Sử dụng tên service "auth-service" thay cho localhost/127.0.0.1
       - AUTH_SERVICE_URL=http://auth-service:3001
+      - READING_SERVICE_URL=http://reading-service:3002
     depends_on:
       - redis
       - auth-service
