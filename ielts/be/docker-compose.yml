@@ -34,7 +34,8 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:3001
     depends_on:
       - redis
-      - auth-service # Đảm bảo auth-service chạy trước api-gateway
+      - auth-service
+      - reading-service # Đảm bảo reading-service chạy trước api-gateway
     restart: unless-stopped
 
   auth-service:
@@ -42,6 +43,15 @@ services:
     container_name: ielts_auth
     ports:
       - "3001:3001"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  reading-service:
+    build: ./reading-service
+    container_name: ielts_reading
+    ports:
+      - "3002:3002"
     env_file:
       - .env
     restart: unless-stopped
