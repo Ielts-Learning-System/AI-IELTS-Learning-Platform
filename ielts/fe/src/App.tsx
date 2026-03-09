@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReadingExamPage } from './pages/ReadingExamPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
+import { WritingExamPage } from './pages/WritingExamPage';
 
 export default function App() {
   return (
@@ -20,6 +21,9 @@ export default function App() {
         
         {/* Listening Exam Route */}
         <Route path="/listening/:id" element={<ListeningExamPage />} />
+        
+        {/* Writing Exam Route */}
+        <Route path="/writing/:id" element={<WritingExamPage />} />
       </Routes>
     </BrowserRouter>
   );
