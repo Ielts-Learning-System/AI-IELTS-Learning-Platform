@@ -14,8 +14,9 @@ const app = express();
  */
 app.use(cors());
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// LƯU Ý: Đã loại bỏ app.use(express.json()) và app.use(express.urlencoded())
+// để tránh lỗi mất body khi proxy chuyển tiếp request POST/PUT.
 
 /**
  * =============================
@@ -37,13 +38,12 @@ app.get('/', (req, res) => {
 
 /**
  * Auth Service
- * Example:
- * POST http://localhost:3000/api/auth/login
+ * URL gọi trên Postman: http://localhost:3000/api/auth/...
  */
 app.use(
   '/api/auth',
   createProxyMiddleware({
-    target: process.env.AUTH_SERVICE_URL || 'http://localhost:3001',
+    target: process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:3001',
     changeOrigin: true,
     pathRewrite: {
       '^/api/auth': '',
@@ -53,11 +53,12 @@ app.use(
 
 /**
  * Listening Service
+ * URL gọi trên Postman: http://localhost:3000/api/listening/...
  */
 app.use(
   '/api/listening',
   createProxyMiddleware({
-    target: process.env.LISTENING_SERVICE_URL || 'http://localhost:3002',
+    target: process.env.LISTENING_SERVICE_URL || 'http://127.0.0.1:3002',
     changeOrigin: true,
     pathRewrite: {
       '^/api/listening': '',
@@ -67,11 +68,12 @@ app.use(
 
 /**
  * Reading Service
+ * URL gọi trên Postman: http://localhost:3000/api/reading/...
  */
 app.use(
   '/api/reading',
   createProxyMiddleware({
-    target: process.env.READING_SERVICE_URL || 'http://localhost:3003',
+    target: process.env.READING_SERVICE_URL || 'http://127.0.0.1:3003',
     changeOrigin: true,
     pathRewrite: {
       '^/api/reading': '',
@@ -81,11 +83,12 @@ app.use(
 
 /**
  * Writing Service
+ * URL gọi trên Postman: http://localhost:3000/api/writing/...
  */
 app.use(
   '/api/writing',
   createProxyMiddleware({
-    target: process.env.WRITING_SERVICE_URL || 'http://localhost:3004',
+    target: process.env.WRITING_SERVICE_URL || 'http://127.0.0.1:3004',
     changeOrigin: true,
     pathRewrite: {
       '^/api/writing': '',
@@ -95,11 +98,12 @@ app.use(
 
 /**
  * Speaking Service
+ * URL gọi trên Postman: http://localhost:3000/api/speaking/...
  */
 app.use(
   '/api/speaking',
   createProxyMiddleware({
-    target: process.env.SPEAKING_SERVICE_URL || 'http://localhost:3005',
+    target: process.env.SPEAKING_SERVICE_URL || 'http://127.0.0.1:3005',
     changeOrigin: true,
     pathRewrite: {
       '^/api/speaking': '',
@@ -109,11 +113,12 @@ app.use(
 
 /**
  * Notification Service
+ * URL gọi trên Postman: http://localhost:3000/api/notification/...
  */
 app.use(
   '/api/notification',
   createProxyMiddleware({
-    target: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3006',
+    target: process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:3006',
     changeOrigin: true,
     pathRewrite: {
       '^/api/notification': '',
@@ -128,7 +133,7 @@ app.use(
  */
 app.use((req, res) => {
   res.status(404).json({
-    message: 'Route not found',
+    message: 'Route not found at Gateway',
     path: req.originalUrl,
   });
 });
@@ -142,7 +147,7 @@ app.use((err, req, res, next) => {
   console.error('Gateway Error:', err);
 
   res.status(500).json({
-    message: 'Internal Server Error',
+    message: 'Internal Server Error at Gateway',
   });
 });
 
