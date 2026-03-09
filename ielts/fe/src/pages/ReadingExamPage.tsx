@@ -1,40 +1,100 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import Split from 'react-split';
-import { useExamStore } from '../store/useExamStore';
-import { mockReadingTest } from '../mockData/exam-content';
-import ReactMarkdown from 'react-markdown';
+
+interface Question {
+  _id: string;
+  questionText: string;
+  type: 'multiple_choice' | 'true_false_ng' | 'matching' | 'fill_blank';
+  options?: string[];
+}
+
+interface Passage {
+  _id: string;
+  title: string;
+  content: string;
+  questions: Question[];
+}
+
+interface TestData {
+  _id: string;
+  title: string;
+  description: string;
+  passages: Passage[];
+}
 
 export function ReadingExamPage() {
-  const { startExam, answers, setAnswer, isSubmitted } = useExamStore();
-  const exam = mockReadingTest;
-  const [currentPassageIdx, setCurrentPassageIdx] = useState(0);
+  const { id } = useParams<{ id: string }>();
+  const [testData, setTestData] = useState<TestData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    startExam(exam.id, 60); // 60 minutes
-  }, [exam.id, startExam]);
+    const fetchTest = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(`http://localhost:3000/api/reading/${id}`);
+        setTestData(response.data.data);
+      } catch (error) {
+        console.error('❌ Error fetching reading test:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const currentPassage = exam.passages[currentPassageIdx];
+    if (id) {
+      fetchTest();
+    }
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <p className="text-lg text-slate-600">Đang tải đề thi...</p>
+      </div>
+    );
+  }
+
+  if (!testData || testData.passages.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <p className="text-lg text-red-600">Không tìm thấy đề thi</p>
+      </div>
+    );
+  }
+
+  const passage = testData.passages[0];
+
+  const handleAnswerChange = (questionId: string, value: string) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: value,
+    }));
+  };
+
+  const handleSubmit = () => {
+    console.log('📝 User Answers:', answers);
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Passage Navigation */}
-      <div className="flex items-center gap-2 bg-white border-b border-slate-200 px-6 py-2">
-        {exam.passages.map((p, idx) => (
-          <button
-            key={p.passage_number}
-            onClick={() => setCurrentPassageIdx(idx)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-              currentPassageIdx === idx 
-                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50' 
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            Passage {p.passage_number}
-          </button>
-        ))}
+    <div className="flex flex-col h-screen bg-white">
+      {/* Header */}
+      <div className="h-16 border-b border-slate-200 bg-white shadow-sm flex items-center justify-between px-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{testData.title}</h1>
+          <p className="text-sm text-slate-500">{testData.description}</p>
+        </div>
+        <button
+          onClick={handleSubmit}
+          className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+        >
+          Nộp bài
+        </button>
       </div>
 
-      <Split 
+      {/* Split Pane */}
+      <Split
         className="flex flex-1 w-full overflow-hidden"
         sizes={[50, 50]}
         minSize={300}
@@ -46,71 +106,72 @@ export function ReadingExamPage() {
         cursor="col-resize"
       >
         {/* Left Pane: Passage */}
-        <div className="h-full overflow-y-auto bg-white p-8 shadow-inner">
-          <div className="prose prose-slate max-w-none prose-headings:text-indigo-950 prose-p:text-slate-700 prose-p:leading-relaxed">
-            <h2>{currentPassage.title}</h2>
-            {currentPassage.content.map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
-            ))}
-          </div>
+        <div className="overflow-y-auto bg-white">
+          <div
+            className="prose prose-lg prose-blue max-w-none text-justify p-6"
+            dangerouslySetInnerHTML={{ __html: passage.content }}
+          />
         </div>
 
         {/* Right Pane: Questions */}
-        <div className="h-full overflow-y-auto bg-slate-50 p-8">
-          <div className="max-w-2xl mx-auto space-y-8">
-            {currentPassage.question_groups.map((group) => (
-              <div key={group.group_id} className="space-y-6">
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                  <p className="font-medium text-indigo-900">{group.instruction}</p>
-                </div>
+        <div className="overflow-y-auto bg-slate-50 p-6">
+          <div className="max-w-2xl mx-auto space-y-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-6">{passage.title}</h2>
 
-                {group.questions.map((q) => (
-                  <div key={q.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-                    <div className="flex gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                        {q.number}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-800 mb-4">{q.text}</p>
-                        
-                        {q.options ? (
-                          <div className="space-y-3">
-                            {q.options.map((opt) => (
-                              <label 
-                                key={opt} 
-                                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all ${
-                                  answers[q.id] === opt 
-                                    ? 'border-indigo-600 bg-indigo-50/50' 
-                                    : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
-                                } ${isSubmitted ? 'pointer-events-none opacity-70' : ''}`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={q.id}
-                                  value={opt}
-                                  checked={answers[q.id] === opt}
-                                  onChange={(e) => setAnswer(q.id, e.target.value)}
-                                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-600"
-                                  disabled={isSubmitted}
-                                />
-                                <span className="text-sm font-medium text-slate-700">{opt}</span>
-                              </label>
-                            ))}
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            value={answers[q.id] || ''}
-                            onChange={(e) => setAnswer(q.id, e.target.value)}
-                            placeholder="Type your answer here..."
-                            className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                            disabled={isSubmitted}
-                          />
-                        )}
-                      </div>
-                    </div>
+            {passage.questions.map((question, index) => (
+              <div
+                key={question._id}
+                className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex gap-4">
+                  {/* Question Number */}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white text-sm font-bold">
+                    {index + 1}
                   </div>
-                ))}
+
+                  {/* Question Content */}
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 mb-4">{question.questionText}</p>
+
+                    {/* Options for Multiple Choice or True/False/NG */}
+                    {(question.type === 'multiple_choice' ||
+                      question.type === 'true_false_ng') && question.options ? (
+                      <div className="space-y-3">
+                        {question.options.map((option) => (
+                          <label
+                            key={option}
+                            className="flex items-center gap-3 cursor-pointer hover:bg-indigo-50 p-3 rounded-lg transition-colors"
+                          >
+                            <input
+                              type="radio"
+                              name={question._id}
+                              value={option}
+                              checked={answers[question._id] === option}
+                              onChange={(e) =>
+                                handleAnswerChange(question._id, e.target.value)
+                              }
+                              className="h-4 w-4 text-indigo-600 cursor-pointer"
+                            />
+                            <span className="text-sm text-slate-700 font-medium">
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Text Input for Fill in the Blank */
+                      <input
+                        type="text"
+                        value={answers[question._id] || ''}
+                        onChange={(e) =>
+                          handleAnswerChange(question._id, e.target.value)
+                        }
+                        placeholder="Nhập câu trả lời của bạn..."
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
