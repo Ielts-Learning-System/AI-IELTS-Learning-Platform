@@ -108,7 +108,7 @@ export function ReadingExamPage() {
         {/* Left Pane: Passage */}
         <div className="overflow-y-auto bg-white">
           <div
-            className="prose prose-lg prose-blue max-w-none text-justify p-6"
+            className="prose prose-lg prose-red max-w-none text-justify p-6"
             dangerouslySetInnerHTML={{ __html: passage.content }}
           />
         </div>

@@ -1,10 +1,14 @@
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { mockDashboardStats } from '../mockData/exams';
-import { BookOpen, Trophy, Target, Clock, ArrowRight } from 'lucide-react';
+import { BookOpen, Trophy, Target, Clock, ArrowRight, Book, BarChart2, Clock as ClockIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useUserStore } from '../store/useUserStore';
 
 export function DashboardPage() {
-  return (
+  const { isAuthenticated } = useUserStore();
+
+  // subcomponent for logged-in users
+  const UserDashboard = () => (
     <div className="max-w-6xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-indigo-950">Tổng quan năng lực</h1>
@@ -13,7 +17,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Bài thi đã làm', value: '24', icon: BookOpen, color: 'text-blue-600', bg: 'bg-blue-100' },
+          { label: 'Bài thi đã làm', value: '24', icon: BookOpen, color: 'text-red-600', bg: 'bg-red-100' },
           { label: 'Điểm trung bình', value: '7.0', icon: Trophy, color: 'text-amber-600', bg: 'bg-amber-100' },
           { label: 'Mục tiêu', value: '7.5', icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-100' },
           { label: 'Giờ học', value: '128h', icon: Clock, color: 'text-purple-600', bg: 'bg-purple-100' },
@@ -80,4 +84,29 @@ export function DashboardPage() {
       </div>
     </div>
   );
+
+  // guest landing view
+  const GuestLanding = () => (
+    <div className="space-y-12">
+      <div className="rounded-3xl p-12 text-white bg-gradient-to-br from-red-600 to-red-800">
+        <h1 className="text-4xl font-bold">Chinh phục IELTS với IELTS Master</h1>
+        <p className="mt-3 text-lg">Nền tảng luyện thi chuẩn xác, chấm điểm thông minh và cá nhân hóa lộ trình của bạn.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { title: 'Kho đề thi phong phú', icon: Book },
+          { title: 'Phân tích chi tiết', icon: BarChart2 },
+          { title: 'Luyện tập mọi lúc', icon: ClockIcon },
+        ].map((f, idx) => (
+          <div key={idx} className="bg-white shadow-sm rounded-xl p-6 text-center hover:shadow-md transition">
+            <f.icon className="mx-auto h-8 w-8 text-red-600" />
+            <h3 className="mt-4 font-semibold text-lg">{f.title}</h3>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return isAuthenticated ? <UserDashboard /> : <GuestLanding />;
 }

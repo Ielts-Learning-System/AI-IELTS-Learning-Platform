@@ -27,6 +27,15 @@ const userSchema = new mongoose.Schema({
     default: 'free',
     enum: ['free', 'premium'],
   },
+
+  avatar: { 
+    type: String, 
+    default: function() {
+      // Tự động tạo ảnh đại diện có chữ cái đầu của Tên
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(this.name)}&background=random`;
+    }
+  },
+  
 }, {
   timestamps: true,
 });

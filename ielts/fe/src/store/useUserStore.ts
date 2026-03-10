@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface User {
   id: string;
@@ -6,26 +7,50 @@ interface User {
   email: string;
   avatar: string;
   isVip: boolean;
+  role: string; // added for user role
 }
 
 interface UserState {
   user: User | null;
   isAuthenticated: boolean;
+  token: string | null;
   
-  setUser: (user: User) => void;
+  setAuth: (user: User, token: string) => void;
   logout: () => void;
 }
 
-export const useUserStore = create<UserState>((set) => ({
-  user: {
-    id: 'u1',
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@example.com',
-    avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d',
-    isVip: false,
-  },
-  isAuthenticated: true,
+export const useUserStore = create<UserState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      token: null,
 
-  setUser: (user) => set({ user, isAuthenticated: true }),
-  logout: () => set({ user: null, isAuthenticated: false }),
-}));
+      setAuth: (user, token) => {
+        localStorage.setItem('token', token);
+        set({ 
+          user, 
+          token, 
+          isAuthenticated: true 
+        });
+      },
+
+      logout: () => {
+        localStorage.removeItem('token');
+        set({ 
+          user: null, 
+          token: null, 
+          isAuthenticated: false 
+        });
+      },
+    }),
+    {
+      name: 'user-store', // key for localStorage
+      partialize: (state) => ({ 
+        user: state.user, 
+        isAuthenticated: state.isAuthenticated,
+        token: state.token 
+      }),
+    }
+  )
+);
