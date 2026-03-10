@@ -1,72 +1,35 @@
 const mongoose = require('mongoose');
 
-// ====== Question Schema ======
-const QuestionSchema = new mongoose.Schema(
-  {
-    questionText: {
-      type: String,
-      required: true,
-    },
-    type: {
-      type: String,
-      enum: ['multiple_choice', 'true_false_ng', 'matching', 'fill_blank'],
-      required: true,
-    },
-    options: {
-      type: [String],
-      default: [], // Không bắt buộc
-    },
-    correctAnswer: {
-      type: String,
-      required: true,
-    },
+// Schema cho từng câu hỏi
+const questionSchema = new mongoose.Schema({
+  questionNumber: { type: Number, required: true }, // Câu số mấy (1-40)
+  type: { 
+    type: String, 
+    enum: ['MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', 'TFNG', 'YNNG'], 
+    required: true 
   },
-  { _id: true }
-);
+  text: { type: String, required: true }, // Nội dung câu hỏi
+  options: [{ type: String }], // Dành cho trắc nghiệm hoặc matching
+  correctAnswer: { type: String, required: true }, // Đáp án chuẩn để hệ thống tự chấm
+  explanation: { type: String } // Lời giải thích (tùy chọn)
+});
 
-// ====== Passage Schema ======
-const PassageSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: true,
-    },
-    content: {
-      type: String,
-      required: true, // Chứa bài đọc
-    },
-    questions: {
-      type: [QuestionSchema],
-      required: true,
-    },
-  },
-  { _id: true }
-);
+// Schema cho từng Đoạn văn (Passage)
+const passageSchema = new mongoose.Schema({
+  passageNumber: { type: Number, required: true }, // Passage 1, 2, 3
+  title: { type: String, required: true },
+  content: { type: String, required: true }, // Nội dung bài đọc (lưu dạng HTML hoặc text dài)
+  image: { type: String }, // Ảnh đính kèm bài đọc (nếu có)
+  questions: [questionSchema] // Danh sách câu hỏi của passage này
+});
 
-// ====== Reading Test Schema ======
-const ReadingTestSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: true,
-    },
-    description: {
-      type: String,
-    },
-    passages: {
-      type: [PassageSchema],
-      required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  { timestamps: true }
-);
+// Schema tổng của Đề thi
+const readingTestSchema = new mongoose.Schema({
+  title: { type: String, required: true }, // VD: "Cambridge IELTS 18 - Test 1"
+  description: { type: String },
+  isPublished: { type: Boolean, default: false }, // Giáo viên duyệt xong mới public cho học sinh
+  passages: [passageSchema],
+  createdBy: { type: mongoose.Schema.Types.ObjectId, required: true } // ID của Giáo viên tạo đề
+}, { timestamps: true });
 
-module.exports = mongoose.model('ReadingTest', ReadingTestSchema);
+module.exports = mongoose.model('ReadingTest', readingTestSchema);

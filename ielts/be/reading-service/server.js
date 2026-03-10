@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const multer = require('multer');
 const connectDB = require('./src/config/db');
 const readingRoutes = require('./src/routes/reading.routes');
 
@@ -16,7 +17,18 @@ app.use(morgan('dev'));
 connectDB();
 
 // ====== Routes ======
-app.use('/', readingRoutes);
+app.use('/api/tests', readingRoutes);
+
+// ====== Multer Error Handling ======
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      success: false,
+      message: `Multer error: ${err.message}`,
+    });
+  }
+  next(err);
+});
 
 // ====== Error Handling Middleware ======
 app.use((err, req, res, next) => {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUserStore } from '../store/useUserStore';
 
@@ -10,6 +11,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { setAuth } = useUserStore();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -75,6 +77,20 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       
       setTimeout(() => {
         onClose();
+        
+        // Redirect based on user role
+        switch (user.role) {
+          case 'admin':
+            navigate('/admin');
+            break;
+          case 'teacher':
+            navigate('/teacher');
+            break;
+          case 'student':
+          default:
+            navigate('/dashboard');
+            break;
+        }
       }, 1000);
     } catch (err: any) {
       console.error('Login error:', err.response?.data || err.message);
