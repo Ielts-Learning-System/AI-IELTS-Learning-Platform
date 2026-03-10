@@ -4,8 +4,9 @@ import { Bell, Crown, LogOut, User } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import AuthModal from '../AuthModal';
 import logo from '../../assets/logo.png';
+import UpgradeModal from '../UpgradeModal';
 
-// role label map
+// role label map (Để hằng số ở ngoài là cực kỳ chuẩn xác)
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Quản trị viên',
   teacher: 'Giáo viên',
@@ -13,6 +14,9 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function Navbar() {
+  // ✅ 1. KÉO STATE VÀO TRONG HÀM (FIX LỖI MÀN HÌNH TRẮNG)
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  
   const { isAuthenticated, user, logout } = useUserStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -44,7 +48,7 @@ export function Navbar() {
         ) : (
           // Authenticated - Show User Menu
           <>
-            <button className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-200">
+            <button className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-200" onClick={() => setIsUpgradeOpen(true)}>
               <Crown className="h-4 w-4" />
               Nâng cấp VIP
             </button>
@@ -114,6 +118,9 @@ export function Navbar() {
     </header>
 
     <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+    
+    {/* ✅ 2. GỌI UPGRADE MODAL RA GIAO DIỆN (Nằm cạnh AuthModal) */}
+    <UpgradeModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
     </>
   );
 }

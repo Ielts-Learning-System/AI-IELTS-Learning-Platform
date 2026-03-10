@@ -129,6 +129,21 @@ app.use(
 );
 
 /**
+ * Billing Service
+ * URL gọi trên Postman: http://localhost:3000/api/billing/...
+ */
+app.use(
+  '/api/billing',
+  createProxyMiddleware({
+    target: process.env.BILLING_SERVICE_URL || 'http://127.0.0.1:3005',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/billing': '',
+    },
+  })
+);
+
+/**
  * =============================
  * 404 Handler
  * =============================
