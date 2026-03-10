@@ -42,6 +42,7 @@ const register = async (req, res) => {
         name: user.name,
         role: user.role,
         plan: user.plan,
+        avatar: user.avatar,
         token,
       },
     });
@@ -87,6 +88,7 @@ const login = async (req, res) => {
         name: user.name,
         role: user.role,
         plan: user.plan,
+        avatar: user.avatar,
         token,
       },
     });
@@ -182,6 +184,7 @@ const updateUserRole = async (req, res) => {
         name: targetUser.name,
         role: targetUser.role,
         plan: targetUser.plan,
+        avatar: targetUser.avatar,
       },
     });
   } catch (error) {
@@ -192,4 +195,113 @@ const updateUserRole = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, updateUserRole };
+/**
+ * Update user profile (Name and Avatar)
+ * @requires Authentication token
+ */
+const updateProfile = async (req, res) => {
+  try {
+    const { name, avatar } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!name && !avatar) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least name or avatar is required'
+      });
+    }
+
+    // Prepare update object
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (avatar) updateData.avatar = avatar;
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error('Lỗi updateProfile:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Change user password
+ * @requires Authentication token
+ */
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check current password
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Lỗi changePassword:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+module.exports = { register, login, getProfile, updateUserRole, updateProfile, changePassword };

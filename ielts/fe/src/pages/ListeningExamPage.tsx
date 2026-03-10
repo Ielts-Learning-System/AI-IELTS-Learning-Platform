@@ -188,7 +188,7 @@ export function ListeningExamPage() {
                         value={answers[q._id] || ''}
                         onChange={(e) => handleAnswerChange(q._id, e.target.value)}
                         placeholder="Nhập câu trả lời..."
-                        className="w-full mt-3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                        className="w-full mt-3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-all"
                       />
                     ) : (q.type === 'map_labeling' || q.type === 'matching') && q.options ? (
                       <select
