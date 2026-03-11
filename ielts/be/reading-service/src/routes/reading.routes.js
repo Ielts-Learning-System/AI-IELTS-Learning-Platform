@@ -1,22 +1,7 @@
 const express = require('express');
-const multer = require('multer');
 const router = express.Router();
 const readingController = require('../controllers/reading.controller');
 const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
-
-// ====== Multer Configuration (Memory Storage for AI Processing) ======
-const upload = multer({
-  storage: multer.memoryStorage(),
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF, JPG, and PNG files are allowed'), false);
-    }
-  },
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-});
 
 // ====== Routes ======
 
@@ -38,7 +23,7 @@ router.delete('/:id', verifyToken, authorizeRoles('admin', 'teacher'), readingCo
 // POST /:id/submit - Chấm điểm đề thi (Student/Teacher/Admin)
 router.post('/:id/submit', verifyToken, readingController.submitTest);
 
-// POST /extract-ai - AI Extraction từ file (Admin/Teacher only)
-router.post('/extract-ai', verifyToken, authorizeRoles('admin', 'teacher'), upload.single('file'), readingController.extractTestFromImage);
+// POST /generate-ai - Generate test from AI based on parameters (Admin/Teacher only)
+router.post('/generate-ai', verifyToken, authorizeRoles('admin', 'teacher'), readingController.generateTestFromAI);
 
 module.exports = router;
