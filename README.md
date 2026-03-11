@@ -1,6 +1,6 @@
 # 🎯 IELTS Master Platform - AI-Powered Preparation Hub
 
-![IELTS Master Banner](https://via.placeholder.com/1200x400/E53E3E/FFFFFF?text=IELTS+Master+-+AI+Powered+EdTech+Platform)
+![IELTS Master Banner](ielts/fe/src/assets/logo.png)
 
 Một nền tảng luyện thi IELTS toàn diện, mang đến trải nghiệm học tập cá nhân hóa thông qua sức mạnh của Trí tuệ nhân tạo (Google Gemini) và phương pháp luyện tập chuyên sâu (Nghe chép chính tả). Hệ thống được xây dựng trên kiến trúc **Microservices** giúp tối ưu hóa hiệu suất và dễ dàng mở rộng.
 
