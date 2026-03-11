@@ -313,21 +313,21 @@ exports.generateTestFromAI = async (req, res) => {
         title: 'Passage 1: Factual & Descriptive Text',
         wordCount: '700-800',
         questionCount: 13,
-        questionTypes: 'True/False/Not Given and Note Completion',
+        questionTypes: 'True/False/Not Given (TFNG) and Note Completion (FILL_IN_BLANK)',
         difficulty: 'Factual/descriptive language (easier)',
       },
       '2': {
         title: 'Passage 2: Discursive & Complex Text',
         wordCount: '800-900',
         questionCount: 13,
-        questionTypes: 'Matching Headings and Multiple Choice',
+        questionTypes: 'Matching Headings (MATCHING) and Multiple Choice (MULTIPLE_CHOICE)',
         difficulty: 'Discursive/complex information (medium)',
       },
       '3': {
         title: 'Passage 3: Academic & Argumentative Text',
         wordCount: '800-950',
         questionCount: 14,
-        questionTypes: 'Yes/No/Not Given and Matching Features',
+        questionTypes: 'Yes/No/Not Given (YNNG) and Matching Features (MATCHING)',
         difficulty: 'Academic/argumentative (challenging)',
       },
     };
@@ -335,32 +335,40 @@ exports.generateTestFromAI = async (req, res) => {
     const spec = passageSpecs[passageType];
     const topicKeyword = keywords && keywords.trim() ? keywords : 'general IELTS topics';
 
-    // Construct prompt for Gemini
+    // Construct prompt for Gemini to return JSON
     const prompt = `You are an expert IELTS examiner. Create a Reading ${spec.title}.
 
 REQUIREMENTS:
-- Word count: ${spec.wordCount} words
-- Number of questions: ${spec.questionCount}
+- Word count for passage: ${spec.wordCount} words
+- Number of questions: exactly ${spec.questionCount}
 - Question types: ${spec.questionTypes}
 - Target band score: ${bandScore}
 - Topic/Keywords: ${topicKeyword}
 - Difficulty level: ${spec.difficulty}
 
-OUTPUT REQUIREMENTS (CRITICAL - respond ONLY with raw HTML, no markdown):
-1. Generate a complete IELTS Reading passage with meaningful content
-2. Create exactly ${spec.questionCount} questions with appropriate answer key
-3. Return STRICTLY as HTML (use <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>)
-4. DO NOT wrap in markdown code blocks
-5. DO NOT include \`\`\`html or any markdown formatting
-6. Structure: 
-   - <h2>Passage Title</h2>
-   - <p>Passage content...</p>
-   - <h3>Questions</h3>
-   - <ol><li>Question 1...</li></ol>
-   - <h3>Answer Key</h3>
-   - <p>Answers with explanations</p>
+OUTPUT REQUIREMENTS (CRITICAL - respond ONLY with raw JSON, no markdown):
+Return a JSON object with this exact structure:
+{
+  "title": "Title of the passage",
+  "passageContent": "HTML string for the reading text only (no questions) - use clean HTML like <p>, <h2>, <strong>, etc.",
+  "questions": [
+    {
+      "questionNumber": 1,
+      "type": "TFNG | MULTIPLE_CHOICE | MATCHING | FILL_IN_BLANK | YNNG",
+      "text": "The question text",
+      "options": ["Option A", "Option B"], // Only include for MULTIPLE_CHOICE or MATCHING, empty array [] for others
+      "correctAnswer": "TRUE",
+      "explanation": "Why this is the answer"
+    }
+  ]
+}
 
-Start generating the HTML now:`;
+IMPORTANT:
+- passageContent must be clean HTML without questions
+- Generate exactly ${spec.questionCount} questions
+- Use the exact type enums: TFNG, MULTIPLE_CHOICE, MATCHING, FILL_IN_BLANK, YNNG
+- Do NOT wrap in markdown code blocks or \`\`\`json
+- Return only the raw JSON object`;
 
     console.log('🤖 Calling Google Gemini API for passage type:', passageType);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -370,21 +378,50 @@ Start generating the HTML now:`;
     console.log('📝 Response length:', responseText.length);
 
     // Clean up response (remove markdown code blocks if present)
-    let cleanedHtml = responseText.trim();
-    if (cleanedHtml.startsWith('```html')) {
-      cleanedHtml = cleanedHtml.replace(/^```html\n?/, '').replace(/\n?```$/, '');
-    } else if (cleanedHtml.startsWith('```')) {
-      cleanedHtml = cleanedHtml.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    let cleanedText = responseText.trim();
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.replace(/^```json\n/, '').replace(/\n```$/, '');
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```\n/, '').replace(/\n```$/, '');
     }
 
-    // Additional cleanup: remove any remaining markdown characters
-    cleanedHtml = cleanedHtml.replace(/\*\*/g, '').replace(/\*\//g, '');
+    // Parse JSON
+    let parsedData;
+    try {
+      parsedData = JSON.parse(cleanedText);
+    } catch (parseError) {
+      console.error('❌ JSON Parse Error:', parseError.message);
+      console.error('Response content:', cleanedText);
+      return res.status(400).json({
+        success: false,
+        message: 'AI không thể tạo đúng định dạng JSON. Vui lòng thử lại.',
+        details: parseError.message,
+      });
+    }
+
+    // Validate parsed data structure
+    if (!parsedData.title || !parsedData.passageContent || !Array.isArray(parsedData.questions)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dữ liệu tạo không hợp lệ. Thiếu title, passageContent hoặc questions.',
+      });
+    }
+
+    // Validate question count
+    if (parsedData.questions.length !== spec.questionCount) {
+      return res.status(400).json({
+        success: false,
+        message: `Số câu hỏi phải là ${spec.questionCount}, nhưng nhận được ${parsedData.questions.length}.`,
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: 'Test generated successfully!',
       data: {
-        htmlContent: cleanedHtml,
+        title: parsedData.title,
+        passageContent: parsedData.passageContent,
+        questions: parsedData.questions,
         metadata: {
           passageType,
           bandScore,
@@ -429,7 +466,7 @@ exports.extractTestFromImage = async (req, res) => {
     };
 
     // Initialize Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Crafted prompt for IELTS test extraction
     const prompt = `Bạn là chuyên gia ra đề IELTS. Hãy đọc hình ảnh/tài liệu này và trích xuất nội dung thành ĐÚNG định dạng JSON sau, tuyệt đối KHÔNG có markdown json bao quanh, chỉ trả về JSON thuần túy:
