@@ -286,7 +286,123 @@ exports.deleteTest = async (req, res) => {
   }
 };
 
-// ====== 7. Extract Test From Image (Google Gemini AI) ======
+// ====== 7. Generate Test From AI (Generative AI Test Creation) ======
+exports.generateTestFromAI = async (req, res) => {
+  try {
+    const { bandScore, keywords, passageType } = req.body;
+
+    // Validate passageType
+    if (!['1', '2', '3'].includes(String(passageType))) {
+      return res.status(400).json({
+        success: false,
+        message: 'passageType phải là "1", "2", hoặc "3"',
+      });
+    }
+
+    // Validate bandScore
+    if (!bandScore) {
+      return res.status(400).json({
+        success: false,
+        message: 'bandScore là bắt buộc',
+      });
+    }
+
+    // Define passage specifications based on type
+    const passageSpecs = {
+      '1': {
+        title: 'Passage 1: Factual & Descriptive Text',
+        wordCount: '700-800',
+        questionCount: 13,
+        questionTypes: 'True/False/Not Given and Note Completion',
+        difficulty: 'Factual/descriptive language (easier)',
+      },
+      '2': {
+        title: 'Passage 2: Discursive & Complex Text',
+        wordCount: '800-900',
+        questionCount: 13,
+        questionTypes: 'Matching Headings and Multiple Choice',
+        difficulty: 'Discursive/complex information (medium)',
+      },
+      '3': {
+        title: 'Passage 3: Academic & Argumentative Text',
+        wordCount: '800-950',
+        questionCount: 14,
+        questionTypes: 'Yes/No/Not Given and Matching Features',
+        difficulty: 'Academic/argumentative (challenging)',
+      },
+    };
+
+    const spec = passageSpecs[passageType];
+    const topicKeyword = keywords && keywords.trim() ? keywords : 'general IELTS topics';
+
+    // Construct prompt for Gemini
+    const prompt = `You are an expert IELTS examiner. Create a Reading ${spec.title}.
+
+REQUIREMENTS:
+- Word count: ${spec.wordCount} words
+- Number of questions: ${spec.questionCount}
+- Question types: ${spec.questionTypes}
+- Target band score: ${bandScore}
+- Topic/Keywords: ${topicKeyword}
+- Difficulty level: ${spec.difficulty}
+
+OUTPUT REQUIREMENTS (CRITICAL - respond ONLY with raw HTML, no markdown):
+1. Generate a complete IELTS Reading passage with meaningful content
+2. Create exactly ${spec.questionCount} questions with appropriate answer key
+3. Return STRICTLY as HTML (use <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>, <blockquote>)
+4. DO NOT wrap in markdown code blocks
+5. DO NOT include \`\`\`html or any markdown formatting
+6. Structure: 
+   - <h2>Passage Title</h2>
+   - <p>Passage content...</p>
+   - <h3>Questions</h3>
+   - <ol><li>Question 1...</li></ol>
+   - <h3>Answer Key</h3>
+   - <p>Answers with explanations</p>
+
+Start generating the HTML now:`;
+
+    console.log('🤖 Calling Google Gemini API for passage type:', passageType);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+
+    console.log('📝 Response length:', responseText.length);
+
+    // Clean up response (remove markdown code blocks if present)
+    let cleanedHtml = responseText.trim();
+    if (cleanedHtml.startsWith('```html')) {
+      cleanedHtml = cleanedHtml.replace(/^```html\n?/, '').replace(/\n?```$/, '');
+    } else if (cleanedHtml.startsWith('```')) {
+      cleanedHtml = cleanedHtml.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    }
+
+    // Additional cleanup: remove any remaining markdown characters
+    cleanedHtml = cleanedHtml.replace(/\*\*/g, '').replace(/\*\//g, '');
+
+    res.status(200).json({
+      success: true,
+      message: 'Test generated successfully!',
+      data: {
+        htmlContent: cleanedHtml,
+        metadata: {
+          passageType,
+          bandScore,
+          keywords,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('❌ Generate Test From AI Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating test with AI',
+      error: error.message,
+    });
+  }
+};
+
+// ====== 8. Extract Test From Image (Google Gemini AI) ======
 exports.extractTestFromImage = async (req, res) => {
   try {
     // Verify file exists

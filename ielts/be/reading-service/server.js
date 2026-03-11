@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const multer = require('multer');
 const connectDB = require('./src/config/db');
 const readingRoutes = require('./src/routes/reading.routes');
 
@@ -16,19 +15,15 @@ app.use(morgan('dev'));
 // ====== Database Connection ======
 connectDB();
 
-// ====== Routes ======
-app.use('/api/tests', readingRoutes);
-
-// ====== Multer Error Handling ======
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({
-      success: false,
-      message: `Multer error: ${err.message}`,
-    });
-  }
-  next(err);
+// ====== Health Check (Cực kỳ quan trọng cho Docker) ======
+// Giúp Docker biết container này vẫn đang "khỏe mạnh"
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Reading Service is healthy' });
 });
+
+// ====== Routes ======
+// Đổi từ '/api/tests' sang '/' để khớp hoàn toàn với request từ API Gateway ném sang
+app.use('/', readingRoutes);
 
 // ====== Error Handling Middleware ======
 app.use((err, req, res, next) => {

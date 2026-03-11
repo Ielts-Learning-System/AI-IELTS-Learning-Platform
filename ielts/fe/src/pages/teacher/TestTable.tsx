@@ -7,9 +7,20 @@ interface TestTableProps {
   onDelete: (testId: string) => void;
 }
 
-const skillColors = {
+type SkillColorConfig = {
+  bg: string;
+  text: string;
+  label: string;
+};
+
+type SkillColors = Record<string, SkillColorConfig>;
+
+const skillColors: SkillColors = {
   reading: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Reading' },
   listening: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Listening' },
+  writing: { bg: 'bg-green-100', text: 'text-green-800', label: 'Writing' },
+  speaking: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Speaking' },
+  default: { bg: 'bg-slate-100', text: 'text-slate-800', label: 'Unknown' },
 };
 
 export function TestTable({ tests, isLoading, onDelete }: TestTableProps) {
@@ -61,7 +72,8 @@ export function TestTable({ tests, isLoading, onDelete }: TestTableProps) {
           </thead>
           <tbody className="divide-y divide-slate-200">
             {tests.map((test) => {
-              const skillColor = skillColors[test.skill];
+              const safeSkillKey = test.skill?.toLowerCase() || 'default';
+              const skillColor = skillColors[safeSkillKey] || skillColors.default;
               return (
                 <tr key={test._id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-slate-900 font-medium">{test.name}</td>

@@ -16,6 +16,7 @@ const verifyToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("🔍 Nội dung giải mã từ Token:", decoded);
     
     // Attach user info from token to request
     req.user = {
@@ -39,6 +40,7 @@ const verifyToken = async (req, res, next) => {
  */
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    console.log("Quyền yêu cầu:", roles , " | Quyền của User hiện tại:", req.user?.role);
     if (!req.user) {
       return res.status(401).json({ 
         success: false,
