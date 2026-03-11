@@ -1,0 +1,702 @@
+[
+  {
+    "lessonId": 1,
+    "audio": "/audio/arctic_a0518.wav",
+    "transcript": "Illuminating oil was becoming all profit.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 2,
+    "audio": "/audio/arctic_b0130.wav",
+    "transcript": "She saw the answer in his face.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 3,
+    "audio": "/audio/arctic_a0058.wav",
+    "transcript": "I came for information more out of curiosity than anything else.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 4,
+    "audio": "/audio/arctic_b0290.wav",
+    "transcript": "He placed his paw on one, and its movements were accelerated.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 5,
+    "audio": "/audio/arctic_a0273.wav",
+    "transcript": "They are big trees and require plenty of room.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 6,
+    "audio": "/audio/arctic_b0103.wav",
+    "transcript": "He lifted his eyes, and a strange cry burst from his lips.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 7,
+    "audio": "/audio/arctic_a0099.wav",
+    "transcript": "A maddening joy pounded in his brain.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 8,
+    "audio": "/audio/arctic_b0226.wav",
+    "transcript": "Your face was the personification of duplicity.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 9,
+    "audio": "/audio/arctic_a0076.wav",
+    "transcript": "The gray eyes faltered; the flush deepened.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 10,
+    "audio": "/audio/arctic_b0037.wav",
+    "transcript": "Philip knew that she was not an Indian.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 11,
+    "audio": "/audio/arctic_a0517.wav",
+    "transcript": "Out of abstractions Ernest had conjured a vision and made them see it.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 12,
+    "audio": "/audio/arctic_a0523.wav",
+    "transcript": "They could not continue their method of producing surpluses.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 13,
+    "audio": "/audio/arctic_b0311.wav",
+    "transcript": "The 29th very foggy.",
+    "difficulty": "easy",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 14,
+    "audio": "/audio/arctic_b0194.wav",
+    "transcript": "Joan cried, with shining eyes.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 15,
+    "audio": "/audio/arctic_b0209.wav",
+    "transcript": "He's terribly touchy about his black wards, as he calls them.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 16,
+    "audio": "/audio/arctic_a0330.wav",
+    "transcript": "Red-Eye never committed a more outrageous deed. ",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 17,
+    "audio": "/audio/arctic_a0527.wav",
+    "transcript": "The lush vegetation of that sheltered spot make a natural shield.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 18,
+    "audio": "/audio/arctic_a0040.wav",
+    "transcript": "I suppose you wonder why she is coming up here. ",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 19,
+    "audio": "/audio/arctic_a0343.wav",
+    "transcript": "You mean for this State, General, Alberta.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 20,
+    "audio": "/audio/arctic_a0172.wav",
+    "transcript": "Gregson had left the outer door slightly ajar.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 21,
+    "audio": "/audio/arctic_b0243.wav",
+    "transcript": "They had been on the same lay as ourselves.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 22,
+    "audio": "/audio/arctic_b0428.wav",
+    "transcript": "The history of our westward-faring race is written in it.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 23,
+    "audio": "/audio/arctic_b0024.wav",
+    "transcript": "It is growing, every day, every hour.",
+    "difficulty": "easy",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 24,
+    "audio": "/audio/arctic_a0342.wav",
+    "transcript": "Seventeen, no, eighteen days ago.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 25,
+    "audio": "/audio/arctic_a0145.wav",
+    "transcript": "I have to be careful of them, as they tear very easily.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 26,
+    "audio": "/audio/arctic_a0230.wav",
+    "transcript": "Do you know any good land around here.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 27,
+    "audio": "/audio/arctic_a0077.wav",
+    "transcript": "It is the fire, partly, she said.",
+    "difficulty": "easy",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 28,
+    "audio": "/audio/arctic_a0139.wav",
+    "transcript": "He told himself that as he washed himself and groomed his disheveled clothes.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 29,
+    "audio": "/audio/arctic_b0428.wav",
+    "transcript": "The history of our westward-faring race is written in it.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 30,
+    "audio": "/audio/arctic_b0238.wav",
+    "transcript": "The very thought of the effort to swim over was nauseating.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 31,
+    "audio": "/audio/arctic_a0593.wav",
+    "transcript": "She'd make a good wife for the cashier.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 32,
+    "audio": "/audio/arctic_a0192.wav",
+    "transcript": "He did not rush in.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 33,
+    "audio": "/audio/arctic_a0026.wav",
+    "transcript": "It occurred to me that there would have to be an accounting.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 34,
+    "audio": "/audio/arctic_b0321.wav",
+    "transcript": "Instead, he arrived on the night of the second day.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 35,
+    "audio": "/audio/arctic_a0180.wav",
+    "transcript": "If not, let's say our prayers and go to bed.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 36,
+    "audio": "/audio/arctic_a0465.wav",
+    "transcript": "He'll never do a tap of work the whole Voyage.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 37,
+    "audio": "/audio/arctic_a0507.wav",
+    "transcript": "He was an athlete and a giant.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 38,
+    "audio": "/audio/arctic_a0451.wav",
+    "transcript": "I noticed blood spouting from Kerfoot's left hand.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 39,
+    "audio": "/audio/arctic_a0225.wav",
+    "transcript": "I was brought up the way most girls in Hawaii are brought up.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 40,
+    "audio": "/audio/arctic_a0247.wav",
+    "transcript": "They ought to pass here some time today.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 41,
+    "audio": "/audio/arctic_a0325.wav",
+    "transcript": "Whiz-zip-bang. Lop-Ear screamed with sudden anguish.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 42,
+    "audio": "/audio/arctic_a0426.wav",
+    "transcript": "They do not know the length of time of incubation.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 43,
+    "audio": "/audio/arctic_a0484.wav",
+    "transcript": "No-sir-ee.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 44,
+    "audio": "/audio/arctic_a0331.wav",
+    "transcript": "Poor little Crooked-Leg was terribly scared.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 45,
+    "audio": "/audio/arctic_a0234.wav",
+    "transcript": "I cannot follow you, she said.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 46,
+    "audio": "/audio/arctic_a0099.wav",
+    "transcript": "A maddening joy pounded in his brain.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 47,
+    "audio": "/audio/arctic_a0147.wav",
+    "transcript": "A moment before he was intoxicated by a joy that was almost madness.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 48,
+    "audio": "/audio/arctic_a0563.wav",
+    "transcript": "Mrs McFee's jaws brought together with a snap.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 49,
+    "audio": "/audio/arctic_b0264.wav",
+    "transcript": "But this time it was Saxon who rebelled.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 50,
+    "audio": "/audio/arctic_a0112.wav",
+    "transcript": "He was wounded in the arm.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 51,
+    "audio": "/audio/arctic_a0358.wav",
+    "transcript": "They continued valiantly to lie, but the truth continued to outrun them.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 52,
+    "audio": "/audio/arctic_a0246.wav",
+    "transcript": "You have heard always how he was the lover of the Princess Naomi.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 53,
+    "audio": "/audio/arctic_a0328.wav",
+    "transcript": "Cherokee identified himself with his instinct.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 54,
+    "audio": "/audio/arctic_a0574.wav",
+    "transcript": "Behind him lay the thousand-years-long road across all Siberia and Russia.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 55,
+    "audio": "/audio/arctic_a0216.wav",
+    "transcript": "The other felt a sudden wave of irritation rush through him.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 56,
+    "audio": "/audio/arctic_a0392.wav",
+    "transcript": "There is that magnificent Bob, eating his head off in the stable.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 57,
+    "audio": "/audio/arctic_b0025.wav",
+    "transcript": "Now, you understand.",
+    "difficulty": "easy",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 58,
+    "audio": "/audio/arctic_a0532.wav",
+    "transcript": "May drought destroy your crops.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 59,
+    "audio": "/audio/arctic_b0037.wav",
+    "transcript": "Philip knew that she was not an Indian.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 60,
+    "audio": "/audio/arctic_a0193.wav",
+    "transcript": "It was edged with ice. ",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 61,
+    "audio": "/audio/arctic_a0451.wav",
+    "transcript": "I noticed blood spouting from Kerfoot's left hand.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 62,
+    "audio": "/audio/arctic_a0305.wav",
+    "transcript": "They had no fixed values, to be altered by adjectives and adverbs.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 63,
+    "audio": "/audio/arctic_a0419.wav",
+    "transcript": "The Portuguese boy passed the Hawaiian. ",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 64,
+    "audio": "/audio/arctic_b0314.wav",
+    "transcript": "He had been born with this endowment.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 65,
+    "audio": "/audio/arctic_b0005.wav",
+    "transcript": "His slim fingers closed like steel about Philip's.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 66,
+    "audio": "/audio/arctic_a0037.wav",
+    "transcript": "I was the only one who remained sitting.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 67,
+    "audio": "/audio/arctic_b0298.wav",
+    "transcript": "His hand shot out and clutched Crooked-Leg by the neck.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 68,
+    "audio": "/audio/arctic_b0097.wav",
+    "transcript": "Besides, that noise makes me deaf.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 69,
+    "audio": "/audio/arctic_a0319.wav",
+    "transcript": "And the Edinburgh Evening News says, with editorial gloom.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 70,
+    "audio": "/audio/arctic_a0333.wav",
+    "transcript": "This is no place for you.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 71,
+    "audio": "/audio/arctic_a0043.wav",
+    "transcript": "It seemed nearer to him since he had seen and talked with Gregson.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 72,
+    "audio": "/audio/arctic_b0383.wav",
+    "transcript": "A bush chief had died a natural death.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 73,
+    "audio": "/audio/arctic_a0553.wav",
+    "transcript": "I am writing these lines in Honolulu, Hawaii.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 74,
+    "audio": "/audio/arctic_a0080.wav",
+    "transcript": "What if Jeanne failed him.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 75,
+    "audio": "/audio/arctic_a0049.wav",
+    "transcript": "Gregson was asleep when he re-entered the cabin.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 76,
+    "audio": "/audio/arctic_a0278.wav",
+    "transcript": "It would give me nervous prostration.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 77,
+    "audio": "/audio/arctic_a0080.wav",
+    "transcript": "What if Jeanne failed him.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 78,
+    "audio": "/audio/arctic_a0239.wav",
+    "transcript": "He cried in such genuine dismay that she broke into hearty laughter.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 79,
+    "audio": "/audio/arctic_b0380.wav",
+    "transcript": "He had peeled off his shirt and was wildly waving it.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 80,
+    "audio": "/audio/arctic_a0556.wav",
+    "transcript": "Why, he's bought forty pounds of goods from you already.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 81,
+    "audio": "/audio/arctic_a0197.wav",
+    "transcript": "Such a dog the wise driver kills, or turns loose.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 82,
+    "audio": "/audio/arctic_b0389.wav",
+    "transcript": "Among my minor afflictions, I may mention a new and mysterious one.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 83,
+    "audio": "/audio/arctic_a0101.wav",
+    "transcript": "You, you would not keep the truth from me.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 84,
+    "audio": "/audio/arctic_b0128.wav",
+    "transcript": "Philip bent low over Pierre.",
+    "difficulty": "easy",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 85,
+    "audio": "/audio/arctic_a0437.wav",
+    "transcript": "By that answer my professional medical prestige stood or fell.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 86,
+    "audio": "/audio/arctic_a0593.wav",
+    "transcript": "She'd make a good wife for the cashier.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 87,
+    "audio": "/audio/arctic_b0460.wav",
+    "transcript": "The history of the eighteenth century is written, Ernest prompted.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 88,
+    "audio": "/audio/arctic_b0127.wav",
+    "transcript": "He destroyed everything that had belonged to the woman.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 89,
+    "audio": "/audio/arctic_a0317.wav",
+    "transcript": "He was a wise hyena.",
+    "difficulty": "easy",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 90,
+    "audio": "/audio/arctic_a0140.wav",
+    "transcript": "Accept a father's blessing, and with it, this.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 91,
+    "audio": "/audio/arctic_a0546.wav",
+    "transcript": "I lost my balance and pitched head foremost into the ooze.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 92,
+    "audio": "/audio/arctic_a0478.wav",
+    "transcript": "Also, she has forbidden them smoking their pipes in the after-room.",
+    "difficulty": "medium",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 93,
+    "audio": "/audio/arctic_b0160.wav",
+    "transcript": "It was over when he made his way through the ring of spectators.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 94,
+    "audio": "/audio/arctic_b0257.wav",
+    "transcript": "Tudor surveyed him with withering disgust.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 95,
+    "audio": "/audio/arctic_a0034.wav",
+    "transcript": "Men of Selden's stamp don't stop at women and children.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 96,
+    "audio": "/audio/arctic_a0199.wav",
+    "transcript": "Thus had the raw wilderness prepared him for this day.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 97,
+    "audio": "/audio/arctic_b0154.wav",
+    "transcript": "That is the strange part of it.",
+    "difficulty": "easy",
+    "speaker": "unknown"
+  },
+  {
+    "lessonId": 98,
+    "audio": "/audio/arctic_b0049.wav",
+    "transcript": "There was nothing more, except a large ink blot under the words.",
+    "difficulty": "medium",
+    "speaker": "female"
+  },
+  {
+    "lessonId": 99,
+    "audio": "/audio/arctic_b0479.wav",
+    "transcript": "Violation of this law was made a high misdemeanor and punished accordingly.",
+    "difficulty": "medium",
+    "speaker": "male"
+  },
+  {
+    "lessonId": 100,
+    "audio": "/audio/arctic_b0302.wav",
+    "transcript": "I pulled, suddenly, with all my might.",
+    "difficulty": "easy",
+    "speaker": "male"
+  }
+]

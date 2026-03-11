@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -11,26 +11,95 @@ import { TeacherLayout } from './components/layout/TeacherLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
-
 import { ReadingExamPage } from './pages/ReadingExamPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
 import { WritingExamPage } from './pages/WritingExamPage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
+import DictationPage from './pages/DictationExercisePage';
+
+/**
+ * Placeholder component for IELTS Listening exercises
+ */
+function IELTSListeningPage() {
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold text-gray-800 mb-4">IELTS Listening Exercises</h1>
+      <p className="text-gray-600 mb-6">
+        Practice official IELTS listening tests with instant feedback and detailed statistics.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Placeholder cards for listening exercises */}
+        {[1, 2, 3, 4, 5, 6].map((num) => (
+          <div
+            key={num}
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Test {num}</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Complete this practice test to improve your listening skills.
+            </p>
+            <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+              Start Test
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * NotFound (404) page component
+ */
+function NotFound() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center">
+        <h1 className="text-6xl font-bold text-gray-800 mb-4">404</h1>
+        <p className="text-xl text-gray-600 mb-8">Page not found</p>
+        <a
+          href="/dashboard"
+          className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+        >
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login & Register Routes */}
+        {/* Login & Register Routes (no layout) */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Student Dashboard Routes */}
-        <Route path="/" element={<DashboardLayout />}>
+        {/* Student Dashboard Routes (with DashboardLayout) */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
+        </Route>
+
+        {/* Listening Routes (with DashboardLayout) */}
+        <Route path="/listening" element={<DashboardLayout />}>
+          {/* Auto-redirect /listening to /listening/ielts */}
+          <Route index element={<Navigate to="/listening/ielts" replace />} />
+          <Route path="ielts" element={<IELTSListeningPage />} />
+          <Route path="dictation" element={<DictationPage />} />
+        </Route>
+
+        {/* Reading Routes (with DashboardLayout) */}
+        <Route path="/reading" element={<DashboardLayout />}>
+          <Route path=":id" element={<ReadingExamPage />} />
+        </Route>
+
+        {/* Writing Routes (with DashboardLayout) */}
+        <Route path="/writing" element={<DashboardLayout />}>
+          <Route path=":id" element={<WritingExamPage />} />
         </Route>
 
         {/* Admin Routes */}
@@ -51,10 +120,8 @@ export default function App() {
           <Route path="students" element={<TeacherDashboard />} />
         </Route>
 
-        {/* Exam Routes */}
-        <Route path="/reading/:id" element={<ReadingExamPage />} />
-        <Route path="/listening/:id" element={<ListeningExamPage />} />
-        <Route path="/writing/:id" element={<WritingExamPage />} />
+        {/* Catch-all 404 Route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

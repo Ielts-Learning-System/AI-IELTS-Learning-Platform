@@ -72,6 +72,23 @@ app.use(
  * URL gọi trên Postman: http://localhost:3000/api/listening/...
  */
 app.use(
+  '/api/dictation',
+  createProxyMiddleware({
+    target: process.env.LISTENING_SERVICE_URL || 'http://127.0.0.1:3003',
+    changeOrigin: true,
+    // Express strips mount path, so forward original URL explicitly.
+    pathRewrite: (path, req) => req.originalUrl,
+  })
+);
+
+app.use('/audio', createProxyMiddleware({
+  target: process.env.LISTENING_SERVICE_URL || 'http://127.0.0.1:3003',
+  changeOrigin: true,
+  // Keep /audio prefix when proxying static files.
+  pathRewrite: (path, req) => req.originalUrl,
+}));
+
+app.use(
   '/api/listening',
   createProxyMiddleware({
     target: process.env.LISTENING_SERVICE_URL || 'http://127.0.0.1:3003',
@@ -81,8 +98,6 @@ app.use(
     },
   })
 );
-
-
 
 /**
  * Writing Service
