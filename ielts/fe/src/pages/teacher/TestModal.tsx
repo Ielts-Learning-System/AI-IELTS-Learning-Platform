@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, AlertCircle, Loader } from 'lucide-react';
+import { X, Plus, AlertCircle, Loader, Edit3, Trash2 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import axios from 'axios';
@@ -8,6 +8,15 @@ interface TestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTestCreated: () => void;
+}
+
+interface Question {
+  questionNumber: number;
+  type: 'TFNG' | 'MULTIPLE_CHOICE' | 'MATCHING' | 'FILL_IN_BLANK' | 'YNNG';
+  text: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
 }
 
 interface MenuBarProps {
@@ -75,6 +84,9 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [passageTitle, setPassageTitle] = useState<string>('');
+
   const editor = useEditor({
     extensions: [StarterKit],
     content: '<p>Select passage type, enter keywords, and click "Generate Test" to create content...</p>',
@@ -136,8 +148,11 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
 
       console.log('📥 Response received:', response.data);
 
-      if (response.data.success && response.data.data?.htmlContent) {
-        editor?.commands.setContent(response.data.data.htmlContent);
+      if (response.data.success && response.data.data) {
+        const { title, passageContent, questions: genQuestions } = response.data.data;
+        editor?.commands.setContent(passageContent);
+        setPassageTitle(title || '');
+        setQuestions(Array.isArray(genQuestions) ? genQuestions : []);
         setErrorMessage('');
       } else {
         setErrorMessage('Unexpected response format from server');
@@ -154,49 +169,56 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
     }
   };
 
+  const updateQuestion = (index: number, field: keyof Question, value: any) => {
+    setQuestions(prev =>
+      prev.map((q, i) => (i === index ? { ...q, [field]: value } : q))
+    );
+  };
+
   const handleSaveTest = async () => {
     const htmlContent = editor?.getHTML();
 
-    if (!htmlContent || htmlContent === '<p></p>') {
-      setErrorMessage('Vui lòng tạo đề trước khi lưu.');
+    if (!htmlContent || questions.length === 0) {
+      setErrorMessage('Vui lòng tạo đề và kiểm tra câu hỏi.');
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
 
-      // 1. Chuẩn bị payload theo cấu trúc ReadingTestSchema
-      const testData = {
-        title: `IELTS Reading Passage ${passageType} - ${keywords || 'AI Generated'}`,
-        description: `Target Band: ${bandScore}. Chủ đề: ${keywords}`,
-        isPublished: false, // Mặc định là bản nháp để giáo viên duyệt
-
-        // Map vào mảng passages theo Schema của bạn
+      // Build payload matching ReadingTest schema
+      const payload = {
+        title: passageTitle || `IELTS Reading Test - ${keywords}`,
+        description: `Target Band ${bandScore}`,
+        isPublished: false,
         passages: [
           {
             passageNumber: parseInt(passageType),
-            title: `Reading Passage ${passageType}`,
-            content: htmlContent, // Toàn bộ nội dung AI tạo ra (bao gồm cả câu hỏi) sẽ nằm ở đây
-            questions: [] // TẠM THỜI ĐỂ TRỐNG - Đọc lưu ý bên dưới
-          }
-        ]
-        // createdBy sẽ do Backend tự lấy từ Token (req.user.id) nên không cần gửi từ FE
+            title: passageTitle || 'Reading Passage',
+            content: htmlContent,
+            questions: questions.map(q => ({
+              questionNumber: q.questionNumber,
+              type: q.type,
+              text: q.text,
+              options: q.options || [],
+              correctAnswer: q.correctAnswer,
+              explanation: q.explanation,
+            })),
+          },
+        ],
       };
 
-      const response = await axios.post('http://localhost:3000/api/reading', testData, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await axios.post('http://localhost:3000/api/reading', payload, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.data.success) {
-        alert('Đề thi đã được lưu thành bản nháp! 🎉');
+        alert('Đề thi chuyên nghiệp đã được lưu thành công!');
         onTestCreated();
         onClose();
       }
     } catch (error) {
-      console.error('❌ Save error:', error);
-      setErrorMessage(error.response?.data?.message || 'Lỗi lưu dữ liệu vào CSDL.');
+      setErrorMessage((error as any).response?.data?.message || 'Lỗi lưu cấu trúc đề thi.');
     }
   };
 
@@ -296,6 +318,21 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
                     Describe the topic or keywords for the reading passage
                   </p>
                 </div>
+
+                {/* Optional Passage Title */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-900 mb-2">
+                    Passage Title (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={passageTitle}
+                    onChange={(e) => setPassageTitle(e.target.value)}
+                    disabled={isGenerating}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="Custom passage title"
+                  />
+                </div>
               </div>
 
               {/* Generate Button */}
@@ -326,15 +363,104 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
               )}
             </div>
 
-            {/* Right Column: Editor & Preview (2/3 width) */}
-            <div className="w-full lg:w-2/3">
-              <div className="border border-slate-300 rounded-lg overflow-hidden h-full flex flex-col bg-white">
+            {/* Right Column: Editor & Questions (2/3 width) */}
+            <div className="w-full lg:w-2/3 space-y-6">
+              {/* Passage Editor */}
+              <div className="border border-slate-300 rounded-lg overflow-hidden">
+                <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
+                  <h3 className="font-semibold text-slate-900">Reading Passage</h3>
+                  <p className="text-sm text-slate-600">Edit the passage content below</p>
+                </div>
                 <MenuBar editor={editor} />
                 <EditorContent
                   editor={editor}
-                  className="flex-1 overflow-y-auto bg-slate-50"
+                  className="min-h-[300px] bg-slate-50"
                 />
               </div>
+
+              {/* Questions Editor */}
+              {questions.length > 0 && (
+                <div className="border border-slate-300 rounded-lg overflow-hidden">
+                  <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
+                    <h3 className="font-semibold text-slate-900">Questions ({questions.length})</h3>
+                    <p className="text-sm text-slate-600">Review and edit the generated questions</p>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto p-4 space-y-4">
+                    {questions.map((question, index) => (
+                      <div key={index} className="border border-slate-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium text-slate-900">Question {question.questionNumber}</h4>
+                          <select
+                            value={question.type}
+                            onChange={(e) => updateQuestion(index, 'type', e.target.value)}
+                            className="px-2 py-1 border border-slate-300 rounded text-sm"
+                          >
+                            <option value="TFNG">True/False/Not Given</option>
+                            <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                            <option value="MATCHING">Matching</option>
+                            <option value="FILL_IN_BLANK">Fill in Blank</option>
+                            <option value="YNNG">Yes/No/Not Given</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Question Text
+                            </label>
+                            <textarea
+                              value={question.text}
+                              onChange={(e) => updateQuestion(index, 'text', e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              rows={2}
+                            />
+                          </div>
+
+                          {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MATCHING') && (
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Options (one per line)
+                              </label>
+                              <textarea
+                                value={question.options.join('\n')}
+                                onChange={(e) => updateQuestion(index, 'options', e.target.value.split('\n').filter(opt => opt.trim()))}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                rows={3}
+                                placeholder="Option A\nOption B\nOption C"
+                              />
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Correct Answer
+                              </label>
+                              <input
+                                type="text"
+                                value={question.correctAnswer}
+                                onChange={(e) => updateQuestion(index, 'correctAnswer', e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">
+                                Explanation
+                              </label>
+                              <input
+                                type="text"
+                                value={question.explanation}
+                                onChange={(e) => updateQuestion(index, 'explanation', e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
