@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Split from 'react-split';
+import { CheckCircle } from 'lucide-react';
 
 interface Question {
   _id: string;
@@ -91,35 +92,38 @@ export function ListeningExamPage() {
         </div>
         <button
           onClick={handleSubmit}
-          className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors shadow-md"
+          className="inline-flex items-center gap-2 px-8 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-all shadow-md shadow-red-200 active:scale-95"
         >
+          <CheckCircle className="h-4 w-4" />
           Nộp bài
         </button>
       </div>
 
       {/* Control bar */}
-      <div className="sticky top-16 bg-white z-10 border-b border-slate-200 flex items-center justify-between px-8 py-2">
-        <div className="flex gap-2">
+      <div className="sticky top-16 bg-white z-10 border-b border-slate-200 flex items-center gap-4 px-8 py-3">
+        <div className="flex gap-2 shrink-0">
           {testData.parts.map((p, idx) => (
             <button
               key={p.partNumber}
               onClick={() => setCurrentPartIndex(idx)}
-              className={`px-3 py-1 text-sm font-medium rounded ${
+              className={`px-5 py-2 text-sm rounded-lg transition-colors ${
                 currentPartIndex === idx
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-red-600 text-white font-bold shadow-sm'
+                  : 'bg-slate-100 text-slate-600 font-medium hover:bg-red-50 hover:text-red-700'
               }`}
             >
               Part {p.partNumber}
             </button>
           ))}
         </div>
-        <audio
-          controls
-          src={currentPart.audioUrl}
-          key={currentPart.audioUrl}
-          className="w-full max-w-md"
-        />
+        <div className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+          <audio
+            controls
+            src={currentPart.audioUrl}
+            key={currentPart.audioUrl}
+            className="w-full"
+          />
+        </div>
       </div>
 
       {/* Split pane */}
@@ -136,28 +140,28 @@ export function ListeningExamPage() {
       >
         {/* Left - description */}
         <div
-          className="overflow-y-auto bg-white"
+          className="overflow-y-auto bg-white scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
           style={{ height: 'calc(100vh - 150px)' }}
         >
           <div
-            className="prose prose-lg max-w-none p-6"
+            className="prose prose-slate prose-lg max-w-none p-6 prose-a:text-red-600 prose-a:no-underline hover:prose-a:underline"
             dangerouslySetInnerHTML={{ __html: currentPart.description }}
           />
         </div>
 
         {/* Right - questions */}
         <div
-          className="overflow-y-auto bg-slate-50 p-6"
+          className="overflow-y-auto bg-slate-50/50 p-6 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent"
           style={{ height: 'calc(100vh - 150px)' }}
         >
           <div className="max-w-2xl mx-auto space-y-6">
             {currentPart.questions.map((q, idx) => (
               <div
                 key={q._id || idx}
-                className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm"
+                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white text-sm font-bold">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-600 text-white text-sm font-bold">
                     {startingIndex + idx + 1}
                   </div>
                   <div className="flex-1 space-y-4">
@@ -168,7 +172,7 @@ export function ListeningExamPage() {
                         {q.options.map((opt) => (
                           <label
                             key={opt}
-                            className="flex items-center gap-3 cursor-pointer hover:bg-indigo-50 p-3 rounded-lg transition-colors"
+                            className="flex items-center gap-3 cursor-pointer hover:bg-red-50 p-3 rounded-lg transition-colors"
                           >
                             <input
                               type="radio"
@@ -176,7 +180,7 @@ export function ListeningExamPage() {
                               value={opt}
                               checked={answers[q._id] === opt}
                               onChange={(e) => handleAnswerChange(q._id, e.target.value)}
-                              className="h-4 w-4 text-indigo-600"
+                              className="h-4 w-4 accent-red-600 text-red-600 focus:ring-red-500"
                             />
                             <span className="text-sm text-slate-700">{opt}</span>
                           </label>
@@ -188,13 +192,13 @@ export function ListeningExamPage() {
                         value={answers[q._id] || ''}
                         onChange={(e) => handleAnswerChange(q._id, e.target.value)}
                         placeholder="Nhập câu trả lời..."
-                        className="w-full mt-3 px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-all"
+                        className="w-full mt-3 px-4 py-3 border border-slate-300 rounded-xl text-slate-800 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent focus:bg-white transition-all"
                       />
                     ) : (q.type === 'map_labeling' || q.type === 'matching') && q.options ? (
                       <select
                         value={answers[q._id] || ''}
                         onChange={(e) => handleAnswerChange(q._id, e.target.value)}
-                        className="w-full border border-slate-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                        className="w-full border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                       >
                         <option value="">Chọn đáp án</option>
                         {q.options.map((opt) => (

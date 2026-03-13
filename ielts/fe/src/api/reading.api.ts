@@ -20,6 +20,8 @@ export interface ReadingTest {
   difficulty?: string;
   bandScore?: number | string;
   passages?: ReadingPassage[];
+  passageCount?: number;
+  totalQuestionCount?: number;
   questionCount?: number;
   totalQuestions?: number;
 }
