@@ -12,6 +12,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
 import { ReadingExamPage } from './pages/ReadingExamPage';
+import ReadingListPage from './pages/ReadingListPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
 import { WritingExamPage } from './pages/WritingExamPage';
 import RegisterPage from './pages/RegisterPage';
@@ -94,6 +95,7 @@ export default function App() {
 
         {/* Reading Routes (with DashboardLayout) */}
         <Route path="/reading" element={<DashboardLayout />}>
+          <Route index element={<ReadingListPage />} />
           <Route path=":id" element={<ReadingExamPage />} />
         </Route>
 

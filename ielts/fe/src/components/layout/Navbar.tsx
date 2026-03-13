@@ -25,7 +25,7 @@ export function Navbar() {
   const handleLogout = () => {
     logout();
     setIsDropdownOpen(false);
-    navigate('/');
+    navigate('/dashboard');
   };
 
   return (

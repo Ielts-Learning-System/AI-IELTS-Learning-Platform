@@ -1,12 +1,21 @@
-import { Headphones, BookOpen, PenTool, Mic, LayoutDashboard, History, Settings, ChevronDown } from 'lucide-react';
+import {
+  Headphones,
+  BookOpen,
+  PenTool,
+  Mic,
+  LayoutDashboard,
+  History,
+  Settings,
+  ChevronDown,
+} from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
-import { useState, useMemo } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 
 interface NavItem {
   name: string;
   path: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   subItems?: SubItem[];
 }
 
@@ -40,8 +49,7 @@ export function Sidebar() {
   const location = useLocation();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
-  // Auto-expand Listening if pathname matches
-  useMemo(() => {
+  useEffect(() => {
     if (location.pathname.startsWith('/listening')) {
       setExpandedItem('Listening');
     } else {
@@ -49,71 +57,97 @@ export function Sidebar() {
     }
   }, [location.pathname]);
 
-  const isSubItemActive = (subPath: string): boolean => {
-    return location.pathname === subPath;
-  };
+  const isSubItemActive = (subPath: string): boolean => location.pathname === subPath;
 
   return (
-    <aside className="flex w-64 flex-col border-r border-indigo-100 bg-slate-50/50 h-[calc(100vh-4rem)]">
+    <aside className="flex h-[calc(100vh-4rem)] w-64 flex-col border-r border-red-100 bg-white">
       <div className="flex-1 overflow-y-auto py-6 px-4">
         <div className="space-y-1">
-          <p className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+          <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
             Luyện tập
           </p>
+
           {navItems.map((item) => {
             const isActive = location.pathname.startsWith(item.path);
             const isItemExpanded = expandedItem === item.name;
-            const hasSubItems = item.subItems && item.subItems.length > 0;
+            const hasSubItems = Boolean(item.subItems?.length);
+
+            const baseClasses = cn(
+              'w-full rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300',
+              'flex items-center gap-3',
+              'hover:translate-x-1 hover:shadow-sm',
+              isActive
+                ? 'bg-[#E31837] text-white shadow-md shadow-red-200/70'
+                : 'text-slate-700 hover:bg-red-50 hover:text-[#E31837]'
+            );
+
+            const navContent = (
+              <>
+                <item.icon
+                  className={cn(
+                    'h-5 w-5 transition-colors duration-300',
+                    isActive ? 'text-white' : 'text-slate-400'
+                  )}
+                />
+                <span className="flex-1 text-left">{item.name}</span>
+                {hasSubItems && (
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 transition-transform duration-300',
+                      isItemExpanded ? 'rotate-180' : 'rotate-0'
+                    )}
+                  />
+                )}
+              </>
+            );
 
             return (
-              <div key={item.name}>
-                <button
-                  onClick={() => {
-                    if (hasSubItems) {
-                      setExpandedItem(isItemExpanded ? null : item.name);
-                    }
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all",
-                    isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                      : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-900'
-                  )}
-                >
-                  <item.icon
-                    className={cn('h-5 w-5', isActive ? 'text-indigo-100' : 'text-slate-400')}
-                  />
-                  <span className="flex-1 text-left">{item.name}</span>
-                  {hasSubItems && (
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 transition-transform',
-                        isItemExpanded ? 'rotate-180' : ''
-                      )}
-                    />
-                  )}
-                </button>
+              <div key={item.name} className="space-y-2">
+                {hasSubItems ? (
+                  <button
+                    type="button"
+                    onClick={() => setExpandedItem(isItemExpanded ? null : item.name)}
+                    className={baseClasses}
+                    aria-expanded={isItemExpanded}
+                    aria-controls={`submenu-${item.name}`}
+                  >
+                    {navContent}
+                  </button>
+                ) : (
+                  <Link to={item.path} className={baseClasses}>
+                    {navContent}
+                  </Link>
+                )}
 
-                {/* Sub-menu items */}
-                {hasSubItems && isItemExpanded && (
-                  <div className="mt-2 ml-4 space-y-1 pl-3 border-l-2 border-indigo-200">
-                    {item.subItems.map((subItem) => {
-                      const isSubActive = isSubItemActive(subItem.path);
-                      return (
-                        <Link
-                          key={subItem.path}
-                          to={subItem.path}
-                          className={cn(
-                            'block rounded-lg px-3 py-2 text-sm font-medium transition-all',
-                            isSubActive
-                              ? 'bg-indigo-100 text-indigo-700 font-semibold'
-                              : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-900'
-                          )}
-                        >
-                          {subItem.name}
-                        </Link>
-                      );
-                    })}
+                {hasSubItems && (
+                  <div
+                    id={`submenu-${item.name}`}
+                    className={cn(
+                      'ml-4 overflow-hidden border-l-2 border-red-100 pl-3 transition-all duration-300 ease-out',
+                      isItemExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                    )}
+                  >
+                    <div className="space-y-1 pb-1 pt-1">
+                      {item.subItems?.map((subItem) => {
+                        const isSubActive = isSubItemActive(subItem.path);
+
+                        return (
+                          <Link
+                            key={subItem.path}
+                            to={subItem.path}
+                            className={cn(
+                              'block rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300',
+                              'hover:translate-x-1',
+                              isSubActive
+                                ? 'bg-red-50 text-[#E31837] shadow-sm'
+                                : 'text-slate-600 hover:bg-red-50 hover:text-[#E31837]'
+                            )}
+                          >
+                            {subItem.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -122,15 +156,15 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="p-4 border-t border-indigo-100">
+      <div className="border-t border-red-100 p-4">
         <div className="space-y-1">
           {bottomItems.map((item) => (
             <Link
               key={item.name}
               to={item.path}
-              className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-300 hover:translate-x-1 hover:bg-red-50 hover:text-[#E31837]"
             >
-              <item.icon className="h-5 w-5 text-slate-400" />
+              <item.icon className="h-5 w-5 text-slate-400 transition-colors duration-300" />
               {item.name}
             </Link>
           ))}
