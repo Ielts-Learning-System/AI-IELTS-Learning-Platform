@@ -5,9 +5,11 @@ import Split from 'react-split';
 
 interface Question {
   _id: string;
-  questionText: string;
-  type: 'multiple_choice' | 'true_false_ng' | 'matching' | 'fill_blank';
+  text: string;
+  type: 'MULTIPLE_CHOICE' | 'FILL_IN_BLANK' | 'MATCHING' | 'TFNG' | 'YNNG';
   options?: string[];
+  questionNumber?: number;
+  correctAnswer?: string;
 }
 
 interface Passage {
@@ -126,16 +128,19 @@ export function ReadingExamPage() {
                 <div className="flex gap-4">
                   {/* Question Number */}
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white text-sm font-bold">
-                    {index + 1}
+                    {question.questionNumber || index + 1}
                   </div>
 
                   {/* Question Content */}
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900 mb-4">{question.questionText}</p>
+                    <p className="font-medium text-slate-900 mb-4">{question.text}</p>
 
-                    {/* Options for Multiple Choice or True/False/NG */}
-                    {(question.type === 'multiple_choice' ||
-                      question.type === 'true_false_ng') && question.options ? (
+                    {/* Options for Multiple Choice, TFNG, or YNNG */}
+                    {(question.type === 'MULTIPLE_CHOICE' ||
+                      question.type === 'TFNG' ||
+                      question.type === 'YNNG') &&
+                      question.options &&
+                      question.options.length > 0 ? (
                       <div className="space-y-3">
                         {question.options.map((option) => (
                           <label
