@@ -27,13 +27,39 @@ exports.getAllTests = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const tests = await ReadingTest.find({})
-      .select('_id title description isPublished createdAt createdBy')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const [tests, totalResult] = await Promise.all([
+      ReadingTest.aggregate([
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            description: 1,
+            isPublished: 1,
+            createdAt: 1,
+            createdBy: 1,
+            passageCount: { $size: { $ifNull: ['$passages', []] } },
+            totalQuestionCount: {
+              $reduce: {
+                input: { $ifNull: ['$passages', []] },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    '$$value',
+                    { $size: { $ifNull: ['$$this.questions', []] } },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      ]),
+      ReadingTest.countDocuments({}),
+    ]);
 
-    const total = await ReadingTest.countDocuments({});
+    const total = totalResult;
 
     res.status(200).json({
       success: true,

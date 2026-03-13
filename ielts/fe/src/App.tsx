@@ -14,42 +14,13 @@ import { TestManagement } from './pages/teacher/TestManagement';
 import { ReadingExamPage } from './pages/ReadingExamPage';
 import ReadingListPage from './pages/ReadingListPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
+import ListeningListPage from './pages/ListeningListPage';
 import { WritingExamPage } from './pages/WritingExamPage';
+import { SpeakingExamPage } from './pages/SpeakingExamPage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import DictationPage from './pages/DictationExercisePage';
-
-/**
- * Placeholder component for IELTS Listening exercises
- */
-function IELTSListeningPage() {
-  return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-4">IELTS Listening Exercises</h1>
-      <p className="text-gray-600 mb-6">
-        Practice official IELTS listening tests with instant feedback and detailed statistics.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Placeholder cards for listening exercises */}
-        {[1, 2, 3, 4, 5, 6].map((num) => (
-          <div
-            key={num}
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
-          >
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Test {num}</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Complete this practice test to improve your listening skills.
-            </p>
-            <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-              Start Test
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * NotFound (404) page component
@@ -89,7 +60,8 @@ export default function App() {
         <Route path="/listening" element={<DashboardLayout />}>
           {/* Auto-redirect /listening to /listening/ielts */}
           <Route index element={<Navigate to="/listening/ielts" replace />} />
-          <Route path="ielts" element={<IELTSListeningPage />} />
+          <Route path="ielts" element={<ListeningListPage />} />
+          <Route path="ielts/:id" element={<ListeningExamPage />} />
           <Route path="dictation" element={<DictationPage />} />
         </Route>
 
@@ -102,6 +74,11 @@ export default function App() {
         {/* Writing Routes (with DashboardLayout) */}
         <Route path="/writing" element={<DashboardLayout />}>
           <Route path=":id" element={<WritingExamPage />} />
+        </Route>
+
+        {/* Speaking Routes (with DashboardLayout) */}
+        <Route path="/speaking" element={<DashboardLayout />}>
+          <Route path="/speaking" element={<SpeakingExamPage />} />
         </Route>
 
         {/* Admin Routes */}

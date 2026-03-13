@@ -21,13 +21,60 @@ const calculateBandScore = (correctAnswers) => {
   return 1.0;
 };
 
-// Get all tests (only _id, title, description)
+// Get all tests (with partCount & totalQuestionCount)
 exports.getAllTests = async (req, res) => {
   try {
-    const tests = await ListeningTest.find({}, '_id title description');
-    res.json(tests);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [tests, total] = await Promise.all([
+      ListeningTest.aggregate([
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            description: 1,
+            createdAt: 1,
+            partCount: { $size: { $ifNull: ['$parts', []] } },
+            totalQuestionCount: {
+              $reduce: {
+                input: { $ifNull: ['$parts', []] },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    '$$value',
+                    { $size: { $ifNull: ['$$this.questions', []] } },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      ]),
+      ListeningTest.countDocuments({}),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: tests,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Get All Listening Tests Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy danh sách đề thi Listening',
+      error: error.message,
+    });
   }
 };
 
