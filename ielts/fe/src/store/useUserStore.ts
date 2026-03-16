@@ -36,12 +36,14 @@ export const useUserStore = create<UserState>()(
       },
 
       logout: () => {
-        localStorage.removeItem('token');
+        localStorage.clear();
+        sessionStorage.clear();
         set({ 
           user: null, 
           token: null, 
           isAuthenticated: false 
         });
+        window.location.replace('/');
       },
     }),
     {

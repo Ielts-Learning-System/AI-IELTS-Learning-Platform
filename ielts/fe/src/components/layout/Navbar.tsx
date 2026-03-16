@@ -23,9 +23,8 @@ export function Navbar() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
     setIsDropdownOpen(false);
-    navigate('/dashboard');
+    logout(); // clears storage and redirects via window.location.replace
   };
 
   return (

@@ -18,9 +18,10 @@ import ListeningListPage from './pages/ListeningListPage';
 import { WritingExamPage } from './pages/WritingExamPage';
 import { SpeakingExamPage } from './pages/SpeakingExamPage';
 import RegisterPage from './pages/RegisterPage';
-import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
+import HomePage from './pages/HomePage';
 import DictationPage from './pages/DictationExercisePage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 /**
  * NotFound (404) page component
@@ -46,57 +47,74 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Login & Register Routes (no layout) */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* Root — public landing page */}
+        <Route path="/" element={<DashboardLayout />}>
+          <Route index element={<HomePage />} />
+        </Route>
+
+        {/* Register Route (login is handled via Navbar modal) */}
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Student Dashboard Routes (with DashboardLayout) */}
+        {/* Protected Routes — blur overlay when unauthenticated */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="profile" element={<ProfilePage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
         </Route>
 
-        {/* Listening Routes (with DashboardLayout) */}
+        {/* Listening Routes */}
         <Route path="/listening" element={<DashboardLayout />}>
-          {/* Auto-redirect /listening to /listening/ielts */}
-          <Route index element={<Navigate to="/listening/ielts" replace />} />
-          <Route path="ielts" element={<ListeningListPage />} />
-          <Route path="ielts/:id" element={<ListeningExamPage />} />
-          <Route path="dictation" element={<DictationPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<Navigate to="/listening/ielts" replace />} />
+            <Route path="ielts" element={<ListeningListPage />} />
+            <Route path="ielts/:id" element={<ListeningExamPage />} />
+            <Route path="dictation" element={<DictationPage />} />
+          </Route>
         </Route>
 
-        {/* Reading Routes (with DashboardLayout) */}
+        {/* Reading Routes */}
         <Route path="/reading" element={<DashboardLayout />}>
-          <Route index element={<ReadingListPage />} />
-          <Route path=":id" element={<ReadingExamPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<ReadingListPage />} />
+            <Route path=":id" element={<ReadingExamPage />} />
+          </Route>
         </Route>
 
-        {/* Writing Routes (with DashboardLayout) */}
+        {/* Writing Routes */}
         <Route path="/writing" element={<DashboardLayout />}>
-          <Route path=":id" element={<WritingExamPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path=":id" element={<WritingExamPage />} />
+          </Route>
         </Route>
 
-        {/* Speaking Routes (with DashboardLayout) */}
+        {/* Speaking Routes */}
         <Route path="/speaking" element={<DashboardLayout />}>
-          <Route path="/speaking" element={<SpeakingExamPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<SpeakingExamPage />} />
+          </Route>
         </Route>
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<AdminDashboard />} />
-          <Route path="resources" element={<AdminDashboard />} />
-          <Route path="reports" element={<AdminDashboard />} />
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminDashboard />} />
+            <Route path="resources" element={<AdminDashboard />} />
+            <Route path="reports" element={<AdminDashboard />} />
+          </Route>
         </Route>
 
         {/* Teacher Routes */}
         <Route path="/teacher" element={<TeacherLayout />}>
-          <Route index element={<TeacherDashboard />} />
-          <Route path="reading" element={<TestManagement />} />
-          <Route path="listening" element={<TestManagement />} />
-          <Route path="writing" element={<TeacherDashboard />} />
-          <Route path="speaking" element={<TeacherDashboard />} />
-          <Route path="students" element={<TeacherDashboard />} />
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<TeacherDashboard />} />
+            <Route path="reading" element={<TestManagement />} />
+            <Route path="listening" element={<TestManagement />} />
+            <Route path="writing" element={<TeacherDashboard />} />
+            <Route path="speaking" element={<TeacherDashboard />} />
+            <Route path="students" element={<TeacherDashboard />} />
+          </Route>
         </Route>
 
         {/* Catch-all 404 Route */}
