@@ -16,6 +16,7 @@ import ReadingListPage from './pages/ReadingListPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
 import ListeningListPage from './pages/ListeningListPage';
 import { WritingExamPage } from './pages/WritingExamPage';
+import WritingListPage from './pages/WritingListPage';
 import { SpeakingExamPage } from './pages/SpeakingExamPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
@@ -84,6 +85,7 @@ export default function App() {
         {/* Writing Routes */}
         <Route path="/writing" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
+            <Route index element={<WritingListPage />} />
             <Route path=":id" element={<WritingExamPage />} />
           </Route>
         </Route>

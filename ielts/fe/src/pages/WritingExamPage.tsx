@@ -3,45 +3,46 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Split from 'react-split';
 
-interface Task {
-  taskNumber: number;
-  title: string;
-  content: string;
-  minWords: number;
-}
-
-interface WritingTest {
+interface Writing {
   _id: string;
   title: string;
-  description: string;
-  tasks: Task[];
+  type: 'Task 1' | 'Task 2';
+  category: string;
+  timeLimit: number;
+  contentHtml: string;
+  isSample: boolean;
+  sampleInfo?: {
+    bandScore: number;
+    contentHtml: string;
+    author: string;
+  };
+  tags: string[];
 }
 
 export function WritingExamPage() {
   const { id } = useParams<{ id: string }>();
-  const [testData, setTestData] = useState<WritingTest | null>(null);
+  const [writing, setWriting] = useState<Writing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentTaskIndex, setCurrentTaskIndex] = useState<0 | 1>(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({ 0: '', 1: '' });
-  const [notes, setNotes] = useState<Record<number, string>>({ 0: '', 1: '' });
+  const [answer, setAnswer] = useState('');
+  const [noteText, setNoteText] = useState('');
   const [showNotes, setShowNotes] = useState(false);
   const [highlightContent, setHighlightContent] = useState(false);
 
   useEffect(() => {
-    const fetchTest = async () => {
+    const fetchWriting = async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get(`http://localhost:3000/api/writing/${id}`);
-        setTestData(res.data?.data ?? res.data);
+        const res = await axios.get(`http://localhost:3000/api/writing/items/${id}`);
+        setWriting(res.data?.data ?? res.data);
       } catch (err) {
-        console.error('❌ Error fetching writing test:', err);
+        console.error('Error fetching writing:', err);
       } finally {
         setIsLoading(false);
       }
     };
 
     if (id) {
-      fetchTest();
+      fetchWriting();
     }
   }, [id]);
 
@@ -57,7 +58,7 @@ export function WritingExamPage() {
     );
   }
 
-  if (!testData) {
+  if (!writing) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
         <p className="text-lg text-red-600">Không tìm thấy đề thi</p>
@@ -65,22 +66,12 @@ export function WritingExamPage() {
     );
   }
 
-  const currentTask = testData.tasks[currentTaskIndex];
-  const currentAnswer = answers[currentTaskIndex] || '';
-  const currentNotes = notes[currentTaskIndex] || '';
-  const wordCount = getWordCount(currentAnswer);
-  const isWordCountValid = wordCount >= currentTask.minWords;
-
-  const handleAnswerChange = (value: string) => {
-    setAnswers(prev => ({ ...prev, [currentTaskIndex]: value }));
-  };
-
-  const handleNotesChange = (value: string) => {
-    setNotes(prev => ({ ...prev, [currentTaskIndex]: value }));
-  };
+  const minWords = writing.type === 'Task 1' ? 150 : 250;
+  const wordCount = getWordCount(answer);
+  const isWordCountValid = wordCount >= minWords;
 
   const handleSubmit = () => {
-    console.log('📝 Submitting answers', answers);
+    console.log('Submitting answer', { testId: writing._id, answer });
     // TODO: call API to submit
   };
 
@@ -90,12 +81,12 @@ export function WritingExamPage() {
       <div className="sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
         <div className="flex items-center justify-between px-6 py-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{testData.title}</h1>
-            <p className="text-sm text-slate-500">{testData.description}</p>
+            <h1 className="text-2xl font-bold text-slate-900">{writing.title}</h1>
+            <p className="text-sm text-slate-500">{writing.type} &middot; {writing.category} &middot; {writing.timeLimit} phút</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm text-slate-600">
-              Time: 59:45 {/* TODO: Add countdown timer */}
+              Time: {writing.timeLimit}:00
             </div>
             <button
               onClick={handleSubmit}
@@ -106,35 +97,17 @@ export function WritingExamPage() {
           </div>
         </div>
 
-        {/* Task Navigation & Controls */}
-        <div className="flex items-center justify-between px-6 pb-4">
-          <div className="flex items-center gap-2">
-            {[0, 1].map((index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentTaskIndex(index as 0 | 1)}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                  currentTaskIndex === index
-                    ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                Task {index + 1}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={highlightContent}
-                onChange={(e) => setHighlightContent(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
-              />
-              Highlight nội dung
-            </label>
-          </div>
+        {/* Controls */}
+        <div className="flex items-center justify-end px-6 pb-4">
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={highlightContent}
+              onChange={(e) => setHighlightContent(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600"
+            />
+            Highlight nội dung
+          </label>
         </div>
       </div>
 
@@ -157,7 +130,7 @@ export function WritingExamPage() {
         >
           <div
             className={`prose prose-lg max-w-none ${highlightContent ? 'prose-indigo' : ''}`}
-            dangerouslySetInnerHTML={{ __html: currentTask.content }}
+            dangerouslySetInnerHTML={{ __html: writing.contentHtml }}
           />
         </div>
 
@@ -177,8 +150,8 @@ export function WritingExamPage() {
             </button>
             {showNotes && (
               <textarea
-                value={currentNotes}
-                onChange={(e) => handleNotesChange(e.target.value)}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Ghi chú dàn ý của bạn ở đây..."
                 className="w-full mt-2 p-3 bg-slate-100 border border-slate-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all"
                 rows={4}
@@ -191,12 +164,12 @@ export function WritingExamPage() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
               <span className="text-sm font-medium text-slate-600">Bài làm của bạn</span>
               <span className={`text-sm font-medium ${isWordCountValid ? 'text-green-600' : 'text-red-600'}`}>
-                {wordCount} từ (Tối thiểu: {currentTask.minWords})
+                {wordCount} từ (Tối thiểu: {minWords})
               </span>
             </div>
             <textarea
-              value={currentAnswer}
-              onChange={(e) => handleAnswerChange(e.target.value)}
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
               placeholder="Bắt đầu viết bài luận của bạn ở đây..."
               className="flex-1 w-full p-6 resize-none focus:outline-none focus:ring-0 text-slate-700 leading-relaxed bg-white"
             />
