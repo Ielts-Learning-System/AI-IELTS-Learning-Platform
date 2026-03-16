@@ -64,7 +64,9 @@ export function Navbar() {
                 className="flex items-center gap-3 pl-4 pr-2 border-l border-slate-200 hover:bg-slate-50 rounded-lg transition-colors py-1"
               >
                 <div className="flex flex-col items-end">
-                  <span className="text-sm font-medium text-slate-700">{user?.name}</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    {user?.name || user?.email || 'Người dùng'}
+                  </span>
                   {/* role badge */}
                   {(() => {
                     const userRole = user?.role?.toLowerCase() || 'student';
