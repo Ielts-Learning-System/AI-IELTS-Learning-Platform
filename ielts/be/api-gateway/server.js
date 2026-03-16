@@ -32,6 +32,30 @@ app.get('/', (req, res) => {
 
 /**
  * =============================
+ * Anti-Caching Middleware for Protected Routes
+ * =============================
+ */
+const noCacheHeaders = (req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'Surrogate-Control': 'no-store',
+  });
+  next();
+};
+
+// Apply to all protected API routes (exclude auth which is public)
+app.use('/api/reading', noCacheHeaders);
+app.use('/api/listening', noCacheHeaders);
+app.use('/api/dictation', noCacheHeaders);
+app.use('/api/writing', noCacheHeaders);
+app.use('/api/speaking', noCacheHeaders);
+app.use('/api/billing', noCacheHeaders);
+app.use('/api/notification', noCacheHeaders);
+
+/**
+ * =============================
  * Service Proxy
  * =============================
  */
