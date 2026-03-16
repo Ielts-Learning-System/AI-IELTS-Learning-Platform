@@ -1,23 +1,55 @@
-const WritingTest = require('../models/WritingTest');
+const Writing = require('../models/Writing');
 
-// Get all tests
-exports.getAllTests = async (req, res) => {
+// Get all writings with optional filters (?isSample, ?type)
+exports.getItems = async (req, res) => {
   try {
-    const tests = await WritingTest.find({}, '_id title description');
-    res.json(tests);
+    const filter = {};
+
+    if (req.query.isSample !== undefined) {
+      filter.isSample = req.query.isSample === 'true';
+    }
+    if (req.query.type) {
+      filter.type = req.query.type;
+    }
+
+    const items = await Writing.find(filter).sort({ createdAt: -1 });
+    res.json(items);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// Get test by ID
+// Get single writing by ID
+exports.getItemById = async (req, res) => {
+  try {
+    const item = await Writing.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'Writing not found' });
+    }
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get all writings (legacy list endpoint)
+exports.getAllTests = async (req, res) => {
+  try {
+    const items = await Writing.find({}, '_id title type category isSample');
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get test by ID (legacy)
 exports.getTestById = async (req, res) => {
   try {
-    const test = await WritingTest.findById(req.params.id);
-    if (!test) {
+    const item = await Writing.findById(req.params.id);
+    if (!item) {
       return res.status(404).json({ error: 'Test not found' });
     }
-    res.json(test);
+    res.json(item);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -28,22 +60,15 @@ exports.submitTest = async (req, res) => {
   try {
     const { testId, answers } = req.body;
 
-    // Validate input
-    if (!testId || !answers || !answers.task1 || !answers.task2) {
-      return res.status(400).json({ error: 'Missing required fields: testId, answers.task1, answers.task2' });
+    if (!testId || !answers) {
+      return res.status(400).json({ error: 'Missing required fields: testId, answers' });
     }
 
-    // Here you would typically save the submission to database
-    // For now, just return confirmation
     res.json({
       success: true,
       message: 'Writing test submitted successfully',
       testId,
-      answers: {
-        task1: answers.task1.substring(0, 100) + '...', // Truncate for response
-        task2: answers.task2.substring(0, 100) + '...'
-      },
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -3,10 +3,16 @@ const router = express.Router();
 const {
   getAllTests,
   getTestById,
-  submitTest
+  submitTest,
+  getItems,
+  getItemById,
 } = require('../controllers/writing.controller');
 
-// GET / - Get all tests
+// WritingItem routes (list page)
+router.get('/items', getItems);
+router.get('/items/:id', getItemById);
+
+// Legacy WritingTest routes (exam page)
 router.get('/', getAllTests);
 
 // GET /:id - Get test by ID
