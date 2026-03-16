@@ -23,6 +23,7 @@ import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
 import DictationPage from './pages/DictationExercisePage';
 import ProtectedRoute from './components/ProtectedRoute';
+import SettingPage from './pages/SettingPage';
 
 /**
  * NotFound (404) page component
@@ -94,6 +95,13 @@ export default function App() {
         <Route path="/speaking" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<SpeakingExamPage />} />
+          </Route>
+        </Route>
+
+        {/* Settings Routes */}
+        <Route path="/settings" element={<DashboardLayout />}>
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<SettingPage />} />
           </Route>
         </Route>
 
