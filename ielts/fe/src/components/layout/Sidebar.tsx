@@ -11,6 +11,7 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useEffect, useState, type ComponentType } from 'react';
+import { useUserStore } from '../../store/useUserStore';
 
 interface NavItem {
   name: string;
@@ -47,6 +48,7 @@ const bottomItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { isAuthenticated } = useUserStore();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
   useEffect(() => {
@@ -156,20 +158,22 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="border-t border-red-100 p-4">
-        <div className="space-y-1">
-          {bottomItems.map((item) => (
-            <Link
-              key={item.name}
-              to={item.path}
-              className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-300 hover:translate-x-1 hover:bg-red-50 hover:text-[#E31837]"
-            >
-              <item.icon className="h-5 w-5 text-slate-400 transition-colors duration-300" />
-              {item.name}
-            </Link>
-          ))}
+      {isAuthenticated && (
+        <div className="border-t border-red-100 p-4">
+          <div className="space-y-1">
+            {bottomItems.map((item) => (
+              <Link
+                key={item.name}
+                to={item.path}
+                className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 transition-all duration-300 hover:translate-x-1 hover:bg-red-50 hover:text-[#E31837]"
+              >
+                <item.icon className="h-5 w-5 text-slate-400 transition-colors duration-300" />
+                {item.name}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }
