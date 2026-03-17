@@ -9,6 +9,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { TeacherLayout } from './components/layout/TeacherLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { UserManagement } from './pages/admin/UserManagement';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
 import { ReadingExamPage } from './pages/ReadingExamPage';
@@ -109,7 +110,7 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
             <Route path="resources" element={<AdminDashboard />} />
             <Route path="reports" element={<AdminDashboard />} />
           </Route>

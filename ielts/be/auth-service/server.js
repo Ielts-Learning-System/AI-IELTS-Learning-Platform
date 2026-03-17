@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/auth.routes');
+const userRoutes = require('./src/routes/user.routes');
 
 const app = express();
 
@@ -18,6 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/', authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

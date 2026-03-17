@@ -12,6 +12,6 @@ router.post('/login', login);
 router.get('/profile', verifyToken, getProfile);
 
 // Admin only routes
-router.put('/update-role/:id', verifyToken, authorizeRoles('admin'), updateUserRole);
+router.put('/update-role/:id', verifyToken, authorizeRoles('Admin'), updateUserRole);
 
 module.exports = router;

@@ -36,6 +36,7 @@ services:
       - LISTENING_SERVICE_URL=http://listening-service:3003
       - WRITING_SERVICE_URL=http://writing-service:3004
       - BILLING_SERVICE_URL=http://billing-service:3005
+      - MEDIA_SERVICE_URL=http://media-service:3010
     depends_on:
       - redis
       - auth-service
@@ -43,6 +44,7 @@ services:
       - listening-service # Đảm bảo listening-service chạy trước api-gateway
       - writing-service # Đảm bảo writing-service chạy trước api-gateway
       - billing-service # Đảm bảo billing-service chạy trước api-gateway
+      - media-service # Đảm bảo media-service chạy trước api-gateway
     restart: unless-stopped
 
   auth-service:
@@ -90,6 +92,15 @@ services:
       - .env
     restart: unless-stopped
     
+  media-service:
+    build: ./cloud-media-service
+    container_name: ielts_media
+    ports:
+      - "3010:3010"
+    env_file:
+      - .env
+    restart: unless-stopped
+
   # (Tạm thời map 2 service Gateway và Auth trước để test. 
   # Khi nào code xong các service khác, ta sẽ copy block trên paste xuống và đổi tên)
 

@@ -22,12 +22,12 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create user - Always set role as 'student', ignore if provided in request
+    // Create user - Always set role as 'Student', ignore if provided in request
     const user = await User.create({
       email,
       password,
       name,
-      role: 'student', // Force role to be 'student' for security
+      role: 'Student', // Force role to be 'Student' for security
     });
 
     // Generate token
@@ -146,7 +146,7 @@ const updateUserRole = async (req, res) => {
     }
 
     // Validate role value
-    const validRoles = ['student', 'teacher', 'admin'];
+    const validRoles = ['Student', 'Teacher', 'Admin'];
     if (!validRoles.includes(newRole)) {
       return res.status(400).json({ 
         success: false,
@@ -164,10 +164,10 @@ const updateUserRole = async (req, res) => {
     }
 
     // Prevent admin from changing their own role
-    if (req.user.id === id) {
+    if (req.user.id === id && newRole === 'Student') {
       return res.status(400).json({ 
         success: false,
-        message: 'Cannot change your own role' 
+        message: 'Cannot change your own role to Student' 
       });
     }
 

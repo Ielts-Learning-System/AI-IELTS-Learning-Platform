@@ -53,6 +53,7 @@ app.use('/api/writing', noCacheHeaders);
 app.use('/api/speaking', noCacheHeaders);
 app.use('/api/billing', noCacheHeaders);
 app.use('/api/notification', noCacheHeaders);
+app.use('/api/users', noCacheHeaders);
 
 /**
  * =============================
@@ -72,6 +73,20 @@ app.use(
     pathRewrite: {
       '^/api/auth': '',
     },
+  })
+);
+
+/**
+ * User Management (Auth Service)
+ * URL gọi trên Postman: http://localhost:3000/api/users/...
+ */
+app.use(
+  '/api/users',
+  createProxyMiddleware({
+    target: process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:3001',
+    changeOrigin: true,
+    // Keep /api/users prefix because auth-service mounts app.use('/api/users', userRoutes).
+    pathRewrite: (path, req) => req.originalUrl,
   })
 );
 
