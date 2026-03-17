@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { BookOpen, PenTool, Mic, Users, LayoutDashboard, LogOut } from 'lucide-react';
+import { BookOpen, PenTool, Mic, Users, LayoutDashboard, LogOut, Film } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -7,6 +7,7 @@ import logo from '../../assets/logo.png';
 
 const teacherMenuItems = [
   { name: 'Lớp học của tôi', path: '/teacher', icon: LayoutDashboard },
+  { name: 'Quản lý bài giảng', path: '/teacher/lessons', icon: Film },
   { name: 'Quản lý Đề Reading', path: '/teacher/reading', icon: BookOpen },
   { name: 'Quản lý Đề Listening', path: '/teacher/listening', icon: PenTool },
   { name: 'Chấm Writing', path: '/teacher/writing', icon: PenTool },

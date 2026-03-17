@@ -3,6 +3,7 @@ import {
   BookOpen,
   PenTool,
   Mic,
+  Film,
   LayoutDashboard,
   History,
   Settings,
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { name: 'Reading', path: '/reading', icon: BookOpen },
   { name: 'Writing', path: '/writing', icon: PenTool },
   { name: 'Speaking', path: '/speaking', icon: Mic },
+  { name: 'Lessons', path: '/lessons', icon: Film },
 ];
 
 const bottomItems = [

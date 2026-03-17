@@ -25,6 +25,8 @@ import HomePage from './pages/HomePage';
 import DictationPage from './pages/DictationExercisePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SettingPage from './pages/SettingPage';
+import LessonPage from './pages/LessonPage';
+import { LessonManagement } from './pages/teacher/LessonManagement';
 
 /**
  * NotFound (404) page component
@@ -99,6 +101,13 @@ export default function App() {
           </Route>
         </Route>
 
+        {/* Lesson Routes */}
+        <Route path="/lessons" element={<DashboardLayout />}>
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<LessonPage />} />
+          </Route>
+        </Route>
+
         {/* Settings Routes */}
         <Route path="/settings" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
@@ -120,6 +129,7 @@ export default function App() {
         <Route path="/teacher" element={<TeacherLayout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<TeacherDashboard />} />
+            <Route path="lessons" element={<LessonManagement />} />
             <Route path="reading" element={<TestManagement />} />
             <Route path="listening" element={<TestManagement />} />
             <Route path="writing" element={<TeacherDashboard />} />

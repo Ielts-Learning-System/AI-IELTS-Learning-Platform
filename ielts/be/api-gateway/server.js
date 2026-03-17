@@ -52,6 +52,8 @@ app.use('/api/dictation', noCacheHeaders);
 app.use('/api/writing', noCacheHeaders);
 app.use('/api/speaking', noCacheHeaders);
 app.use('/api/billing', noCacheHeaders);
+app.use('/api/lessons', noCacheHeaders);
+app.use('/api/media', noCacheHeaders);
 app.use('/api/notification', noCacheHeaders);
 app.use('/api/users', noCacheHeaders);
 
@@ -195,6 +197,34 @@ app.use(
     pathRewrite: {
       '^/api/billing': '',
     },
+  })
+);
+
+/**
+ * Lesson Service
+ * URL gọi trên Postman: http://localhost:3000/api/lessons/...
+ */
+app.use(
+  '/api/lessons',
+  createProxyMiddleware({
+    target: process.env.LESSON_SERVICE_URL || 'http://127.0.0.1:3007',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/lessons': '',
+    },
+  })
+);
+
+/**
+ * Media Service (Cloudinary Signature, Upload Helpers)
+ * URL gọi trên Postman: http://localhost:3000/api/media/...
+ */
+app.use(
+  '/api/media',
+  createProxyMiddleware({
+    target: process.env.MEDIA_SERVICE_URL || 'http://localhost:3010',
+    changeOrigin: true,
+    pathRewrite: (path, req) => req.originalUrl,
   })
 );
 

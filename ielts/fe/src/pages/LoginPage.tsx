@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useUserStore } from '../store/useUserStore';
 
 export default function LoginPage() {
+  const { setAuth } = useUserStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,8 +22,27 @@ export default function LoginPage() {
         password,
       });
 
-      localStorage.setItem('token', response.data.token);
-      navigate('/');
+      const { _id, email: userEmail, name, avatar, plan, role, token } = response.data.data;
+
+      const normalizedRole = (role || 'student').toLowerCase();
+      const user = {
+        id: _id,
+        name,
+        email: userEmail,
+        avatar,
+        role: normalizedRole,
+        isVip: plan === 'premium',
+      };
+
+      setAuth(user, token);
+
+      if (normalizedRole === 'admin') {
+        navigate('/admin');
+      } else if (normalizedRole === 'teacher') {
+        navigate('/teacher');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {

@@ -28,6 +28,21 @@ const formatDate = (iso: string) =>
 const getToken = () =>
   localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
 
+const getThumbnailUrl = (videoUrl?: string): string => {
+  if (!videoUrl) return '';
+
+  const trimmedUrl = videoUrl.trim();
+  if (!trimmedUrl) return '';
+
+  // Preserve query string while converting Cloudinary video extension to jpg.
+  const [baseUrl, query = ''] = trimmedUrl.split('?');
+  const thumbnailBase = baseUrl.replace(/\.mp4$/i, '.jpg');
+
+  if (thumbnailBase === baseUrl) return '';
+
+  return query ? `${thumbnailBase}?${query}` : thumbnailBase;
+};
+
 // ---------------------------------------------------------------------------
 // Skeleton card
 // ---------------------------------------------------------------------------
@@ -54,6 +69,10 @@ function LessonCard({
   lesson: Lesson;
   onPlay: (lesson: Lesson) => void;
 }) {
+  const [imageError, setImageError] = useState(false);
+  const thumbnailUrl = getThumbnailUrl(lesson.videoUrl);
+  const showImage = Boolean(thumbnailUrl) && !imageError;
+
   return (
     <div
       onClick={() => onPlay(lesson)}
@@ -61,6 +80,17 @@ function LessonCard({
     >
       {/* Thumbnail */}
       <div className="relative flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-red-50 to-red-100">
+        {showImage && (
+          <img
+            src={thumbnailUrl}
+            alt={lesson.title}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+          />
+        )}
+
+        <div className="absolute inset-0 bg-black/30" />
+
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/80 shadow-md ring-4 ring-white/40 transition-transform duration-200 group-hover:scale-110">
           <Play className="h-7 w-7 translate-x-0.5 fill-red-600 text-red-600" />
         </div>

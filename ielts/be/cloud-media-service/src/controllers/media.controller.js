@@ -80,7 +80,38 @@ async function deleteMedia(req, res, next) {
   }
 }
 
+async function generateUploadSignature(req, res, next) {
+  try {
+    const folder = req.query.folderName || process.env.DEFAULT_UPLOAD_FOLDER || 'ielts_platform/misc';
+    const timestamp = Math.round(Date.now() / 1000);
+
+    const paramsToSign = {
+      folder,
+      timestamp,
+    };
+
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        signature,
+        timestamp,
+        folder,
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   uploadMedia,
   deleteMedia,
+  generateUploadSignature,
 };
