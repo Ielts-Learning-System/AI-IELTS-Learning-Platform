@@ -190,7 +190,6 @@ export function LessonManagement() {
       const sigRes = await axios.get(`${API_BASE}/api/media/generate-signature`, {
         params: {
           folderName: 'ielts_platform/lessons',
-          resourceType: 'video',
         },
         headers: authHeaders(),
       });
@@ -200,9 +199,9 @@ export function LessonManagement() {
       const timestamp: number = signatureData?.timestamp;
       const cloudName: string = signatureData?.cloud_name;
       const apiKey: string = signatureData?.api_key;
-      const folder: string = signatureData?.folder ?? 'ielts_platform/lessons';
+      const folder: string = signatureData?.folder;
 
-      if (!signature || !timestamp || !cloudName || !apiKey) {
+      if (!signature || !timestamp || !cloudName || !apiKey || !folder) {
         throw new Error('Không nhận được chữ ký upload hợp lệ từ server');
       }
 
@@ -213,7 +212,6 @@ export function LessonManagement() {
       cloudFormData.append('timestamp', String(timestamp));
       cloudFormData.append('signature', signature);
       cloudFormData.append('folder', folder);
-      cloudFormData.append('resource_type', 'video');
 
       const cloudinaryUploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
 

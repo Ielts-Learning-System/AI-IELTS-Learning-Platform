@@ -36,6 +36,7 @@ services:
       - LISTENING_SERVICE_URL=http://listening-service:3003
       - WRITING_SERVICE_URL=http://writing-service:3004
       - BILLING_SERVICE_URL=http://billing-service:3005
+      - LESSON_SERVICE_URL=http://lesson-service:3007
       - MEDIA_SERVICE_URL=http://media-service:3010
     depends_on:
       - redis
@@ -44,6 +45,7 @@ services:
       - listening-service # Đảm bảo listening-service chạy trước api-gateway
       - writing-service # Đảm bảo writing-service chạy trước api-gateway
       - billing-service # Đảm bảo billing-service chạy trước api-gateway
+      - lesson-service # Đảm bảo lesson-service chạy trước api-gateway
       - media-service # Đảm bảo media-service chạy trước api-gateway
     restart: unless-stopped
 
@@ -90,6 +92,17 @@ services:
       - "3005:3005"
     env_file:
       - .env
+    restart: unless-stopped
+
+  lesson-service:
+    build: ./lesson-service
+    container_name: ielts_lesson
+    ports:
+      - "3007:3007"
+    env_file:
+      - .env
+    environment:
+      - PORT=3007
     restart: unless-stopped
     
   media-service:
