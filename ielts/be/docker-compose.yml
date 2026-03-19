@@ -35,6 +35,7 @@ services:
       - READING_SERVICE_URL=http://reading-service:3002
       - LISTENING_SERVICE_URL=http://listening-service:3003
       - WRITING_SERVICE_URL=http://writing-service:3004
+      - SPEAKING_SERVICE_URL=http://speaking-service:3008
       - BILLING_SERVICE_URL=http://billing-service:3005
       - LESSON_SERVICE_URL=http://lesson-service:3007
       - MEDIA_SERVICE_URL=http://media-service:3010
@@ -44,6 +45,7 @@ services:
       - reading-service # Đảm bảo reading-service chạy trước api-gateway
       - listening-service # Đảm bảo listening-service chạy trước api-gateway
       - writing-service # Đảm bảo writing-service chạy trước api-gateway
+      - speaking-service # Đảm bảo speaking-service chạy trước api-gateway
       - billing-service # Đảm bảo billing-service chạy trước api-gateway
       - lesson-service # Đảm bảo lesson-service chạy trước api-gateway
       - media-service # Đảm bảo media-service chạy trước api-gateway
@@ -83,6 +85,17 @@ services:
       - "3004:3004"
     env_file:
       - .env
+    restart: unless-stopped
+
+  speaking-service:
+    build: ./speaking-service
+    container_name: ielts_speaking
+    ports:
+      - "3008:3008"
+    env_file:
+      - .env
+    environment:
+      - PORT=3008
     restart: unless-stopped
 
   billing-service:

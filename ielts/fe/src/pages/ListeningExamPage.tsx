@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Split from 'react-split';
 import { CheckCircle } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Question {
   _id: string;
@@ -27,11 +28,14 @@ interface TestData {
 }
 
 export function ListeningExamPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [testData, setTestData] = useState<TestData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentPartIndex, setCurrentPartIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startTime] = useState(() => Date.now());
 
   useEffect(() => {
     const fetchTest = async () => {
@@ -77,13 +81,53 @@ export function ListeningExamPage() {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  const handleSubmit = () => {
-    console.log('📝 Submitting answers', answers);
-    // TODO: call API to submit
+  const handleSubmit = async () => {
+    if (!id || !testData) return;
+
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+    if (!token) {
+      toast.error('Bạn cần đăng nhập trước khi nộp bài.');
+      return;
+    }
+
+    const allQuestions = testData.parts.flatMap((part) => part.questions);
+    const studentAnswers = allQuestions.map((question) => String(answers[question._id] || ''));
+    const timeSpent = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+
+    try {
+      setIsSubmitting(true);
+      const response = await axios.post(
+        `http://localhost:3000/api/listening/${id}/submit`,
+        {
+          studentAnswers,
+          timeSpent,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const attempt = response.data?.data;
+      const payload = {
+        attempt,
+        module: 'Listening' as const,
+      };
+      sessionStorage.setItem('latestAttemptResult', JSON.stringify(payload));
+
+      navigate('/results', { state: payload });
+    } catch (error: any) {
+      console.error('❌ Error submitting listening test:', error);
+      toast.error(error.response?.data?.message || 'Không thể nộp bài Listening.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-white">
+      <Toaster position="top-right" />
       {/* Header */}
       <div className="h-16 border-b border-slate-200 bg-white shadow-sm flex items-center justify-between px-8">
         <div>
@@ -92,10 +136,11 @@ export function ListeningExamPage() {
         </div>
         <button
           onClick={handleSubmit}
-          className="inline-flex items-center gap-2 px-8 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-all shadow-md shadow-red-200 active:scale-95"
+          disabled={isSubmitting}
+          className="inline-flex items-center gap-2 px-8 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition-all shadow-md shadow-red-200 active:scale-95 disabled:cursor-not-allowed disabled:bg-red-300"
         >
           <CheckCircle className="h-4 w-4" />
-          Nộp bài
+          {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
         </button>
       </div>
 

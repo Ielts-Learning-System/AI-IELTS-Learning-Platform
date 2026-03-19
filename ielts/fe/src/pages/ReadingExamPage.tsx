@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Split from 'react-split';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Question {
   _id: string;
@@ -27,10 +28,18 @@ interface TestData {
 }
 
 export function ReadingExamPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [testData, setTestData] = useState<TestData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startTime] = useState(() => Date.now());
+
+  const allQuestions = useMemo(
+    () => testData?.passages.flatMap((item) => item.questions) || [],
+    [testData],
+  );
 
   useEffect(() => {
     const fetchTest = async () => {
@@ -75,12 +84,53 @@ export function ReadingExamPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    console.log('📝 User Answers:', answers);
+  const handleSubmit = async () => {
+    if (!id || !testData) return;
+
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+    if (!token) {
+      toast.error('Bạn cần đăng nhập trước khi nộp bài.');
+      return;
+    }
+
+    const studentAnswers = allQuestions.map((question) => String(answers[question._id] || ''));
+    const timeSpent = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+
+    try {
+      setIsSubmitting(true);
+      const response = await axios.post(
+        `http://localhost:3000/api/reading/${id}/submit`,
+        {
+          studentAnswers,
+          timeSpent,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const attempt = response.data?.data;
+
+      const payload = {
+        attempt,
+        module: 'Reading' as const,
+      };
+      sessionStorage.setItem('latestAttemptResult', JSON.stringify(payload));
+
+      navigate('/results', { state: payload });
+    } catch (error: any) {
+      console.error('❌ Error submitting reading test:', error);
+      toast.error(error.response?.data?.message || 'Không thể nộp bài Reading.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-white">
+      <Toaster position="top-right" />
       {/* Header */}
       <div className="h-16 border-b border-slate-200 bg-white shadow-sm flex items-center justify-between px-8">
         <div>
@@ -89,9 +139,10 @@ export function ReadingExamPage() {
         </div>
         <button
           onClick={handleSubmit}
-          className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+          disabled={isSubmitting}
+          className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-md disabled:cursor-not-allowed disabled:bg-indigo-300"
         >
-          Nộp bài
+          {isSubmitting ? 'Đang nộp...' : 'Nộp bài'}
         </button>
       </div>
 

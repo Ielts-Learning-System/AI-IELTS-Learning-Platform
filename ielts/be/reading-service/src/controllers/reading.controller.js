@@ -1,24 +1,12 @@
 const ReadingTest = require('../models/ReadingTest');
+const ReadingAttempt = require('../models/attempt.model');
+const { convertRawToBand } = require('../utils/scoreConverter');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // ====== Initialize Gemini API ======
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ====== Helper Function: Chuyển đổi số câu đúng thành Band điểm IELTS ======
-const getBandScore = (totalCorrect) => {
-  if (totalCorrect >= 39) return 9.0;
-  if (totalCorrect >= 37) return 8.5;
-  if (totalCorrect >= 35) return 8.0;
-  if (totalCorrect >= 33) return 7.5;
-  if (totalCorrect >= 30) return 7.0;
-  if (totalCorrect >= 27) return 6.5;
-  if (totalCorrect >= 24) return 6.0;
-  if (totalCorrect >= 21) return 5.5;
-  if (totalCorrect >= 18) return 5.0;
-  if (totalCorrect >= 15) return 4.5;
-  if (totalCorrect >= 13) return 4.0;
-  return 3.5;
-};
+const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
 
 // ====== 1. Get All Tests (Pagination) ======
 exports.getAllTests = async (req, res) => {
@@ -151,9 +139,8 @@ exports.createTest = async (req, res) => {
 exports.submitTest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { answers } = req.body; // answers: [{ questionId, userAnswer }, ...]
+    const { studentAnswers, timeSpent } = req.body;
 
-    // Lấy đề thi đầy đủ (có đáp án)
     const test = await ReadingTest.findById(id);
 
     if (!test) {
@@ -163,64 +150,85 @@ exports.submitTest = async (req, res) => {
       });
     }
 
-    if (!Array.isArray(answers)) {
+    if (!Array.isArray(studentAnswers)) {
       return res.status(400).json({
         success: false,
-        message: 'answers phải là một mảng',
+        message: 'studentAnswers phải là một mảng',
       });
     }
 
-    let totalCorrect = 0;
-    const detailedResults = [];
+    const correctAnswers = test.passages.flatMap((passage) =>
+      passage.questions.map((question) => question.correctAnswer)
+    );
 
-    // Lặp qua passages và questions để so khớp
-    test.passages.forEach((passage) => {
-      passage.questions.forEach((question) => {
-        // Tìm đáp án của user cho câu hỏi này
-        const userAnswer = answers.find(
-          (ans) => ans.questionId === question._id.toString()
-        );
+    let rawScore = 0;
+    const details = correctAnswers.map((correctAnswer, index) => {
+      const studentAnswer = String(studentAnswers[index] || '');
+      const isCorrect =
+        normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
 
-        const correctAnswer = question.correctAnswer.toLowerCase().trim();
-        const userAnswerText = userAnswer
-          ? userAnswer.userAnswer.toLowerCase().trim()
-          : '';
+      if (isCorrect) {
+        rawScore++;
+      }
 
-        const isCorrect = userAnswerText === correctAnswer;
-
-        if (isCorrect) {
-          totalCorrect++;
-        }
-
-        detailedResults.push({
-          questionId: question._id,
-          passage: passage.title,
-          questionText: question.text,
-          userAnswer: userAnswerText,
-          correctAnswer: question.correctAnswer,
-          isCorrect,
-        });
-      });
+      return {
+        questionIndex: index + 1,
+        studentAnswer,
+        correctAnswer: String(correctAnswer || ''),
+        isCorrect,
+      };
     });
 
-    // Tính Band Score
-    const bandScore = getBandScore(totalCorrect);
+    const bandScore = convertRawToBand(rawScore, 'reading');
 
-    res.status(200).json({
+    const attempt = await ReadingAttempt.create({
+      testId: test._id,
+      studentId: req.user.id,
+      studentAnswers: studentAnswers.map((answer) => String(answer || '')),
+      rawScore,
+      bandScore,
+      timeSpent: Number.isFinite(Number(timeSpent))
+        ? Math.max(0, Number(timeSpent))
+        : 0,
+      details,
+    });
+
+    const populatedAttempt = await ReadingAttempt.findById(attempt._id).populate(
+      'testId',
+      'title'
+    );
+
+    res.status(201).json({
       success: true,
-      score: {
-        totalCorrect,
-        totalQuestions: detailedResults.length,
-        bandScore,
-        percentage: Math.round((totalCorrect / detailedResults.length) * 100),
-      },
-      detailedResults,
+      data: populatedAttempt,
     });
   } catch (error) {
     console.error('❌ Submit Test Error:', error.message);
     res.status(500).json({
       success: false,
       message: 'Lỗi khi chấm điểm',
+      error: error.message,
+    });
+  }
+};
+
+// ====== 4.1. Get Auto-Graded Attempts ======
+exports.getAttempts = async (req, res) => {
+  try {
+    const attempts = await ReadingAttempt.find({})
+      .populate('testId', 'title')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: attempts,
+    });
+  } catch (error) {
+    console.error('❌ Get Reading Attempts Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy danh sách kết quả auto-graded Reading',
       error: error.message,
     });
   }

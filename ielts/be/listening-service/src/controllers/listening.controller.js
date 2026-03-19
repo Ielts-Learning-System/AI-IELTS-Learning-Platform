@@ -1,25 +1,8 @@
 const ListeningTest = require('../models/ListeningTest');
+const ListeningAttempt = require('../models/attempt.model');
+const { convertRawToBand } = require('../utils/scoreConverter');
 
-// Helper function to calculate IELTS band score
-const calculateBandScore = (correctAnswers) => {
-  if (correctAnswers >= 39) return 9.0;
-  if (correctAnswers >= 37) return 8.5;
-  if (correctAnswers >= 35) return 8.0;
-  if (correctAnswers >= 32) return 7.5;
-  if (correctAnswers >= 30) return 7.0;
-  if (correctAnswers >= 26) return 6.5;
-  if (correctAnswers >= 23) return 6.0;
-  if (correctAnswers >= 18) return 5.5;
-  if (correctAnswers >= 15) return 5.0;
-  if (correctAnswers >= 13) return 4.5;
-  if (correctAnswers >= 10) return 4.0;
-  if (correctAnswers >= 8) return 3.5;
-  if (correctAnswers >= 6) return 3.0;
-  if (correctAnswers >= 4) return 2.5;
-  if (correctAnswers >= 2) return 2.0;
-  if (correctAnswers >= 0) return 1.5;
-  return 1.0;
-};
+const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
 
 // Get all tests (with partCount & totalQuestionCount)
 exports.getAllTests = async (req, res) => {
@@ -106,56 +89,96 @@ exports.createTest = async (req, res) => {
 // Submit test answers
 exports.submitTest = async (req, res) => {
   try {
-    const { testId, answers } = req.body; // answers should be an array of objects: [{ partNumber, questionIndex, answer }]
+    const { id } = req.params;
+    const { studentAnswers, timeSpent } = req.body;
 
-    const test = await ListeningTest.findById(testId);
-    if (!test) {
-      return res.status(404).json({ error: 'Test not found' });
+    if (!Array.isArray(studentAnswers)) {
+      return res.status(400).json({
+        success: false,
+        message: 'studentAnswers phải là một mảng',
+      });
     }
 
-    let totalCorrect = 0;
-    const results = [];
-
-    // Process each part
-    test.parts.forEach((part, partIndex) => {
-      const partResults = {
-        partNumber: part.partNumber,
-        title: part.title,
-        questions: []
-      };
-
-      part.questions.forEach((question, questionIndex) => {
-        const userAnswer = answers.find(a =>
-          a.partNumber === part.partNumber && a.questionIndex === questionIndex
-        );
-
-        const submittedAnswer = userAnswer ? userAnswer.answer.toLowerCase().trim() : '';
-        const correctAnswer = question.correctAnswer.toLowerCase().trim();
-        const isCorrect = submittedAnswer === correctAnswer;
-
-        if (isCorrect) totalCorrect++;
-
-        partResults.questions.push({
-          questionIndex,
-          submittedAnswer: userAnswer ? userAnswer.answer : '',
-          correctAnswer: question.correctAnswer,
-          isCorrect
-        });
+    const test = await ListeningTest.findById(id);
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        message: 'Test not found',
       });
+    }
 
-      results.push(partResults);
+    const correctAnswers = test.parts.flatMap((part) =>
+      part.questions.map((question) => question.correctAnswer)
+    );
+
+    let rawScore = 0;
+    const details = correctAnswers.map((correctAnswer, index) => {
+      const studentAnswer = String(studentAnswers[index] || '');
+      const isCorrect =
+        normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
+
+      if (isCorrect) {
+        rawScore++;
+      }
+
+      return {
+        questionIndex: index + 1,
+        studentAnswer,
+        correctAnswer: String(correctAnswer || ''),
+        isCorrect,
+      };
     });
 
-    const bandScore = calculateBandScore(totalCorrect);
+    const bandScore = convertRawToBand(rawScore, 'listening');
 
-    res.json({
-      totalCorrect,
-      totalQuestions: 40, // Assuming 40 questions total
+    const attempt = await ListeningAttempt.create({
+      testId: test._id,
+      studentId: req.user.id,
+      studentAnswers: studentAnswers.map((answer) => String(answer || '')),
+      rawScore,
       bandScore,
-      results
+      timeSpent: Number.isFinite(Number(timeSpent))
+        ? Math.max(0, Number(timeSpent))
+        : 0,
+      details,
+    });
+
+    const populatedAttempt = await ListeningAttempt.findById(attempt._id).populate(
+      'testId',
+      'title'
+    );
+
+    res.status(201).json({
+      success: true,
+      data: populatedAttempt,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi chấm điểm bài Listening',
+      error: error.message,
+    });
+  }
+};
+
+// Get all auto-graded listening attempts
+exports.getAttempts = async (req, res) => {
+  try {
+    const attempts = await ListeningAttempt.find({})
+      .populate('testId', 'title')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: attempts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy danh sách kết quả auto-graded Listening',
+      error: error.message,
+    });
   }
 };
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs/promises');
 const path = require('path');
 const listeningController = require('../controllers/listening.controller');
+const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
 
 // ====== Routes ======
 
@@ -36,6 +37,9 @@ router.get('/api/dictation', async (req, res) => {
 // GET / - Lấy danh sách tất cả đề thi
 router.get('/', listeningController.getAllTests);
 
+// GET /attempts - Teacher/Admin xem danh sách kết quả auto-graded
+router.get('/attempts', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.getAttempts);
+
 // GET /:id - Lấy chi tiết một đề thi (ẩn đáp án)
 router.get('/:id', listeningController.getTestById);
 
@@ -43,6 +47,6 @@ router.get('/:id', listeningController.getTestById);
 router.post('/', listeningController.createTest);
 
 // POST /:id/submit - Chấm điểm đề thi
-router.post('/:id/submit', listeningController.submitTest);
+router.post('/:id/submit', verifyToken, authorizeRoles('student'), listeningController.submitTest);
 
 module.exports = router;
