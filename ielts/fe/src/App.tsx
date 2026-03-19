@@ -12,13 +12,15 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { UserManagement } from './pages/admin/UserManagement';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
+import GradingDashboard from './pages/teacher/GradingDashboard';
 import { ReadingExamPage } from './pages/ReadingExamPage';
 import ReadingListPage from './pages/ReadingListPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
 import ListeningListPage from './pages/ListeningListPage';
 import { WritingExamPage } from './pages/WritingExamPage';
 import WritingListPage from './pages/WritingListPage';
-import { SpeakingExamPage } from './pages/SpeakingExamPage';
+import MyWritingHistory from './pages/MyWritingHistory';
+import SpeakingTest from './pages/SpeakingTest';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
@@ -27,6 +29,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SettingPage from './pages/SettingPage';
 import LessonPage from './pages/LessonPage';
 import { LessonManagement } from './pages/teacher/LessonManagement';
+import SpeakingGrading from './pages/teacher/SpeakingGrading';
+import ResultPage from './pages/ResultPage';
+import ReadingListeningProgress from './pages/teacher/ReadingListeningProgress';
+import WritingTestManagement from './pages/teacher/WritingTestManagement';
+import SpeakingTestManagement from './pages/teacher/SpeakingTestManagement';
 
 /**
  * NotFound (404) page component
@@ -97,7 +104,19 @@ export default function App() {
         {/* Speaking Routes */}
         <Route path="/speaking" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
-            <Route index element={<SpeakingExamPage />} />
+            <Route index element={<SpeakingTest />} />
+          </Route>
+        </Route>
+
+        <Route path="/history" element={<DashboardLayout />}>
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<MyWritingHistory />} />
+          </Route>
+        </Route>
+
+        <Route path="/results" element={<DashboardLayout />}>
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<ResultPage />} />
           </Route>
         </Route>
 
@@ -132,8 +151,11 @@ export default function App() {
             <Route path="lessons" element={<LessonManagement />} />
             <Route path="reading" element={<TestManagement />} />
             <Route path="listening" element={<TestManagement />} />
-            <Route path="writing" element={<TeacherDashboard />} />
-            <Route path="speaking" element={<TeacherDashboard />} />
+            <Route path="writing" element={<GradingDashboard />} />
+            <Route path="writing-management" element={<WritingTestManagement />} />
+            <Route path="speaking-management" element={<SpeakingTestManagement />} />
+            <Route path="speaking" element={<SpeakingGrading />} />
+            <Route path="auto-graded-results" element={<ReadingListeningProgress />} />
             <Route path="students" element={<TeacherDashboard />} />
           </Route>
         </Route>

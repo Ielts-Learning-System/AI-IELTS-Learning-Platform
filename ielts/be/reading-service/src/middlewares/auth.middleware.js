@@ -21,7 +21,7 @@ const verifyToken = async (req, res, next) => {
     // Attach user info from token to request
     req.user = {
       id: decoded.id,
-      role: decoded.role || 'student'
+      role: String(decoded.role || 'student').toLowerCase(),
     };
 
     next();

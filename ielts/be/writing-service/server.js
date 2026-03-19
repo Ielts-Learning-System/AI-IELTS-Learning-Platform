@@ -5,6 +5,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const writingRoutes = require('./src/routes/writing.routes');
+const submissionRoutes = require('./src/routes/submission.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3004;
@@ -20,6 +21,7 @@ app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/', writingRoutes);
+app.use('/submissions', submissionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

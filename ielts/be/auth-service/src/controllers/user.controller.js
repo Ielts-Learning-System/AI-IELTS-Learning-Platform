@@ -4,7 +4,14 @@ const ALLOWED_ROLES = ['Admin', 'Teacher', 'Student'];
 
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    const filter = {};
+    const roleQuery = String(req.query.role || '').trim();
+
+    if (roleQuery) {
+      filter.role = new RegExp(`^${roleQuery}$`, 'i');
+    }
+
+    const users = await User.find(filter).select('-password').sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -116,8 +123,45 @@ const toggleUserStatus = async (req, res) => {
   }
 };
 
+const getUsersByIds = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ids must be an array',
+      });
+    }
+
+    const cleanedIds = [...new Set(ids.map((id) => String(id || '').trim()).filter(Boolean))];
+
+    if (cleanedIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    const users = await User.find({ _id: { $in: cleanedIds } })
+      .select('_id name email role avatar')
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to resolve users',
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   updateUserRole,
   toggleUserStatus,
+  getUsersByIds,
 };

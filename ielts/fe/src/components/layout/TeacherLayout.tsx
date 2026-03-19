@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { BookOpen, PenTool, Mic, Users, LayoutDashboard, LogOut, Film } from 'lucide-react';
+import { BookOpen, PenTool, Mic, Users, LayoutDashboard, LogOut, Film, ChartColumnBig, FilePenLine } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -10,8 +10,11 @@ const teacherMenuItems = [
   { name: 'Quản lý bài giảng', path: '/teacher/lessons', icon: Film },
   { name: 'Quản lý Đề Reading', path: '/teacher/reading', icon: BookOpen },
   { name: 'Quản lý Đề Listening', path: '/teacher/listening', icon: PenTool },
+  { name: 'Quản lý Prompt Writing', path: '/teacher/writing-management', icon: FilePenLine },
+  { name: 'Quản lý Prompt Speaking', path: '/teacher/speaking-management', icon: Mic },
   { name: 'Chấm Writing', path: '/teacher/writing', icon: PenTool },
   { name: 'Chấm Speaking', path: '/teacher/speaking', icon: Mic },
+  { name: 'KQ Auto-Graded', path: '/teacher/auto-graded-results', icon: ChartColumnBig },
   { name: 'Quản lý học viên', path: '/teacher/students', icon: Users },
 ];
 

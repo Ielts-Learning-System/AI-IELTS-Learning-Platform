@@ -162,7 +162,7 @@ app.use(
 app.use(
   '/api/speaking',
   createProxyMiddleware({
-    target: process.env.SPEAKING_SERVICE_URL || 'http://127.0.0.1:3005',
+    target: process.env.SPEAKING_SERVICE_URL || 'http://127.0.0.1:3008',
     changeOrigin: true,
     pathRewrite: {
       '^/api/speaking': '',

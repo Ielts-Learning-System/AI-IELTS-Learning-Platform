@@ -8,6 +8,9 @@ const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware'
 // GET / - Lấy danh sách tất cả đề thi (public)
 router.get('/', readingController.getAllTests);
 
+// GET /attempts - Teacher/Admin xem danh sách kết quả auto-graded
+router.get('/attempts', verifyToken, authorizeRoles('admin', 'teacher'), readingController.getAttempts);
+
 // GET /:id - Lấy chi tiết một đề thi (public)
 router.get('/:id', readingController.getTestById);
 
@@ -20,8 +23,8 @@ router.put('/:id', verifyToken, authorizeRoles('admin', 'teacher'), readingContr
 // DELETE /:id - Xóa đề thi (Owner/Admin only)
 router.delete('/:id', verifyToken, authorizeRoles('admin', 'teacher'), readingController.deleteTest);
 
-// POST /:id/submit - Chấm điểm đề thi (Student/Teacher/Admin)
-router.post('/:id/submit', verifyToken, readingController.submitTest);
+// POST /:id/submit - Student nộp bài và hệ thống tự chấm
+router.post('/:id/submit', verifyToken, authorizeRoles('student'), readingController.submitTest);
 
 // POST /generate-ai - Generate test from AI based on parameters (Admin/Teacher only)
 router.post('/generate-ai', verifyToken, authorizeRoles('admin', 'teacher'), readingController.generateTestFromAI);
