@@ -72,11 +72,11 @@ export function TestTable({ tests, isLoading, onDelete }: TestTableProps) {
           </thead>
           <tbody className="divide-y divide-slate-200">
             {tests.map((test) => {
-              const safeSkillKey = test.skill?.toLowerCase() || 'default';
+              const safeSkillKey = test.module?.toLowerCase() || 'default';
               const skillColor = skillColors[safeSkillKey] || skillColors.default;
               return (
                 <tr key={test._id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 text-slate-900 font-medium">{test.name}</td>
+                  <td className="px-6 py-4 text-slate-900 font-medium">{test.title}</td>
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${skillColor.bg} ${skillColor.text}`}
@@ -84,7 +84,7 @@ export function TestTable({ tests, isLoading, onDelete }: TestTableProps) {
                       {skillColor.label}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{test.questions} câu</td>
+                  <td className="px-6 py-4 text-slate-600">{test.questionCount} câu</td>
                   <td className="px-6 py-4 text-slate-600">{formatDate(test.createdAt)}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
