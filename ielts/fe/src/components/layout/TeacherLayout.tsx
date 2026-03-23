@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { BookOpen, PenTool, Mic, Users, LayoutDashboard, LogOut, Film, ChartColumnBig, FilePenLine } from 'lucide-react';
+import { BookOpenCheck, PenTool, Mic, Users, LayoutDashboard, LogOut, Film, ChartColumnBig, FilePenLine } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -8,8 +8,12 @@ import logo from '../../assets/logo.png';
 const teacherMenuItems = [
   { name: 'Lớp học của tôi', path: '/teacher', icon: LayoutDashboard },
   { name: 'Quản lý bài giảng', path: '/teacher/lessons', icon: Film },
-  { name: 'Quản lý Đề Reading', path: '/teacher/reading', icon: BookOpen },
-  { name: 'Quản lý Đề Listening', path: '/teacher/listening', icon: PenTool },
+  {
+    name: 'Quản lý Đề R & L',
+    path: '/teacher/tests',
+    icon: BookOpenCheck,
+    activePaths: ['/teacher/tests', '/teacher/reading', '/teacher/listening'],
+  },
   { name: 'Quản lý Prompt Writing', path: '/teacher/writing-management', icon: FilePenLine },
   { name: 'Quản lý Prompt Speaking', path: '/teacher/speaking-management', icon: Mic },
   { name: 'Chấm Writing', path: '/teacher/writing', icon: PenTool },
@@ -43,7 +47,8 @@ export function TeacherLayout() {
         {/* Menu Items */}
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
           {teacherMenuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const activePaths = item.activePaths || [item.path];
+            const isActive = activePaths.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
             return (
               <Link
                 key={item.name}

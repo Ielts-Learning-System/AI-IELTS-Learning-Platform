@@ -153,8 +153,9 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route index element={<TeacherDashboard />} />
             <Route path="lessons" element={<LessonManagement />} />
-            <Route path="reading" element={<TestManagement />} />
-            <Route path="listening" element={<TestManagement />} />
+            <Route path="tests" element={<TestManagement />} />
+            <Route path="reading" element={<Navigate to="/teacher/tests" replace />} />
+            <Route path="listening" element={<Navigate to="/teacher/tests" replace />} />
             <Route path="writing" element={<GradingDashboard />} />
             <Route path="writing-management" element={<WritingTestManagement />} />
             <Route path="speaking-management" element={<SpeakingTestManagement />} />

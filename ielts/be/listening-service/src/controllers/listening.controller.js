@@ -86,6 +86,39 @@ exports.createTest = async (req, res) => {
   }
 };
 
+// Update existing test
+exports.updateTest = async (req, res) => {
+  try {
+    const test = await ListeningTest.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json(test);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Delete test
+exports.deleteTest = async (req, res) => {
+  try {
+    const test = await ListeningTest.findByIdAndDelete(req.params.id);
+
+    if (!test) {
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    res.json({ success: true, message: 'Đề thi Listening đã được xóa' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Submit test answers
 exports.submitTest = async (req, res) => {
   try {

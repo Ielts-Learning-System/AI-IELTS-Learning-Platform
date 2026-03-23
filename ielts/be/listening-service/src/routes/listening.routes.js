@@ -44,7 +44,13 @@ router.get('/attempts', verifyToken, authorizeRoles('admin', 'teacher'), listeni
 router.get('/:id', listeningController.getTestById);
 
 // POST / - Tạo đề thi mới (Admin/Teacher)
-router.post('/', listeningController.createTest);
+router.post('/', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.createTest);
+
+// PUT /:id - Sửa đề thi (Admin/Teacher)
+router.put('/:id', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.updateTest);
+
+// DELETE /:id - Xóa đề thi (Admin/Teacher)
+router.delete('/:id', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.deleteTest);
 
 // POST /:id/submit - Chấm điểm đề thi
 router.post('/:id/submit', verifyToken, authorizeRoles('student'), listeningController.submitTest);

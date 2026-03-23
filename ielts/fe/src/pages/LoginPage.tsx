@@ -22,7 +22,17 @@ export default function LoginPage() {
         password,
       });
 
-      const { _id, email: userEmail, name, avatar, plan, role, token } = response.data.data;
+      const {
+        _id,
+        email: userEmail,
+        name,
+        avatar,
+        plan,
+        role,
+        subscriptionPlan,
+        vipValidUntil,
+        token,
+      } = response.data.data;
 
       const normalizedRole = (role || 'student').toLowerCase();
       const user = {
@@ -32,6 +42,8 @@ export default function LoginPage() {
         avatar,
         role: normalizedRole,
         isVip: plan === 'premium',
+        subscriptionPlan: subscriptionPlan || 'Free',
+        vipValidUntil: vipValidUntil || null,
       };
 
       setAuth(user, token);
