@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { CheckCircle, Search, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2, Search, XCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { useUserStore } from '../../store/useUserStore';
 
 type TransactionStatus = 'Pending' | 'Success' | 'Failed' | 'Rejected';
+type ConfirmDialogType = 'approve' | 'reject' | '';
 
 interface TransactionItem {
   _id: string;
@@ -73,8 +74,20 @@ export function TransactionManagement() {
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  const [isConfirming, setIsConfirming] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | TransactionStatus>('All');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: ConfirmDialogType;
+    transactionId: string | null;
+    orderId: string;
+  }>({
+    isOpen: false,
+    type: '',
+    transactionId: null,
+    orderId: '',
+  });
 
   const transactionsApiBase = getTransactionsApiBase();
 
@@ -179,6 +192,51 @@ export function TransactionManagement() {
       toast.error(message);
     } finally {
       setIsProcessing((prev) => ({ ...prev, [transactionId]: false }));
+    }
+  };
+
+  const openConfirmDialog = (
+    type: ConfirmDialogType,
+    transactionId: string,
+    orderId: string
+  ) => {
+    setConfirmDialog({
+      isOpen: true,
+      type,
+      transactionId,
+      orderId,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    if (isConfirming) return;
+    setConfirmDialog({
+      isOpen: false,
+      type: '',
+      transactionId: null,
+      orderId: '',
+    });
+  };
+
+  const proceedAction = async () => {
+    if (!confirmDialog.transactionId || !confirmDialog.type) return;
+
+    setIsConfirming(true);
+    try {
+      if (confirmDialog.type === 'approve') {
+        await handleApprove(confirmDialog.transactionId);
+      } else {
+        await handleReject(confirmDialog.transactionId);
+      }
+
+      setConfirmDialog({
+        isOpen: false,
+        type: '',
+        transactionId: null,
+        orderId: '',
+      });
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -297,7 +355,13 @@ export function TransactionManagement() {
                               <button
                                 title="Xác nhận đã nhận tiền"
                                 disabled={loading}
-                                onClick={() => handleApprove(transaction._id)}
+                                onClick={() =>
+                                  openConfirmDialog(
+                                    'approve',
+                                    transaction._id,
+                                    transaction.orderId
+                                  )
+                                }
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 <CheckCircle className="h-4 w-4" />
@@ -306,7 +370,13 @@ export function TransactionManagement() {
                               <button
                                 title="Từ chối / Hủy"
                                 disabled={loading}
-                                onClick={() => handleReject(transaction._id)}
+                                onClick={() =>
+                                  openConfirmDialog(
+                                    'reject',
+                                    transaction._id,
+                                    transaction.orderId
+                                  )
+                                }
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 <XCircle className="h-4 w-4" />
@@ -325,6 +395,65 @@ export function TransactionManagement() {
           </div>
         )}
       </div>
+
+      {confirmDialog.isOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              {confirmDialog.type === 'approve' ? (
+                <div className="rounded-full bg-emerald-100 p-2 text-emerald-700">
+                  <CheckCircle className="h-5 w-5" />
+                </div>
+              ) : (
+                <div className="rounded-full bg-rose-100 p-2 text-rose-700">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+              )}
+
+              <h3 className="text-lg font-bold text-slate-900">
+                {confirmDialog.type === 'approve'
+                  ? 'Xác nhận duyệt giao dịch'
+                  : 'Từ chối giao dịch'}
+              </h3>
+            </div>
+
+            <p className="text-sm leading-relaxed text-slate-600">
+              Bạn có chắc chắn muốn {confirmDialog.type === 'approve' ? 'duyệt' : 'từ chối'} đơn
+              hàng <span className="font-semibold text-slate-800">{confirmDialog.orderId}</span>{' '}
+              không? Hành động này không thể hoàn tác.
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={closeConfirmDialog}
+                disabled={isConfirming}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+
+              <button
+                onClick={proceedAction}
+                disabled={isConfirming}
+                className={`inline-flex min-w-[110px] items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  confirmDialog.type === 'approve'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Xác nhận'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

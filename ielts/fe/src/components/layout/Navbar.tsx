@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Crown, LogOut, User } from 'lucide-react';
+import { Bell, Clock3, Crown, LogOut, User } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import AuthModal from '../AuthModal';
 import logo from '../../assets/logo.png';
 import CheckoutModal from '../CheckoutModal';
+import { apiClient } from '../../lib/api/client';
 
 // role label map (Để hằng số ở ngoài là cực kỳ chuẩn xác)
 const ROLE_LABELS: Record<string, string> = {
@@ -20,6 +21,38 @@ export function Navbar() {
   const { isAuthenticated, user, logout } = useUserStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [pendingTx, setPendingTx] = useState<{ _id: string; planId: string } | null>(null);
+  const [isCheckingPending, setIsCheckingPending] = useState(false);
+
+  useEffect(() => {
+    const fetchPendingTransaction = async () => {
+      if (!isAuthenticated || !user || user.subscriptionPlan !== 'Free') {
+        setPendingTx(null);
+        setIsCheckingPending(false);
+        return;
+      }
+
+      setIsCheckingPending(true);
+      try {
+        const response = await apiClient.get('/payment/transactions/my-pending');
+        setPendingTx(response.data?.data || null);
+      } catch (error) {
+        setPendingTx(null);
+      } finally {
+        setIsCheckingPending(false);
+      }
+    };
+
+    fetchPendingTransaction();
+  }, [isAuthenticated, user]);
+
+  const getPendingBadgeText = (planId?: string) => {
+    const normalizedPlan = (planId || '').toUpperCase();
+    if (normalizedPlan.includes('PLUS')) return 'Chờ duyệt tài khoản Plus';
+    if (normalizedPlan.includes('PRO')) return 'Chờ duyệt tài khoản Pro';
+    if (normalizedPlan.includes('VIP')) return 'Chờ duyệt tài khoản VIP';
+    return 'Chờ duyệt giao dịch nâng cấp';
+  };
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
@@ -46,7 +79,7 @@ export function Navbar() {
         ) : (
           // Authenticated - Show User Menu
           <>
-            {/* VIP Badge (if subscribed) or Upgrade button (if Free) */}
+            {/* VIP badge / pending badge / upgrade button */}
             {user?.subscriptionPlan && user.subscriptionPlan !== 'Free' ? (
               <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-sm hover:scale-105 transition-transform cursor-default select-none">
                 <Crown className="h-4 w-4 fill-yellow-700 text-yellow-700" />
@@ -55,6 +88,16 @@ export function Navbar() {
                   {user.subscriptionPlan === 'VIP_6_MONTH' && 'VIP 6 Tháng'}
                   {user.subscriptionPlan === 'VIP_1_YEAR' && 'VIP 1 Năm'}
                 </span>
+              </div>
+            ) : isCheckingPending ? (
+              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600 cursor-wait select-none">
+                <span className="h-3.5 w-3.5 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
+                <span>Đang kiểm tra giao dịch...</span>
+              </div>
+            ) : pendingTx ? (
+              <div className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 opacity-80 cursor-not-allowed select-none">
+                <Clock3 className="h-4 w-4" />
+                {getPendingBadgeText(pendingTx.planId)}
               </div>
             ) : (
               <button
