@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, BarChart3, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, BarChart3, LogOut, ReceiptText } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -8,6 +8,7 @@ import logo from '../../assets/logo.png';
 const adminMenuItems = [
   { name: 'Tổng quan', path: '/admin', icon: LayoutDashboard },
   { name: 'Quản lý người dùng', path: '/admin/users', icon: Users },
+  { name: 'Quản lý giao dịch', path: '/admin/transactions', icon: ReceiptText },
   { name: 'Quản lý tài nguyên', path: '/admin/resources', icon: FileText },
   { name: 'Báo cáo', path: '/admin/reports', icon: BarChart3 },
 ];

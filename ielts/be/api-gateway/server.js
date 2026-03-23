@@ -54,6 +54,7 @@ app.use('/api/speaking', noCacheHeaders);
 app.use('/api/billing', noCacheHeaders);
 app.use('/api/lessons', noCacheHeaders);
 app.use('/api/media', noCacheHeaders);
+app.use('/api/payment', noCacheHeaders);
 app.use('/api/notification', noCacheHeaders);
 app.use('/api/users', noCacheHeaders);
 
@@ -211,6 +212,21 @@ app.use(
     changeOrigin: true,
     pathRewrite: {
       '^/api/lessons': '',
+    },
+  })
+);
+
+/**
+ * Payment Service (MoMo Gateway)
+ * URL gọi trên Postman: http://localhost:3000/api/payment/...
+ */
+app.use(
+  '/api/payment',
+  createProxyMiddleware({
+    target: process.env.PAYMENT_SERVICE_URL || 'http://127.0.0.1:3009',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/payment': '',
     },
   })
 );

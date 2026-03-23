@@ -56,7 +56,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       });
 
       // Extract user data and token from API response
-      const { _id, email: userEmail, name, avatar, plan, role } = response.data.data;
+      const { _id, email: userEmail, name, avatar, plan, role, subscriptionPlan, vipValidUntil } = response.data.data;
       const token = response.data.data.token;
 
       // Map API response to User interface
@@ -67,6 +67,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         avatar,
         role: (role || 'student').toLowerCase(),
         isVip: plan === 'premium',
+        subscriptionPlan: subscriptionPlan || 'Free',
+        vipValidUntil: vipValidUntil || null,
       };
 
       // Update global state

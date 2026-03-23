@@ -8,6 +8,8 @@ interface User {
   avatar: string;
   isVip: boolean;
   role: string; // added for user role
+  subscriptionPlan: 'Free' | 'VIP_1_MONTH' | 'VIP_6_MONTH' | 'VIP_1_YEAR';
+  vipValidUntil: string | null;
 }
 
 interface UserState {
@@ -27,7 +29,7 @@ export const useUserStore = create<UserState>()(
       token: null,
 
       setAuth: (user, token) => {
-        localStorage.setItem('token', token);
+        localStorage.setItem('accessToken', token);
         set({ 
           user, 
           token, 

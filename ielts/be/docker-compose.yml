@@ -39,6 +39,7 @@ services:
       - BILLING_SERVICE_URL=http://billing-service:3005
       - LESSON_SERVICE_URL=http://lesson-service:3007
       - MEDIA_SERVICE_URL=http://media-service:3010
+      - PAYMENT_SERVICE_URL=http://payment-service:3009
     depends_on:
       - redis
       - auth-service
@@ -49,6 +50,7 @@ services:
       - billing-service # Đảm bảo billing-service chạy trước api-gateway
       - lesson-service # Đảm bảo lesson-service chạy trước api-gateway
       - media-service # Đảm bảo media-service chạy trước api-gateway
+      - payment-service # Đảm bảo payment-service chạy trước api-gateway
     restart: unless-stopped
 
   auth-service:
@@ -125,6 +127,17 @@ services:
       - "3010:3010"
     env_file:
       - .env
+    restart: unless-stopped
+
+  payment-service:
+    build: ./payment-service
+    container_name: ielts_payment
+    ports:
+      - "3009:3009"
+    env_file:
+      - .env
+    environment:
+      - PORT=3009
     restart: unless-stopped
 
   # (Tạm thời map 2 service Gateway và Auth trước để test. 

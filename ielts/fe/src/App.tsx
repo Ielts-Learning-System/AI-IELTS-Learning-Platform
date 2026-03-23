@@ -10,6 +10,7 @@ import { AdminLayout } from './components/layout/AdminLayout';
 import { TeacherLayout } from './components/layout/TeacherLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { UserManagement } from './pages/admin/UserManagement';
+import { TransactionManagement } from './pages/admin/TransactionManagement';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
 import GradingDashboard from './pages/teacher/GradingDashboard';
@@ -34,6 +35,8 @@ import ResultPage from './pages/ResultPage';
 import ReadingListeningProgress from './pages/teacher/ReadingListeningProgress';
 import WritingTestManagement from './pages/teacher/WritingTestManagement';
 import SpeakingTestManagement from './pages/teacher/SpeakingTestManagement';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentPending from './pages/PaymentPending';
 
 /**
  * NotFound (404) page component
@@ -139,6 +142,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
+            <Route path="transactions" element={<TransactionManagement />} />
             <Route path="resources" element={<AdminDashboard />} />
             <Route path="reports" element={<AdminDashboard />} />
           </Route>
@@ -161,6 +165,8 @@ export default function App() {
         </Route>
 
         {/* Catch-all 404 Route */}
+        <Route path="/payment-success" element={<PaymentSuccessPage />} />
+        <Route path="/payment-pending" element={<PaymentPending />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

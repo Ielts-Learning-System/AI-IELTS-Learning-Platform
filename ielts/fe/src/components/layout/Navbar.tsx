@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Bell, Crown, LogOut, User } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import AuthModal from '../AuthModal';
 import logo from '../../assets/logo.png';
-import UpgradeModal from '../UpgradeModal';
+import CheckoutModal from '../CheckoutModal';
 
 // role label map (Để hằng số ở ngoài là cực kỳ chuẩn xác)
 const ROLE_LABELS: Record<string, string> = {
@@ -20,7 +20,6 @@ export function Navbar() {
   const { isAuthenticated, user, logout } = useUserStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
@@ -47,10 +46,25 @@ export function Navbar() {
         ) : (
           // Authenticated - Show User Menu
           <>
-            <button className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-200" onClick={() => setIsUpgradeOpen(true)}>
-              <Crown className="h-4 w-4" />
-              Nâng cấp VIP
-            </button>
+            {/* VIP Badge (if subscribed) or Upgrade button (if Free) */}
+            {user?.subscriptionPlan && user.subscriptionPlan !== 'Free' ? (
+              <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-sm hover:scale-105 transition-transform cursor-default select-none">
+                <Crown className="h-4 w-4 fill-yellow-700 text-yellow-700" />
+                <span>
+                  {user.subscriptionPlan === 'VIP_1_MONTH' && 'VIP 1 Tháng'}
+                  {user.subscriptionPlan === 'VIP_6_MONTH' && 'VIP 6 Tháng'}
+                  {user.subscriptionPlan === 'VIP_1_YEAR' && 'VIP 1 Năm'}
+                </span>
+              </div>
+            ) : (
+              <button
+                className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-200"
+                onClick={() => setIsUpgradeOpen(true)}
+              >
+                <Crown className="h-4 w-4" />
+                Nâng cấp VIP
+              </button>
+            )}
 
             <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors">
               <Bell className="h-5 w-5" />
@@ -120,8 +134,7 @@ export function Navbar() {
 
     <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     
-    {/* ✅ 2. GỌI UPGRADE MODAL RA GIAO DIỆN (Nằm cạnh AuthModal) */}
-    <UpgradeModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
+    <CheckoutModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
     </>
   );
 }
