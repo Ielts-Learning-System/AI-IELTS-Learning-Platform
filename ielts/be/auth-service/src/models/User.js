@@ -32,6 +32,17 @@ const userSchema = new mongoose.Schema({
     enum: ['free', 'premium'],
   },
 
+  // Subscription tracking for MoMo payment integration
+  subscriptionPlan: {
+    type: String,
+    enum: ['Free', 'VIP_1_MONTH', 'VIP_6_MONTH', 'VIP_1_YEAR'],
+    default: 'Free',
+  },
+  vipValidUntil: {
+    type: Date,
+    default: null,
+  },
+
   avatar: { 
     type: String, 
     default: function() {

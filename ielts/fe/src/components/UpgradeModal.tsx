@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Check } from 'lucide-react';
-import axios from 'axios';
+import { X, Check, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useUserStore } from '../store/useUserStore';
+import { apiClient } from '../lib/api/client';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const { token } = useUserStore();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -38,7 +38,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
   const fetchPlans = async () => {
     setIsLoading(true);
     try {
-      const resp = await axios.get('http://localhost:3000/api/billing/plans');
+      const resp = await apiClient.get('/billing/plans');
       setPlans(resp.data.data);
     } catch (err: any) {
       console.error('Fetch plans error', err.response || err.message);
@@ -48,26 +48,36 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
     }
   };
 
-  const handleUpgrade = async (planCode: string) => {
-    if (planCode === 'FREE') return;
+  const handlePayment = async (planId: string, price: number) => {
+    if (planId === 'FREE') return;
     if (!token) {
       toast.error('Bạn cần đăng nhập để nâng cấp');
       return;
     }
-    setLoadingPlan(planCode);
+    // Chống click đúp — nếu đang xử lý 1 gói thì block toàn bộ
+    if (processingPlanId) return;
+
+    setProcessingPlanId(planId);
     try {
-      await axios.post(
-        'http://localhost:3000/api/billing/upgrade',
-        { plan: planCode },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success('Nâng cấp thành công!');
-      onClose();
+      const resp = await apiClient.post('/payment/create', {
+        planId,
+        amount: price,
+      });
+
+      if (resp.data.success && resp.data.payUrl) {
+        // Redirect sang trang thanh toán MoMo
+        window.location.href = resp.data.payUrl;
+        return; // Không reset state — trang sẽ navigate đi
+      }
+
+      toast.error('Không nhận được link thanh toán từ MoMo.');
+      setProcessingPlanId(null);
     } catch (err: any) {
-      console.error('Upgrade error', err.response || err.message);
-      toast.error(err.response?.data?.message || 'Không thể nâng cấp, thử lại');
-    } finally {
-      setLoadingPlan(null);
+      console.error('Payment error', err.response || err.message);
+      toast.error(
+        err.response?.data?.message || 'Không thể khởi tạo thanh toán. Vui lòng thử lại sau.'
+      );
+      setProcessingPlanId(null);
     }
   };
 
@@ -127,13 +137,20 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                   ))}
                 </ul>
                 <button
-                  onClick={() => handleUpgrade(plan.code)}
-                  disabled={loadingPlan === plan.code || plan.code === 'FREE'}
-                  className={`mt-auto px-4 py-2 rounded-lg transition ${plan.ui.buttonColor} ${
-                    plan.code === 'FREE' ? 'cursor-not-allowed' : ''
+                  onClick={() => handlePayment(plan.code, plan.price)}
+                  disabled={plan.code === 'FREE' || processingPlanId !== null}
+                  className={`mt-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition ${plan.ui.buttonColor} ${
+                    plan.code === 'FREE' || processingPlanId !== null ? 'cursor-not-allowed opacity-60' : ''
                   }`}
                 >
-                  {loadingPlan === plan.code ? 'Đang xử lý...' : plan.ui.buttonText}
+                  {processingPlanId === plan.code ? (
+                    <>
+                      <Loader className="h-4 w-4 animate-spin" />
+                      Đang chuyển hướng...
+                    </>
+                  ) : (
+                    plan.ui.buttonText
+                  )}
                 </button>
               </div>
             ))}
