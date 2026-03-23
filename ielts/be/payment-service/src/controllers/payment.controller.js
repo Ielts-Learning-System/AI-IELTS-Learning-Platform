@@ -96,6 +96,31 @@ const createVietQRPayment = async (req, res) => {
 const createPayment = createVietQRPayment;
 
 /**
+ * @desc    Get current user's latest pending transaction
+ * @route   GET /transactions/my-pending
+ * @access  Protected
+ */
+const getMyPendingTransaction = async (req, res) => {
+  try {
+    const pending = await Transaction.findOne({
+      userId: req.user.id,
+      status: 'Pending',
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: pending || null,
+    });
+  } catch (error) {
+    console.error('getMyPendingTransaction error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error.',
+    });
+  }
+};
+
+/**
  * @desc    Get all transactions for admin management
  * @route   GET /transactions
  * @access  Protected (admin middleware should be added in real deployment)
@@ -222,6 +247,7 @@ const rejectTransaction = async (req, res) => {
 module.exports = {
   createVietQRPayment,
   createPayment,
+  getMyPendingTransaction,
   getTransactions,
   approveTransaction,
   rejectTransaction,
