@@ -36,5 +36,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm run test
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-media-service-coverage
+          path: ielts/be/cloud-media-service/coverage/
+          retention-days: 14

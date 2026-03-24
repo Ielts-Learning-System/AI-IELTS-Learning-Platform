@@ -1,4 +1,4 @@
-name: Frontend CI
+name: Frontend CI/CD
 
 on:
   push:
@@ -10,7 +10,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  frontend-ci:
+  # ──────────────────────────────────────────────
+  # Job 1: Lint & Build (runs on push, PR, manual)
+  # ──────────────────────────────────────────────
+  ci:
+    name: Lint & Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,3 +39,46 @@ jobs:
 
       - name: Run build
         run: npm run build
+
+  # ──────────────────────────────────────────────
+  # Job 2: Deploy to Vercel (only on push to main)
+  # ──────────────────────────────────────────────
+  deploy:
+    name: Deploy to Vercel
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: ./ielts/fe
+
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ielts/fe/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+
+      - name: Build with Vercel
+        run: vercel build --prod --token=$VERCEL_TOKEN
+
+      - name: Deploy to Vercel (Production)
+        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
