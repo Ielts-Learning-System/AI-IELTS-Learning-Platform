@@ -1,0 +1,41 @@
+name: Cloud Media Service CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ielts/be/cloud-media-service/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ielts/be/cloud-media-service/**'
+
+jobs:
+  cloud-media-service-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ielts/be/cloud-media-service
+
+    env:
+      CLOUDINARY_CLOUD_NAME: test-cloud
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ielts/be/cloud-media-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
