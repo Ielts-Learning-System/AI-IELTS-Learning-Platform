@@ -3,19 +3,18 @@ name: Writing Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/writing-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/writing-service/**'
+  workflow_dispatch:
 
 jobs:
   writing-service-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/writing-service
+        working-directory: ./ielts/be/writing-service
 
     services:
       mongodb:

@@ -3,19 +3,18 @@ name: Speaking Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/speaking-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/speaking-service/**'
+  workflow_dispatch:
 
 jobs:
   speaking-service-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/speaking-service
+        working-directory: ./ielts/be/speaking-service
 
     services:
       mongodb:

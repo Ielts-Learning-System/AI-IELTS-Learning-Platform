@@ -3,19 +3,18 @@ name: Reading Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/reading-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/reading-service/**'
+  workflow_dispatch:
 
 jobs:
   reading-service-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/reading-service
+        working-directory: ./ielts/be/reading-service
 
     services:
       mongodb:
