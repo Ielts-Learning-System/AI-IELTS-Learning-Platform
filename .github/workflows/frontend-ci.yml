@@ -3,19 +3,18 @@ name: Frontend CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/fe/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/fe/**'
+  workflow_dispatch:
 
 jobs:
   frontend-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/fe
+        working-directory: ./ielts/fe
 
     steps:
       - name: Checkout repository

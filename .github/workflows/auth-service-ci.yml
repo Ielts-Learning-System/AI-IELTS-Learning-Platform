@@ -3,12 +3,11 @@ name: Auth Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/auth-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/auth-service/**'
+  workflow_dispatch:
 
 jobs:
   auth-service-ci:

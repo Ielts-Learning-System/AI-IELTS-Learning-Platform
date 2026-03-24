@@ -3,19 +3,18 @@ name: Listening Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/listening-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/listening-service/**'
+  workflow_dispatch:
 
 jobs:
   listening-service-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/listening-service
+        working-directory: ./ielts/be/listening-service
 
     services:
       mongodb:

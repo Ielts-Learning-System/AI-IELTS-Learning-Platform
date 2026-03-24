@@ -3,19 +3,18 @@ name: Payment Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/payment-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/payment-service/**'
+  workflow_dispatch:
 
 jobs:
   payment-service-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/payment-service
+        working-directory: ./ielts/be/payment-service
 
     services:
       mongodb:

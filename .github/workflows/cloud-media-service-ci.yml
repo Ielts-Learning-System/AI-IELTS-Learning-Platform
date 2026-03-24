@@ -3,19 +3,18 @@ name: Cloud Media Service CI
 on:
   push:
     branches: [main]
-    paths:
-      - 'ielts/be/cloud-media-service/**'
   pull_request:
     branches: [main]
     paths:
       - 'ielts/be/cloud-media-service/**'
+  workflow_dispatch:
 
 jobs:
   cloud-media-service-ci:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/cloud-media-service
+        working-directory: ./ielts/be/cloud-media-service
 
     env:
       CLOUDINARY_CLOUD_NAME: test-cloud
