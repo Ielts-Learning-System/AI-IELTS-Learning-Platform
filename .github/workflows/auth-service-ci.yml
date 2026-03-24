@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ielts/be/auth-service
+        working-directory: ./ielts/be/auth-service
 
     services:
       mongodb:
