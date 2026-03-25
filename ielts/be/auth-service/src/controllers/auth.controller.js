@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { publishEvent } = require('../services/rabbitmq.service');
 
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -28,6 +29,13 @@ const register = async (req, res) => {
       password,
       name,
       role: 'Student', // Force role to be 'Student' for security
+    });
+
+    // Publish the domain event after persistence succeeds, before the 2xx response.
+    await publishEvent('auth.user.registered', {
+      userId: user._id.toString(),
+      email: user.email,
+      name: user.name,
     });
 
     // Generate token

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Clock3, Crown, LogOut, User } from 'lucide-react';
+import { Clock3, Crown, LogOut, User } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import AuthModal from '../AuthModal';
 import logo from '../../assets/logo.png';
 import CheckoutModal from '../CheckoutModal';
 import { apiClient } from '../../lib/api/client';
+import NotificationBell from './NotificationBell';
 
 // role label map (Để hằng số ở ngoài là cực kỳ chuẩn xác)
 const ROLE_LABELS: Record<string, string> = {
@@ -109,10 +110,7 @@ export function Navbar() {
               </button>
             )}
 
-            <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500"></span>
-            </button>
+            <NotificationBell />
 
             {/* User Dropdown */}
             <div className="relative">
