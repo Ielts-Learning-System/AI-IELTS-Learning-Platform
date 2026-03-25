@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -172,8 +173,9 @@ app.use(
 );
 
 /**
- * Notification Service
+ * Notification Service — REST
  * URL gọi trên Postman: http://localhost:3000/api/notification/...
+ * Strip /api/notification so the notification service receives root-relative paths.
  */
 app.use(
   '/api/notification',
@@ -185,6 +187,21 @@ app.use(
     },
   })
 );
+
+/**
+ * Notification Service — WebSocket (Socket.io)
+ * FE connects: io("http://localhost:3000", { path: "/socket.io-notification" })
+ * Gateway proxies /socket.io-notification/* → notification-service /socket.io/*
+ *
+ * Stored as a variable so we can call .upgrade(server) below for WS support.
+ */
+const notificationWsProxy = createProxyMiddleware({
+  target: process.env.NOTIFICATION_SERVICE_URL || 'http://127.0.0.1:3006',
+  changeOrigin: true,
+  ws: true,
+  pathRewrite: { '^/socket.io-notification': '/socket.io' },
+});
+app.use('/socket.io-notification', notificationWsProxy);
 
 /**
  * Billing Service
@@ -276,6 +293,13 @@ app.use((err, req, res, next) => {
  */
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+// Use http.createServer so we can attach WebSocket upgrade handling.
+const server = http.createServer(app);
+
+// Subscribe the notification WS proxy to the server's 'upgrade' event.
+// Without this, http-proxy-middleware v3 will NOT proxy WebSocket connections.
+notificationWsProxy.upgrade(server);
+
+server.listen(PORT, () => {
   console.log(`🚀 API Gateway running at http://localhost:${PORT}`);
 });

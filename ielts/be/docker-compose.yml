@@ -40,6 +40,7 @@ services:
       - LESSON_SERVICE_URL=http://lesson-service:3007
       - MEDIA_SERVICE_URL=http://media-service:3010
       - PAYMENT_SERVICE_URL=http://payment-service:3009
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3011
     depends_on:
       - redis
       - auth-service
@@ -51,6 +52,7 @@ services:
       - lesson-service # Đảm bảo lesson-service chạy trước api-gateway
       - media-service # Đảm bảo media-service chạy trước api-gateway
       - payment-service # Đảm bảo payment-service chạy trước api-gateway
+      - notification-service
     restart: unless-stopped
 
   auth-service:
@@ -138,6 +140,19 @@ services:
       - .env
     environment:
       - PORT=3009
+    restart: unless-stopped
+
+  notification-service:
+    build: ./notification-service
+    container_name: ielts_notification
+    ports:
+      - "3011:3011"
+    env_file:
+      - .env
+    environment:
+      - PORT=3011
+    depends_on:
+      - rabbitmq
     restart: unless-stopped
 
   # (Tạm thời map 2 service Gateway và Auth trước để test. 
