@@ -22,6 +22,8 @@ import { WritingExamPage } from './pages/WritingExamPage';
 import WritingListPage from './pages/WritingListPage';
 import MyWritingHistory from './pages/MyWritingHistory';
 import SpeakingTest from './pages/SpeakingTest';
+import SpeakingListPage from './pages/SpeakingListPage';
+import SpeakingPracticePage from './pages/SpeakingPracticePage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import HomePage from './pages/HomePage';
@@ -107,7 +109,9 @@ export default function App() {
         {/* Speaking Routes */}
         <Route path="/speaking" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
-            <Route index element={<SpeakingTest />} />
+            <Route index element={<SpeakingListPage />} />
+            <Route path=":id" element={<SpeakingPracticePage />} />
+            <Route path="assignment" element={<SpeakingTest />} />
           </Route>
         </Route>
 

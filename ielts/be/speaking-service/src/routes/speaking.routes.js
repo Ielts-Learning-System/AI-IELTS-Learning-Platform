@@ -7,6 +7,7 @@ const {
   gradeSpeakingSubmission,
 } = require('../controllers/speakingSubmission.controller');
 const {
+  getAllSpeakingTests,
   getAllTests,
   getTestById,
   createTest,
@@ -17,6 +18,9 @@ const {
 const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
+
+// Student practice list
+router.get('/', getAllSpeakingTests);
 
 // Test management routes (CRUD for teacher prompt bank)
 router.get('/tests', getAllTests);

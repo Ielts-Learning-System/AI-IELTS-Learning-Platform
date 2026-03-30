@@ -5,6 +5,28 @@ const SpeakingSubmission = require('../models/SpeakingSubmission');
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 /**
+ * Get speaking tests for the student practice list.
+ * Returns only list-safe fields to avoid shipping full question payloads.
+ */
+exports.getAllSpeakingTests = async (req, res) => {
+  try {
+    const tests = await SpeakingTest.find({}, '_id title createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      data: tests,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
  * Get all speaking tests (for teacher prompt bank)
  */
 exports.getAllTests = async (req, res) => {
