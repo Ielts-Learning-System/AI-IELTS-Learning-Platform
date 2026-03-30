@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useUserStore } from '../store/useUserStore';
-import axios from 'axios';
+import { apiClient } from '../lib/api/client';
 import { Upload, Lock, Check, X } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -45,12 +45,16 @@ export default function ProfilePage() {
     setIsLoadingProfile(true);
 
     try {
-      const response = await axios.put('http://localhost:3000/api/auth/profile', {
+      const response = await apiClient.put('/auth/profile', {
         name,
         avatar,
       });
 
-      setAuth(response.data.user, response.data.token);
+      // ✅ Extract updated user from response.data.data
+      const updatedUser = response.data?.data || response.data?.user;
+      if (updatedUser) {
+        setAuth(updatedUser, localStorage.getItem('accessToken') || '');
+      }
       setProfileMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
     } catch (err: any) {
       setProfileMessage({
@@ -86,7 +90,7 @@ export default function ProfilePage() {
     setIsLoadingPassword(true);
 
     try {
-      await axios.put('http://localhost:3000/api/auth/change-password', {
+      await apiClient.put('/auth/change-password', {
         currentPassword,
         newPassword,
       });

@@ -6,7 +6,7 @@ import AuthModal from '../AuthModal';
 import logo from '../../assets/logo.png';
 import CheckoutModal from '../CheckoutModal';
 import { apiClient } from '../../lib/api/client';
-import NotificationBell from './NotificationBell';
+import { NotificationBellComponent } from './NotificationBell';
 
 // role label map (Để hằng số ở ngoài là cực kỳ chuẩn xác)
 const ROLE_LABELS: Record<string, string> = {
@@ -110,7 +110,7 @@ export function Navbar() {
               </button>
             )}
 
-            <NotificationBell />
+            <NotificationBellComponent />
 
             {/* User Dropdown */}
             <div className="relative">
