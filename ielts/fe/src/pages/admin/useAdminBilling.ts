@@ -10,8 +10,15 @@ export interface BillingPlan {
   price: number;
   durationMonths: number;
   isActive: boolean;
+  features?: string[];
   benefits?: {
     skills?: PlanSkill[];
+  };
+  ui?: {
+    borderColor?: string;
+    buttonText?: string;
+    buttonColor?: string;
+    badge?: string;
   };
 }
 

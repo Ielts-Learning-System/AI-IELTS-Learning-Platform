@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ChevronDown,
   Check,
   CircleDollarSign,
   Loader2,
   Pencil,
   Plus,
   Sparkles,
+  Trash2,
   X,
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -21,8 +23,15 @@ type PlanFormData = {
   price: number;
   durationMonths: number;
   isActive: boolean;
+  features: string[];
   benefits: {
     skills: PlanSkill[];
+  };
+  ui: {
+    borderColor: string;
+    buttonText: string;
+    buttonColor: string;
+    badge: string;
   };
 };
 
@@ -32,7 +41,14 @@ const emptyForm: PlanFormData = {
   price: 0,
   durationMonths: 1,
   isActive: true,
+  features: [],
   benefits: { skills: [] },
+  ui: {
+    borderColor: '',
+    buttonText: '',
+    buttonColor: '',
+    badge: '',
+  },
 };
 
 const formatPrice = (price: number) =>
@@ -55,6 +71,8 @@ export function BillingPlansManagement() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [form, setForm] = useState<PlanFormData>(emptyForm);
+  const [featureInput, setFeatureInput] = useState('');
+  const [showUiCustomization, setShowUiCustomization] = useState(false);
 
   const isEditing = useMemo(() => !!editingPlanId, [editingPlanId]);
 
@@ -78,6 +96,8 @@ export function BillingPlansManagement() {
   const openCreateModal = () => {
     setEditingPlanId(null);
     setForm(emptyForm);
+    setFeatureInput('');
+    setShowUiCustomization(false);
     setOpenModal(true);
   };
 
@@ -89,15 +109,44 @@ export function BillingPlansManagement() {
       price: Number(plan.price || 0),
       durationMonths: Number(plan.durationMonths || 1),
       isActive: !!plan.isActive,
+      features: (plan.features || []).filter((feature) => !!feature?.trim()),
       benefits: {
         skills: (plan.benefits?.skills || []) as PlanSkill[],
       },
+      ui: {
+        borderColor: plan.ui?.borderColor || '',
+        buttonText: plan.ui?.buttonText || '',
+        buttonColor: plan.ui?.buttonColor || '',
+        badge: plan.ui?.badge || '',
+      },
     });
+    setFeatureInput('');
+    setShowUiCustomization(
+      Boolean(plan.ui?.borderColor || plan.ui?.buttonText || plan.ui?.buttonColor || plan.ui?.badge)
+    );
     setOpenModal(true);
   };
 
   const closeModal = () => {
     if (!submitting) setOpenModal(false);
+  };
+
+  const addFeature = () => {
+    const nextFeature = featureInput.trim();
+    if (!nextFeature) return;
+
+    setForm((prev) => ({
+      ...prev,
+      features: [...prev.features, nextFeature],
+    }));
+    setFeatureInput('');
+  };
+
+  const removeFeature = (indexToRemove: number) => {
+    setForm((prev) => ({
+      ...prev,
+      features: prev.features.filter((_, index) => index !== indexToRemove),
+    }));
   };
 
   const toggleSkill = (skill: PlanSkill) => {
@@ -135,8 +184,15 @@ export function BillingPlansManagement() {
         price: Number(form.price),
         durationMonths: Number(form.durationMonths),
         isActive: form.isActive,
+        features: form.features.map((item) => item.trim()).filter(Boolean),
         benefits: {
           skills: form.benefits.skills,
+        },
+        ui: {
+          borderColor: form.ui.borderColor.trim(),
+          buttonText: form.ui.buttonText.trim(),
+          buttonColor: form.ui.buttonColor.trim(),
+          badge: form.ui.badge.trim(),
         },
       };
 
@@ -283,7 +339,7 @@ export function BillingPlansManagement() {
 
       {openModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">{isEditing ? 'Edit Plan' : 'Add New Plan'}</h3>
@@ -362,6 +418,141 @@ export function BillingPlansManagement() {
                     );
                   })}
                 </div>
+              </div>
+
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Features</p>
+                  <p className="text-xs text-slate-500">Add user-facing benefits for this plan.</p>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={featureInput}
+                    onChange={(e) => setFeatureInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addFeature();
+                      }
+                    }}
+                    placeholder="Example: Reading: Khong gioi han"
+                    className="h-11 flex-1 rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={addFeature}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add
+                  </button>
+                </div>
+
+                {form.features.length ? (
+                  <ul className="space-y-2">
+                    {form.features.map((feature, index) => (
+                      <li
+                        key={`${feature}-${index}`}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2"
+                      >
+                        <span className="text-sm text-slate-700">{feature}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeFeature(index)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-slate-500">No features added yet.</p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowUiCustomization((prev) => !prev)}
+                  className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">UI Customization (Optional)</p>
+                    <p className="text-xs text-slate-500">Configure badge and button style metadata.</p>
+                  </div>
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-500 transition-transform ${
+                      showUiCustomization ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {showUiCustomization ? (
+                  <div className="grid grid-cols-1 gap-3 border-t border-slate-200 px-4 py-4 sm:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className="text-sm font-medium text-slate-700">UI Border Color</span>
+                      <input
+                        value={form.ui.borderColor}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ui: { ...prev.ui, borderColor: e.target.value },
+                          }))
+                        }
+                        placeholder="emerald"
+                        className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-300"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-sm font-medium text-slate-700">UI Button Text</span>
+                      <input
+                        value={form.ui.buttonText}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ui: { ...prev.ui, buttonText: e.target.value },
+                          }))
+                        }
+                        placeholder="Dang ky ngay"
+                        className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-300"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-sm font-medium text-slate-700">UI Button Color</span>
+                      <input
+                        value={form.ui.buttonColor}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ui: { ...prev.ui, buttonColor: e.target.value },
+                          }))
+                        }
+                        placeholder="emerald"
+                        className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-300"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-sm font-medium text-slate-700">UI Badge</span>
+                      <input
+                        value={form.ui.badge}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            ui: { ...prev.ui, badge: e.target.value },
+                          }))
+                        }
+                        placeholder="Pho bien"
+                        className="h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-300"
+                      />
+                    </label>
+                  </div>
+                ) : null}
               </div>
 
               <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
