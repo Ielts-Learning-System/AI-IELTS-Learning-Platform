@@ -22,7 +22,7 @@ import { ListeningExamPage } from './pages/ListeningExamPage';
 import ListeningListPage from './pages/ListeningListPage';
 import { WritingExamPage } from './pages/WritingExamPage';
 import WritingListPage from './pages/WritingListPage';
-import MyWritingHistory from './pages/MyWritingHistory';
+import History from './pages/History';
 import SpeakingTest from './pages/SpeakingTest';
 import SpeakingListPage from './pages/SpeakingListPage';
 import SpeakingPracticePage from './pages/SpeakingPracticePage';
@@ -119,7 +119,7 @@ export default function App() {
 
         <Route path="/history" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
-            <Route index element={<MyWritingHistory />} />
+            <Route index element={<History />} />
           </Route>
         </Route>
 
