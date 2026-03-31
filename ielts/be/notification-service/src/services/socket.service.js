@@ -6,6 +6,7 @@
  */
 
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 let io = null;
 
@@ -24,13 +25,39 @@ function initSocketIO(httpServer) {
     },
   });
 
+  io.use((socket, next) => {
+    try {
+      const authToken = socket.handshake.auth?.token;
+      const headerToken = socket.handshake.headers?.authorization?.startsWith('Bearer ')
+        ? socket.handshake.headers.authorization.split(' ')[1]
+        : null;
+      const queryToken = socket.handshake.query?.token;
+      const token = authToken || headerToken || queryToken;
+
+      if (!token) {
+        return next(new Error('Unauthorized: missing token'));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id || decoded.userId;
+
+      if (!userId) {
+        return next(new Error('Unauthorized: invalid token payload'));
+      }
+
+      socket.userId = String(userId);
+      return next();
+    } catch (err) {
+      return next(new Error('Unauthorized: invalid token'));
+    }
+  });
+
   io.on('connection', (socket) => {
-    // Client sends userId as a query param: io("url", { query: { userId } })
-    const userId = socket.handshake.query.userId;
+    const userId = socket.userId;
 
     if (userId) {
-      socket.join(`user:${userId}`);
-      console.log(`🔌 Socket connected: user:${userId} (${socket.id})`);
+      socket.join(userId);
+      console.log(`🔌 Socket connected: ${userId} (${socket.id})`);
     }
 
     socket.on('disconnect', () => {
@@ -57,7 +84,7 @@ function getIO() {
  */
 function emitToUser(userId, payload) {
   if (!io) return;
-  io.to(`user:${userId}`).emit('notification', payload);
+  io.to(String(userId)).emit('new_notification', payload);
 }
 
 module.exports = { initSocketIO, getIO, emitToUser };

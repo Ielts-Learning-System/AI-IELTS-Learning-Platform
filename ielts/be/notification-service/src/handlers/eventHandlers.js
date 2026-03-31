@@ -150,6 +150,97 @@ const handlers = {
       metadata: data.metadata,
     });
   },
+
+  /**
+   * billing.subscription.cancelled — Subscription cancelled with admin message
+   * Uses the EXACT title and message provided by the admin
+   */
+  'billing.subscription.cancelled': async (data) => {
+    const {
+      userId,
+      email,
+      name,
+      planName,
+      title,       // Admin-provided title from modal
+      message,     // Admin-provided message from modal
+      reason,
+      cancelledAt,
+    } = data;
+
+    await dispatch({
+      userId,
+      type: 'subscription_cancelled',
+      category: 'billing',
+      title: title || '❌ Subscription Cancelled',
+      message: message || `Your ${planName} plan has been cancelled.`,
+      entityType: 'Subscription',
+      entityId: data.subscriptionId,
+      metadata: {
+        planName,
+        reason,
+        cancelledAt,
+      },
+      userEmail: email,
+      emailSubject: title || 'Subscription Cancelled',
+      emailHtml: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2>${title || '❌ Subscription Cancelled'}</h2>
+          <p>Hi ${name || 'there'},</p>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p>${message || `Your ${planName} subscription has been cancelled.`}</p>
+          </div>
+          <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
+            If you have any questions, please contact our support team.
+          </p>
+        </div>
+      `,
+    });
+  },
+
+  /**
+   * billing.subscription.restored — Subscription restored (back to ACTIVE)
+   */
+  'billing.subscription.restored': async (data) => {
+    const {
+      userId,
+      email,
+      name,
+      planName,
+      validUntil,
+      restoredAt,
+    } = data;
+
+    await dispatch({
+      userId,
+      type: 'subscription_restored',
+      category: 'billing',
+      title: '✅ Subscription Restored',
+      message: `Welcome back! Your ${planName} plan has been restored and is now active until ${new Date(validUntil).toLocaleDateString()}.`,
+      entityType: 'Subscription',
+      entityId: data.subscriptionId,
+      metadata: {
+        planName,
+        validUntil,
+        restoredAt,
+      },
+      userEmail: email,
+      emailSubject: 'Subscription Restored ✅',
+      emailHtml: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2>✅ Subscription Restored</h2>
+          <p>Hi ${name || 'there'},</p>
+          <p>Great news! Your <strong>${planName}</strong> plan has been restored and is now active.</p>
+          <div style="background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Valid Until:</strong> ${new Date(validUntil).toLocaleDateString()}</p>
+            <p>You now have access to all premium features again. Happy learning! 🎉</p>
+          </div>
+          <p style="font-size: 0.9em; color: #666; margin-top: 20px;">
+            Need help? Contact our support team anytime.
+          </p>
+        </div>
+      `,
+    });
+  },
 };
 
 /**

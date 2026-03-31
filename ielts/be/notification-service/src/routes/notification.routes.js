@@ -3,9 +3,13 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth.middleware');
 const ctrl = require('../controllers/notification.controller');
 
-// Public diagnostic route to verify Gateway -> App -> Router wiring.
-router.get('/', (req, res) => {
-	res.status(200).json({ message: 'Notification service is working' });
+// List notifications. If unauthenticated, return empty shape to keep client stable.
+router.get('/', (req, res, next) => {
+	if (!req.headers.authorization) {
+		return res.status(200).json({ notifications: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } });
+	}
+
+	return authMiddleware(req, res, () => ctrl.listNotifications(req, res, next));
 });
 
 // Public diagnostic unread-count route for routing validation.

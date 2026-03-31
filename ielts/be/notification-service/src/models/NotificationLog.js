@@ -20,6 +20,8 @@ const notificationLogSchema = new mongoose.Schema(
         'test_completed',
         'reminder',
         'system',
+        'subscription_cancelled',
+        'subscription_restored',
       ],
     },
     title: { type: String, required: true },

@@ -22,6 +22,10 @@ const mongoose = require('mongoose');
 const { sendTemplateEmail, sendWelcomeEmail } = require('../services/email.service');
 const { emitToUser } = require('../services/socket.service');
 const NotificationLog = require('../models/NotificationLog');
+const {
+  handleBillingSubscriptionCancelled,
+  handleBillingSubscriptionRestored,
+} = require('./billing.consumer');
 
 // ──────────── Constants ────────────
 const EXCHANGE     = 'ielts_events';
@@ -47,6 +51,7 @@ const BINDING_KEYS = [
   'speaking.grading.completed',
   'reading.test.completed',
   'listening.test.completed',
+  'billing.subscription.*',
 ];
 
 // ──────────── Module state ────────────
@@ -302,6 +307,8 @@ const ROUTE_TABLE = {
   'speaking.grading.completed':    onSpeakingGraded,
   'reading.test.completed':        onReadingCompleted,
   'listening.test.completed':      onListeningCompleted,
+  'billing.subscription.cancelled': handleBillingSubscriptionCancelled,
+  'billing.subscription.restored':  handleBillingSubscriptionRestored,
 };
 
 // ═══════════════════════════════════════════════

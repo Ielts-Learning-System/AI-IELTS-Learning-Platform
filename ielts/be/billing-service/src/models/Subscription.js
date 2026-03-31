@@ -24,6 +24,23 @@ const subscriptionSchema = new mongoose.Schema({
     type: Date,
     required: true // Bắt buộc phải có ngày hết hạn khi tạo sub
   },
+  cancelledAt: {
+    type: Date,
+    default: null,
+  },
+  cancellationReason: {
+    type: String,
+    enum: [null, 'POLICY_VIOLATION', 'SYSTEM_ERROR', 'USER_REQUEST_REFUND'],
+    default: null,
+  },
+  cancellationTitle: {
+    type: String,
+    default: null,
+  },
+  cancellationMessage: {
+    type: String,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

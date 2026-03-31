@@ -104,6 +104,35 @@ export const useAdminBilling = (token?: string | null) => {
     [baseUrl, token]
   );
 
+  const cancelSubscription = useCallback(
+    async (
+      subscriptionId: string,
+      reason: 'POLICY_VIOLATION' | 'SYSTEM_ERROR' | 'USER_REQUEST_REFUND',
+      editedTitle: string,
+      editedMessage: string
+    ) => {
+      const { data } = await axios.post(
+        `${baseUrl}/admin/subscriptions/${subscriptionId}/cancel`,
+        { reason, editedTitle, editedMessage },
+        { headers: getAuthHeaders(token) }
+      );
+      return data?.data as BillingSubscription;
+    },
+    [baseUrl, token]
+  );
+
+  const restoreSubscription = useCallback(
+    async (subscriptionId: string) => {
+      const { data } = await axios.post(
+        `${baseUrl}/admin/subscriptions/${subscriptionId}/restore`,
+        {},
+        { headers: getAuthHeaders(token) }
+      );
+      return data?.data as BillingSubscription;
+    },
+    [baseUrl, token]
+  );
+
   return {
     fetchPlans,
     createPlan,
@@ -111,5 +140,7 @@ export const useAdminBilling = (token?: string | null) => {
     togglePlanActive,
     fetchSubscriptions,
     sendReminder,
+    cancelSubscription,
+    restoreSubscription,
   };
 };

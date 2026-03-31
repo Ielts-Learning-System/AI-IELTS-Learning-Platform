@@ -7,6 +7,7 @@ import logo from '../../assets/logo.png';
 import CheckoutModal from '../CheckoutModal';
 import { apiClient } from '../../lib/api/client';
 import { NotificationBellComponent } from './NotificationBell';
+import { SubscriptionBadge } from '../SubscriptionBadge';
 
 // role label map (Để hằng số ở ngoài là cực kỳ chuẩn xác)
 const ROLE_LABELS: Record<string, string> = {
@@ -60,6 +61,15 @@ export function Navbar() {
     logout(); // clears storage and redirects via window.location.replace
   };
 
+  const handleSubscriptionUpgrade = () => {
+    setIsUpgradeOpen(true);
+  };
+
+  const handleSubscriptionManage = () => {
+    // Navigate to subscription management page if needed
+    console.log('Navigate to subscription management');
+  };
+
   return (
     <>
       <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
@@ -80,35 +90,11 @@ export function Navbar() {
         ) : (
           // Authenticated - Show User Menu
           <>
-            {/* VIP badge / pending badge / upgrade button */}
-            {user?.subscriptionPlan && user.subscriptionPlan !== 'Free' ? (
-              <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-sm hover:scale-105 transition-transform cursor-default select-none">
-                <Crown className="h-4 w-4 fill-yellow-700 text-yellow-700" />
-                <span>
-                  {user.subscriptionPlan === 'VIP_1_MONTH' && 'VIP 1 Tháng'}
-                  {user.subscriptionPlan === 'VIP_6_MONTH' && 'VIP 6 Tháng'}
-                  {user.subscriptionPlan === 'VIP_1_YEAR' && 'VIP 1 Năm'}
-                </span>
-              </div>
-            ) : isCheckingPending ? (
-              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600 cursor-wait select-none">
-                <span className="h-3.5 w-3.5 rounded-full border-2 border-slate-400 border-t-transparent animate-spin" />
-                <span>Đang kiểm tra giao dịch...</span>
-              </div>
-            ) : pendingTx ? (
-              <div className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 opacity-80 cursor-not-allowed select-none">
-                <Clock3 className="h-4 w-4" />
-                {getPendingBadgeText(pendingTx.planId)}
-              </div>
-            ) : (
-              <button
-                className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-200"
-                onClick={() => setIsUpgradeOpen(true)}
-              >
-                <Crown className="h-4 w-4" />
-                Nâng cấp VIP
-              </button>
-            )}
+            {/* Subscription Badge Component */}
+            <SubscriptionBadge
+              onUpgradeClick={handleSubscriptionUpgrade}
+              onManageClick={handleSubscriptionManage}
+            />
 
             <NotificationBellComponent />
 

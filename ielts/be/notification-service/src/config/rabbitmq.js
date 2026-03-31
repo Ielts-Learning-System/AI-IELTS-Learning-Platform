@@ -7,6 +7,7 @@ const QUEUE_DLQ = 'notification_queue_dlq';
 const MAX_RETRIES = 3;
 
 const BINDING_KEYS = [
+  'auth.user.registered',
   'auth.user.created',
   'auth.user.verified',
   'payment.transaction.declared',
@@ -18,6 +19,7 @@ const BINDING_KEYS = [
   'speaking.grading.completed',
   'reading.test.completed',
   'listening.test.completed',
+  'billing.subscription.*',
 ];
 
 let connection = null;

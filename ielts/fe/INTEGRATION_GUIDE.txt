@@ -1,0 +1,179 @@
+/**
+ * INTEGRATION GUIDE: SubscriptionBadge into Navbar.tsx
+ * 
+ * This guide shows how to import and use the SubscriptionBadge component
+ * in your existing Navbar.tsx file.
+ */
+
+// ============ STEP 1: ADD IMPORT AT TOP OF Navbar.tsx ============
+import { SubscriptionBadge } from '../SubscriptionBadge';
+
+// ============ STEP 2: ADD STATE FOR UPGRADE MODAL ============
+// (You already have this, but ensure it exists)
+const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+
+// ============ STEP 3: CREATE EVENT HANDLERS ============
+const handleSubscriptionUpgrade = () => {
+  setIsUpgradeOpen(true);
+  // Optional: log or track event
+};
+
+const handleSubscriptionManage = () => {
+  // For future use - redirect to subscription management page
+  console.log('Navigate to manage subscription page');
+};
+
+// ============ STEP 4: REPLACE THE OLD VIP BADGE SECTION ============
+// BEFORE (Old code - remove this):
+/*
+{user?.subscriptionPlan && user.subscriptionPlan !== 'Free' ? (
+  <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 px-4 py-2 rounded-full text-sm font-bold shadow-sm hover:scale-105 transition-transform cursor-default select-none">
+    <Crown className="h-4 w-4 fill-yellow-700 text-yellow-700" />
+    <span>
+      {user.subscriptionPlan === 'VIP_1_MONTH' && 'VIP 1 Tháng'}
+      {user.subscriptionPlan === 'VIP_6_MONTH' && 'VIP 6 Tháng'}
+      {user.subscriptionPlan === 'VIP_1_YEAR' && 'VIP 1 Năm'}
+    </span>
+  </div>
+) : isCheckingPending ? (
+  ...
+) : ...
+*/
+
+// AFTER (New code - replace with this):
+<SubscriptionBadge
+  onUpgradeClick={handleSubscriptionUpgrade}
+  onManageClick={handleSubscriptionManage}
+/>
+
+// ============ STEP 5: ENSURE YOUR UPGRADE MODAL IS CONNECTED ============
+// The isUpgradeOpen state should control your CheckoutModal or UpgradeModal:
+{isUpgradeOpen && (
+  <CheckoutModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
+)}
+// OR
+{isUpgradeOpen && (
+  <UpgradeModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
+)}
+
+// ============ COMPLETE EXAMPLE PLACEMENT ============
+/*
+<div className="flex items-center gap-4">
+  {!isAuthenticated ? (
+    // Login button
+    <button
+      onClick={() => setIsAuthModalOpen(true)}
+      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+    >
+      Đăng nhập / Đăng ký
+    </button>
+  ) : (
+    // Authenticated - Show User Menu
+    <>
+      {/* NEW: Subscription Badge with Dropdown */}
+      <SubscriptionBadge
+        onUpgradeClick={handleSubscriptionUpgrade}
+        onManageClick={handleSubscriptionManage}
+      />
+
+      {/* Notification Bell */}
+      <NotificationBellComponent />
+
+      {/* User Dropdown Menu */}
+      <div className="relative">
+        {/* user avatar and dropdown code... */}
+      </div>
+    </>
+  )}
+</div>
+
+{/* Modals */}
+{isAuthModalOpen && (
+  <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+)}
+{isUpgradeOpen && (
+  <CheckoutModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
+)}
+{pendingTx && (
+  {/* existing pending tx modal logic */}
+)}
+*/
+
+// ============ KEY FEATURES OF SubscriptionBadge ============
+// ✅ Fetches subscription from GET /api/billing/my-subscription
+// ✅ Handles loading state with pulsing skeleton
+// ✅ Fallback to FREE if no subscription or status is CANCELLED/EXPIRED
+// ✅ Dynamic colors based on plan (Gold for PRO, Blue for PLUS, Gray for FREE)
+// ✅ Dropdown shows:
+//    - Plan name + status badge
+//    - Registration date and expiration date
+//    - Features/benefits checklist
+//    - Action button (Upgrade or Manage)
+// ✅ Closes dropdown on outside click
+// ✅ Responsive design with Tailwind CSS
+// ✅ Beautiful animations and transitions
+
+// ============ PROPS EXPLANATION ============
+/*
+interface SubscriptionBadgeProps {
+  onUpgradeClick?: () => void;   // Callback when user clicks "Nâng cấp gói" button
+  onManageClick?: () => void;    // Callback when user clicks "Quản lý gói" button
+}
+*/
+
+// ============ EXAMPLE INTEGRATION IN FULL NAVBAR ============
+/*
+export function Navbar() {
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useUserStore();
+
+  const handleSubscriptionUpgrade = () => {
+    setIsUpgradeOpen(true);
+  };
+
+  const handleSubscriptionManage = () => {
+    // Navigate to manage page or show management modal
+  };
+
+  return (
+    <>
+      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
+        <div className="flex items-center gap-2">
+          <img src={logo} alt="IELTS Logo" className="h-10 w-auto" />
+          <span className="text-xl font-bold text-slate-900">IELTS Master</span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {!isAuthenticated ? (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Đăng nhập / Đăng ký
+            </button>
+          ) : (
+            <>
+              {/* ✨ NEW: Subscription Badge */}
+              <SubscriptionBadge
+                onUpgradeClick={handleSubscriptionUpgrade}
+                onManageClick={handleSubscriptionManage}
+              />
+
+              {/* Notification Bell */}
+              <NotificationBellComponent />
+
+              {/* User Dropdown */}
+              <UserDropdownMenu />
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* Modals */}
+      {isAuthModalOpen && <AuthModal {...} />}
+      {isUpgradeOpen && <CheckoutModal {...} />}
+    </>
+  );
+}
+*/
