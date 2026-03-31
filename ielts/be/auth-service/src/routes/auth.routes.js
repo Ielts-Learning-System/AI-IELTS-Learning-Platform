@@ -1,5 +1,13 @@
 const express = require('express');
-const { register, login, getProfile, updateUserRole, updateProfile, changePassword } = require('../controllers/auth.controller');
+const {
+	register,
+	login,
+	getProfile,
+	updateUserRole,
+	updateProfile,
+	changePassword,
+	batchGetUsersInternal,
+} = require('../controllers/auth.controller');
 const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
@@ -7,6 +15,9 @@ const router = express.Router();
 // Public routes
 router.post('/register', register);
 router.post('/login', login);
+
+// Internal service route (API Composition)
+router.post('/internal/users/batch', batchGetUsersInternal);
 
 // Protected routes - Require authentication
 router.get('/profile', verifyToken, getProfile);

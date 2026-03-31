@@ -11,6 +11,8 @@ import { TeacherLayout } from './components/layout/TeacherLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { UserManagement } from './pages/admin/UserManagement';
 import { TransactionManagement } from './pages/admin/TransactionManagement';
+import { BillingPlansManagement } from './pages/admin/BillingPlansManagement';
+import { BillingSubscriptionsManagement } from './pages/admin/BillingSubscriptionsManagement';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
 import GradingDashboard from './pages/teacher/GradingDashboard';
@@ -147,6 +149,8 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="transactions" element={<TransactionManagement />} />
+            <Route path="billing/plans" element={<BillingPlansManagement />} />
+            <Route path="billing/subscriptions" element={<BillingSubscriptionsManagement />} />
             <Route path="resources" element={<AdminDashboard />} />
             <Route path="reports" element={<AdminDashboard />} />
           </Route>

@@ -316,4 +316,51 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, updateUserRole, updateProfile, changePassword };
+/**
+ * Internal endpoint for service-to-service user hydration.
+ * Input: { userIds: string[] }
+ * Output: [{ _id, name, email }]
+ */
+const batchGetUsersInternal = async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'userIds must be an array',
+      });
+    }
+
+    const cleanedIds = [...new Set(userIds.map((id) => String(id).trim()).filter(Boolean))];
+
+    if (!cleanedIds.length) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const users = await User.find({ _id: { $in: cleanedIds } })
+      .select('name email')
+      .lean();
+
+    return res.json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    console.error('BATCH GET USERS ERROR:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users in batch',
+    });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  getProfile,
+  updateUserRole,
+  updateProfile,
+  changePassword,
+  batchGetUsersInternal,
+};
