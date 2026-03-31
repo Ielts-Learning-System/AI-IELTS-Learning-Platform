@@ -1,5 +1,14 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, BarChart3, LogOut, ReceiptText } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  BarChart3,
+  LogOut,
+  ReceiptText,
+  BadgeDollarSign,
+  BellRing,
+} from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -9,6 +18,8 @@ const adminMenuItems = [
   { name: 'Tổng quan', path: '/admin', icon: LayoutDashboard },
   { name: 'Quản lý người dùng', path: '/admin/users', icon: Users },
   { name: 'Quản lý giao dịch', path: '/admin/transactions', icon: ReceiptText },
+  { name: 'Gói cước', path: '/admin/billing/plans', icon: BadgeDollarSign },
+  { name: 'Subscriptions', path: '/admin/billing/subscriptions', icon: BellRing },
   { name: 'Quản lý tài nguyên', path: '/admin/resources', icon: FileText },
   { name: 'Báo cáo', path: '/admin/reports', icon: BarChart3 },
 ];
@@ -38,7 +49,10 @@ export function AdminLayout() {
         {/* Menu Items */}
         <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
           {adminMenuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive =
+              item.path === '/admin'
+                ? location.pathname === '/admin'
+                : location.pathname.startsWith(item.path);
             return (
               <Link
                 key={item.name}

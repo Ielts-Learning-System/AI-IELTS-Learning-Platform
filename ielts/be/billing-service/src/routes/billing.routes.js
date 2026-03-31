@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
 
-// 1. Import toàn bộ controller
 const billingController = require('../controllers/billing.controller');
+const adminController = require('../controllers/admin.controller');
+const subscriptionController = require('../controllers/subscription.controller');
 
-// 2. Import middleware
-const { verifyToken } = require('../middleware/auth.middleware');
-
-// --- CÁC ĐƯỜNG DẪN API ---
+const { verifyToken, authorizeRoles } = require('../middleware/auth.middleware');
 
 router.get('/health', (req, res) => {
   res.status(200).json({
@@ -15,12 +13,23 @@ router.get('/health', (req, res) => {
     timestamp: new Date(),
   });
 });
-// API Public: Lấy danh sách gói cước
+
+// Public plans for student purchase screens
 router.get('/plans', billingController.getAllPlans);
 
-// API Private: Yêu cầu có token đăng nhập
-router.get('/my-plan', verifyToken, billingController.getMySubscription);
-router.post('/upgrade', verifyToken, billingController.upgradePlan);
-router.get('/check-eligibility', verifyToken, billingController.checkFullTestEligibility);
+// Student endpoint
+router.get('/my-subscription', verifyToken, subscriptionController.getMySubscription);
+
+// Backward-compatible alias
+router.get('/my-plan', verifyToken, subscriptionController.getMySubscription);
+
+// Admin endpoints
+router.get('/admin/plans', verifyToken, authorizeRoles('admin'), adminController.getAllPlansForAdmin);
+router.post('/admin/plans', verifyToken, authorizeRoles('admin'), adminController.createPlan);
+router.put('/admin/plans/:planId', verifyToken, authorizeRoles('admin'), adminController.updatePlan);
+router.patch('/admin/plans/:planId/toggle-active', verifyToken, authorizeRoles('admin'), adminController.togglePlanActive);
+router.delete('/admin/plans/:planId', verifyToken, authorizeRoles('admin'), adminController.deletePlan);
+router.get('/admin/subscriptions', verifyToken, authorizeRoles('admin'), adminController.getAllUserSubscriptions);
+router.post('/admin/remind/:userId', verifyToken, authorizeRoles('admin'), adminController.triggerReminderNotification);
 
 module.exports = router;

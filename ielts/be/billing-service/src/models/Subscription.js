@@ -2,15 +2,19 @@ const mongoose = require('mongoose');
 
 const subscriptionSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: mongoose.Schema.Types.ObjectId, // Giữ nguyên, lưu ID của user từ auth-service
     required: true,
     unique: true,
   },
-  plan: {
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Plan', // Liên kết (Join) trực tiếp với bảng Plan
+    required: true,
+  },
+  status: {
     type: String,
-    enum: ['FREE', 'PLUS', 'PRO'],
-    default: 'FREE',
+    enum: ['ACTIVE', 'EXPIRED', 'CANCELLED'],
+    default: 'ACTIVE'
   },
   fullTestUsed: {
     type: Number,
@@ -18,6 +22,7 @@ const subscriptionSchema = new mongoose.Schema({
   },
   validUntil: {
     type: Date,
+    required: true // Bắt buộc phải có ngày hết hạn khi tạo sub
   },
 }, {
   timestamps: true,
