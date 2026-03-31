@@ -15,13 +15,6 @@ interface Notification {
   type?: string;
 }
 
-interface UnreadCountResponse {
-  data?: {
-    unreadCount: number;
-  };
-  unreadCount?: number;
-}
-
 // Utility: Format relative time (e.g., "5 mins ago", "2 days ago")
 const formatRelativeTime = (isoDate: string): string => {
   try {
@@ -66,7 +59,8 @@ export function NotificationBellComponent() {
       });
 
       // ✅ Safe data extraction with fallback to empty array
-      const notificationList = response?.data?.data || response?.data || [];
+      const notificationList =
+        response?.data?.notifications || response?.data?.data || response?.data || [];
       setNotifications(Array.isArray(notificationList) ? notificationList : []);
     } catch (err: any) {
       console.error('Failed to fetch notifications:', err);
@@ -118,8 +112,10 @@ export function NotificationBellComponent() {
     fetchUnreadCount();
 
     // Initialize socket with safe config
+    const token = localStorage.getItem('accessToken');
     const socketInstance = io('http://localhost:3000', {
       path: '/socket.io-notification',
+      auth: token ? { token } : undefined,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,

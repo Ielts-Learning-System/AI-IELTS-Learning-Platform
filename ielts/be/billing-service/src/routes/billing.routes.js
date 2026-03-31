@@ -31,5 +31,7 @@ router.patch('/admin/plans/:planId/toggle-active', verifyToken, authorizeRoles('
 router.delete('/admin/plans/:planId', verifyToken, authorizeRoles('admin'), adminController.deletePlan);
 router.get('/admin/subscriptions', verifyToken, authorizeRoles('admin'), adminController.getAllUserSubscriptions);
 router.post('/admin/remind/:userId', verifyToken, authorizeRoles('admin'), adminController.triggerReminderNotification);
+router.post('/admin/subscriptions/:subscriptionId/cancel', verifyToken, authorizeRoles('admin'), adminController.cancelSubscription);
+router.post('/admin/subscriptions/:subscriptionId/restore', verifyToken, authorizeRoles('admin'), adminController.restoreSubscription);
 
 module.exports = router;

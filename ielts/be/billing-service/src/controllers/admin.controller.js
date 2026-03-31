@@ -235,6 +235,207 @@ const triggerReminderNotification = async (req, res) => {
   }
 };
 
+const cancelSubscription = async (req, res) => {
+  try {
+    const { subscriptionId } = req.params;
+    const { reason, editedTitle, editedMessage } = req.body;
+
+    if (!subscriptionId || !reason || !editedTitle || !editedMessage) {
+      return res.status(400).json({
+        success: false,
+        message: 'subscriptionId, reason, editedTitle, and editedMessage are required',
+      });
+    }
+
+    const validReasons = ['POLICY_VIOLATION', 'SYSTEM_ERROR', 'USER_REQUEST_REFUND'];
+    if (!validReasons.includes(reason)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid reason. Must be one of: ${validReasons.join(', ')}`,
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid subscriptionId format' });
+    }
+
+    const subscription = await Subscription.findById(subscriptionId).populate('planId', 'name');
+
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: 'Subscription not found' });
+    }
+
+    if (subscription.status !== 'ACTIVE') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel subscription with status ${subscription.status}`,
+      });
+    }
+
+    // Update subscription status
+    subscription.status = 'CANCELLED';
+    subscription.cancelledAt = new Date();
+    subscription.cancellationReason = reason;
+    subscription.cancellationTitle = editedTitle;
+    subscription.cancellationMessage = editedMessage;
+    await subscription.save();
+
+    // Fetch user data from auth-service
+    let userData = { name: 'User', email: 'N/A' };
+    try {
+      const userId = subscription.userId.toString();
+      const response = await axios.post(
+        `${AUTH_SERVICE_BASE_URL}/api/auth/internal/users/batch`,
+        { userIds: [userId] },
+        {
+          timeout: AUTH_SERVICE_TIMEOUT_MS,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      const users = response.data?.data || [];
+      if (users.length > 0) {
+        userData = {
+          name: users[0].name || 'User',
+          email: users[0].email || 'N/A',
+        };
+      }
+    } catch (err) {
+      console.error('Failed to fetch user data for cancellation event:', err.message);
+      // Continue with fallback user data
+    }
+
+    // Publish cancellation event with user info and exact admin message
+    const payload = {
+      userId: subscription.userId.toString(),
+      subscriptionId: subscription._id.toString(),
+      email: userData.email,
+      name: userData.name,
+      planName: subscription.planId?.name || 'Unknown Plan',
+      reason,
+      type: 'subscription_cancelled',
+      title: editedTitle,
+      message: editedMessage,
+      status: 'CANCELLED',
+      cancelledAt: subscription.cancelledAt,
+    };
+
+    const published = await publishEvent('billing.subscription.cancelled', payload);
+    if (!published) {
+      console.error('Failed to publish cancellation event: publishEvent returned false');
+    }
+
+    return res.json({
+      success: true,
+      message: 'Subscription cancelled successfully',
+      data: subscription,
+    });
+  } catch (error) {
+    console.error('CANCEL SUBSCRIPTION ERROR', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const restoreSubscription = async (req, res) => {
+  try {
+    const { subscriptionId } = req.params;
+
+    if (!subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'subscriptionId is required',
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      return res.status(400).json({ success: false, message: 'Invalid subscriptionId format' });
+    }
+
+    const subscription = await Subscription.findById(subscriptionId).populate('planId', 'name');
+
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: 'Subscription not found' });
+    }
+
+    if (subscription.status !== 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot restore subscription with status ${subscription.status}`,
+      });
+    }
+
+    // Check if validUntil is still in the future
+    const now = new Date();
+    const validUntilDate = new Date(subscription.validUntil);
+    if (validUntilDate <= now) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot restore subscription with expired validUntil date',
+      });
+    }
+
+    // Restore subscription status
+    subscription.status = 'ACTIVE';
+    subscription.cancelledAt = null;
+    subscription.cancellationReason = null;
+    subscription.cancellationTitle = null;
+    subscription.cancellationMessage = null;
+    await subscription.save();
+
+    // Fetch user data from auth-service
+    let userData = { name: 'User', email: 'N/A' };
+    try {
+      const userId = subscription.userId.toString();
+      const response = await axios.post(
+        `${AUTH_SERVICE_BASE_URL}/api/auth/internal/users/batch`,
+        { userIds: [userId] },
+        {
+          timeout: AUTH_SERVICE_TIMEOUT_MS,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      const users = response.data?.data || [];
+      if (users.length > 0) {
+        userData = {
+          name: users[0].name || 'User',
+          email: users[0].email || 'N/A',
+        };
+      }
+    } catch (err) {
+      console.error('Failed to fetch user data for restoration event:', err.message);
+      // Continue with fallback user data
+    }
+
+    // Publish restoration event
+    const payload = {
+      userId: subscription.userId.toString(),
+      subscriptionId: subscription._id.toString(),
+      email: userData.email,
+      name: userData.name,
+      planName: subscription.planId?.name || 'Unknown Plan',
+      type: 'subscription_restored',
+      title: '✅ Subscription Restored',
+      message: `Welcome back! Your ${subscription.planId?.name || 'subscription'} plan has been restored.`,
+      validUntil: subscription.validUntil,
+      status: 'ACTIVE',
+      restoredAt: new Date(),
+    };
+
+    const published = await publishEvent('billing.subscription.restored', payload);
+    if (!published) {
+      console.error('Failed to publish restoration event: publishEvent returned false');
+    }
+
+    return res.json({
+      success: true,
+      message: 'Subscription restored successfully',
+      data: subscription,
+    });
+  } catch (error) {
+    console.error('RESTORE SUBSCRIPTION ERROR', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createPlan,
   getAllPlansForAdmin,
@@ -243,4 +444,6 @@ module.exports = {
   deletePlan,
   getAllUserSubscriptions,
   triggerReminderNotification,
+  cancelSubscription,
+  restoreSubscription,
 };
