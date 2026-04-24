@@ -228,6 +228,32 @@ exports.addSample = async (req, res) => {
 };
 
 /**
+ * PUT /:id/samples/:sampleId
+ * Update an existing sample essay.
+ */
+exports.updateSample = async (req, res) => {
+  try {
+    const { bandScore, author, contentHtml } = req.body;
+    const { id, sampleId } = req.params;
+
+    const writing = await Writing.findById(id);
+    if (!writing) return res.status(404).json({ success: false, error: 'Writing not found' });
+
+    const sample = writing.sampleInfos.id(sampleId);
+    if (!sample) return res.status(404).json({ success: false, error: 'Sample not found' });
+
+    if (bandScore != null) sample.bandScore = Number(bandScore);
+    if (contentHtml) sample.contentHtml = String(contentHtml).trim();
+    if (author) sample.author = String(author).trim();
+
+    await writing.save();
+    res.json({ success: true, message: 'Sample updated successfully', data: sample, writing });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
  * DELETE /:id/samples/:sampleId
  * Remove a specific sample essay from a Writing prompt.
  */

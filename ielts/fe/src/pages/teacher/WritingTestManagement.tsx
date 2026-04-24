@@ -4,7 +4,13 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
   BookOpen,
   CalendarDays,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  Eye,
   FilePenLine,
+  GraduationCap,
   LoaderCircle,
   Pencil,
   Plus,
@@ -60,6 +66,16 @@ type SampleFormState = {
   sampleContentHtml: string;
 };
 
+type SampleEditState = {
+  writingId: string;
+  sampleId: string;
+  bandScore: string;
+  author: string;
+  contentHtml: string;
+};
+
+type MainTab = 'prompts' | 'samples';
+
 const API_BASE = 'http://localhost:3000';
 
 const defaultFormState: FormState = {
@@ -88,6 +104,17 @@ const removeImageTags = (html: string) => String(html || '').replace(/<img[^>]*>
 
 export default function WritingTestManagement() {
   const { token } = useUserStore();
+  const [mainTab, setMainTab] = useState<MainTab>('prompts');
+  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
+  const [sampleEditState, setSampleEditState] = useState<SampleEditState | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [sampleSearchQuery, setSampleSearchQuery] = useState('');
+  const [previewSample, setPreviewSample] = useState<{
+    writingTitle: string;
+    bandScore: number;
+    author: string;
+    contentHtml: string;
+  } | null>(null);
 
   const [tests, setTests] = useState<WritingTestItem[]>([]);
   const [isLoadingTests, setIsLoadingTests] = useState(true);
@@ -114,17 +141,32 @@ export default function WritingTestManagement() {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
 
+  // --- Filter state ---
+  const [promptTypeFilter, setPromptTypeFilter] = useState<'All' | 'Task 1' | 'Task 2'>('All');
+  const [promptCategoryFilter, setPromptCategoryFilter] = useState<string>('All');
+  const [sampleTypeFilter, setSampleTypeFilter] = useState<'All' | 'Task 1' | 'Task 2'>('All');
+  const [sampleCategoryFilter, setSampleCategoryFilter] = useState<string>('All');
+  const [sampleHasFilter, setSampleHasFilter] = useState<'All' | 'has' | 'none'>('All');
+
+  // Unique categories derived from loaded tests
+  const uniqueCategories = useMemo(() => {
+    const cats = tests.map(t => String(t.category || 'Mixed').trim()).filter(Boolean);
+    return ['All', ...Array.from(new Set(cats)).sort()];
+  }, [tests]);
+
   const filteredTests = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return tests;
-
     return tests.filter((test) => {
-      const title = String(test.title || '').toLowerCase();
-      const category = String(test.category || '').toLowerCase();
-      const type = String(test.type || '').toLowerCase();
-      return title.includes(q) || category.includes(q) || type.includes(q);
+      const matchQ = !q ||
+        String(test.title || '').toLowerCase().includes(q) ||
+        String(test.category || '').toLowerCase().includes(q) ||
+        String(test.type || '').toLowerCase().includes(q);
+      const matchType = promptTypeFilter === 'All' || test.type === promptTypeFilter;
+      const testCat = String(test.category || 'Mixed').trim();
+      const matchCat = promptCategoryFilter === 'All' || testCat === promptCategoryFilter;
+      return matchQ && matchType && matchCat;
     });
-  }, [tests, searchQuery]);
+  }, [tests, searchQuery, promptTypeFilter, promptCategoryFilter]);
 
   // Practice items only (not already a sample) — used in sample creation dropdown
   const practiceTests = useMemo(() => (tests as any[]).filter((t) => !t.isSample), [tests]);
@@ -398,6 +440,45 @@ export default function WritingTestManagement() {
     }
   };
 
+  // ---- Sample Tab handlers ----
+  const handleDeleteSample = async (writingId: string, sampleId: string) => {
+    if (!window.confirm('Xóa bài mẫu này?')) return;
+    try {
+      const authToken = getToken(token);
+      await axios.delete(`${API_BASE}/api/writing/${writingId}/samples/${sampleId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      toast.success('Đã xóa bài mẫu.');
+      fetchTests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể xóa bài mẫu.');
+    }
+  };
+
+  const handleUpdateSample = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sampleEditState) return;
+    const band = parseFloat(sampleEditState.bandScore);
+    if (isNaN(band) || band < 1 || band > 9) { toast.error('Band score 1–9.'); return; }
+    if (!sampleEditState.contentHtml.trim()) { toast.error('Nhập nội dung bài mẫu.'); return; }
+    try {
+      setIsSavingEdit(true);
+      const authToken = getToken(token);
+      await axios.put(
+        `${API_BASE}/api/writing/${sampleEditState.writingId}/samples/${sampleEditState.sampleId}`,
+        { bandScore: band, author: sampleEditState.author.trim() || 'IELTS Master', contentHtml: sampleEditState.contentHtml.trim() },
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+      toast.success('Đã cập nhật bài mẫu.');
+      setSampleEditState(null);
+      fetchTests();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể cập nhật bài mẫu.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   const openAssignModal = async (test: WritingTestItem) => {
     setAssigningTest(test);
     setSelectedStudentId('');
@@ -475,44 +556,170 @@ export default function WritingTestManagement() {
       <div className="rounded-[30px] border border-slate-200 bg-[linear-gradient(135deg,#fff7f7_0%,#ffffff_50%,#f8fafc_100%)] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-900">Writing Prompt Bank</h2>
+            <h2 className="text-3xl font-black tracking-tight text-slate-900">Writing Management</h2>
             <p className="mt-2 text-sm text-slate-500">
-              Quản lý ngân hàng đề Writing IELTS, upload ảnh cho Task 1 và giao đề cho học viên.
+              Quản lý đề thi và bài mẫu Writing IELTS.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={openCreateSampleModal}
-              className="inline-flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100"
-            >
-              <BookOpen className="h-4 w-4" />
-              Tạo Bài Mẫu
-            </button>
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-[#c9142f]"
-            >
-              <Plus className="h-4 w-4" />
-              Tạo Prompt
-            </button>
+            {mainTab === 'prompts' && (
+              <>
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-[#c9142f]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tạo Đề Thi
+                </button>
+              </>
+            )}
+            {mainTab === 'samples' && (
+              <button
+                type="button"
+                onClick={openCreateSampleModal}
+                className="inline-flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100"
+              >
+                <BookOpen className="h-4 w-4" />
+                Thêm Bài Mẫu
+              </button>
+            )}
           </div>
         </div>
 
-        <label className="relative mt-5 block max-w-xl">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Tìm theo title, type hoặc category..."
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none ring-red-100 transition focus:border-red-300 focus:ring"
-          />
-        </label>
+        {/* ---- Tab Switcher ---- */}
+        <div className="mt-6 flex gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setMainTab('prompts')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+              mainTab === 'prompts'
+                ? 'bg-white text-[#E31837] shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <ClipboardList className="h-4 w-4" />
+            Đề Thi Writing
+            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+              mainTab === 'prompts' ? 'bg-red-50 text-red-600' : 'bg-slate-200 text-slate-500'
+            }`}>{tests.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab('samples')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+              mainTab === 'samples'
+                ? 'bg-white text-amber-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <GraduationCap className="h-4 w-4" />
+            Bài Mẫu
+            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+              mainTab === 'samples' ? 'bg-amber-50 text-amber-600' : 'bg-slate-200 text-slate-500'
+            }`}>{tests.filter(t => (t.sampleInfos?.length ?? 0) > 0).length} đề</span>
+          </button>
+        </div>
+
+        {mainTab === 'prompts' && (
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <div className="flex flex-1 min-w-[200px] flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Tìm kiếm</span>
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Nhập tên đề bài..."
+                  className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none ring-red-100 transition focus:border-red-300 focus:ring"
+                />
+              </label>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Loại task</span>
+              <select
+                value={promptTypeFilter}
+                onChange={(e) => setPromptTypeFilter(e.target.value as any)}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none ring-red-100 transition focus:border-red-300 focus:ring"
+              >
+                <option value="All">Tất cả</option>
+                <option value="Task 1">Task 1</option>
+                <option value="Task 2">Task 2</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Đề mục</span>
+              <select
+                value={promptCategoryFilter}
+                onChange={(e) => setPromptCategoryFilter(e.target.value)}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none ring-red-100 transition focus:border-red-300 focus:ring"
+              >
+                {uniqueCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả' : cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+        {mainTab === 'samples' && (
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <div className="flex flex-1 min-w-[200px] flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Tìm kiếm</span>
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={sampleSearchQuery}
+                  onChange={(e) => setSampleSearchQuery(e.target.value)}
+                  placeholder="Nhập tên đề bài..."
+                  className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none ring-amber-100 transition focus:border-amber-300 focus:ring"
+                />
+              </label>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Loại task</span>
+              <select
+                value={sampleTypeFilter}
+                onChange={(e) => setSampleTypeFilter(e.target.value as any)}
+                className="rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none ring-amber-100 transition focus:border-amber-300 focus:ring"
+              >
+                <option value="All">Tất cả</option>
+                <option value="Task 1">Task 1</option>
+                <option value="Task 2">Task 2</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Đề mục</span>
+              <select
+                value={sampleCategoryFilter}
+                onChange={(e) => setSampleCategoryFilter(e.target.value)}
+                className="rounded-xl border border-amber-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none ring-amber-100 transition focus:border-amber-300 focus:ring"
+              >
+                {uniqueCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat === 'All' ? 'Tất cả' : cat}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-amber-500">Bài mẫu</span>
+              <select
+                value={sampleHasFilter}
+                onChange={(e) => setSampleHasFilter(e.target.value as any)}
+                className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 outline-none ring-amber-100 transition focus:border-amber-400 focus:ring"
+              >
+                <option value="All">Tất cả</option>
+                <option value="has">Có bài mẫu</option>
+                <option value="none">Chưa có bài mẫu</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* ============ TAB 1: PROMPTS ============ */}
+      {mainTab === 'prompts' && (
       <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
         {isLoadingTests ? (
           <div className="flex min-h-[260px] items-center justify-center">
@@ -590,6 +797,162 @@ export default function WritingTestManagement() {
           </div>
         )}
       </div>
+      )}
+
+      {/* ============ TAB 2: SAMPLES ============ */}
+      {mainTab === 'samples' && (
+        <div className="space-y-4">
+          {isLoadingTests ? (
+            <div className="flex min-h-[260px] items-center justify-center">
+              <div className="flex items-center gap-3 text-amber-600">
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                <span className="font-semibold">Đang tải dữ liệu...</span>
+              </div>
+            </div>
+          ) : (
+            tests
+              .filter(t => {
+                const q = sampleSearchQuery.trim().toLowerCase();
+                const matchQ = q ? t.title.toLowerCase().includes(q) : true;
+                const matchType = sampleTypeFilter === 'All' || t.type === sampleTypeFilter;
+                const testCat = String(t.category || 'Mixed').trim();
+                const matchCat = sampleCategoryFilter === 'All' || testCat === sampleCategoryFilter;
+                const hasSamples = (t.sampleInfos?.length ?? 0) > 0;
+                const matchHas =
+                  sampleHasFilter === 'All' ? true :
+                  sampleHasFilter === 'has' ? hasSamples :
+                  !hasSamples;
+                return matchQ && matchType && matchCat && matchHas;
+              })
+              .map(writing => {
+                const samples = writing.sampleInfos ?? [];
+                const isExpanded = expandedPromptId === writing._id;
+                return (
+                  <div key={writing._id} className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm">
+                    {/* Prompt header row */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPromptId(isExpanded ? null : writing._id)}
+                      className="flex w-full items-center gap-4 px-5 py-4 transition hover:bg-slate-50"
+                    >
+                      <div className="flex-1 text-left">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                            writing.type === 'Task 1' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'
+                          }`}>{writing.type}</span>
+                          {writing.category && <span className="text-xs text-slate-400">{writing.category}</span>}
+                        </div>
+                        <p className="mt-1 font-semibold text-slate-800">{writing.title}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {samples.length === 0 ? (
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-400">Chưa có bài mẫu</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {samples.map(s => (
+                              <span key={s._id} className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-600">
+                                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                {s.bandScore.toFixed(1)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                      </div>
+                    </button>
+
+                    {/* Expanded samples list */}
+                    {isExpanded && (
+                      <div className="border-t border-slate-100 bg-amber-50/30 px-5 py-4 space-y-3">
+                        {samples.length === 0 && (
+                          <p className="py-4 text-center text-sm text-slate-400">Chưa có bài mẫu nào cho đề này.</p>
+                        )}
+                        {samples.map(sample => {
+                          const isEditing = sampleEditState?.sampleId === sample._id;
+                          return (
+                            <div key={sample._id} className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
+                              {!isEditing ? (
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">
+                                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                      Band {sample.bandScore.toFixed(1)}
+                                    </span>
+                                    <span className="text-sm text-slate-500">{sample.author}</span>
+                                  </div>
+                                  <div className="flex shrink-0 gap-2">
+                                    <button
+                                      type="button"
+                                      title="Xem nội dung"
+                                      onClick={() => setPreviewSample({ writingTitle: writing.title, bandScore: sample.bandScore, author: sample.author, contentHtml: sample.contentHtml })}
+                                      className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                                    ><Eye className="h-3.5 w-3.5" /></button>
+                                    <button
+                                      type="button"
+                                      title="Chỉnh sửa"
+                                      onClick={() => setSampleEditState({ writingId: writing._id, sampleId: sample._id, bandScore: String(sample.bandScore), author: sample.author, contentHtml: sample.contentHtml })}
+                                      className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-600"
+                                    ><Pencil className="h-3.5 w-3.5" /></button>
+                                    <button
+                                      type="button"
+                                      title="Xóa"
+                                      onClick={() => handleDeleteSample(writing._id, sample._id)}
+                                      className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                    ><Trash2 className="h-3.5 w-3.5" /></button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <form onSubmit={handleUpdateSample} className="space-y-3">
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <label className="block">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-600">Band Score</span>
+                                      <input type="number" step="0.5" min="1" max="9"
+                                        value={sampleEditState!.bandScore}
+                                        onChange={e => setSampleEditState(p => p ? { ...p, bandScore: e.target.value } : null)}
+                                        className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring focus:ring-amber-100"
+                                      />
+                                    </label>
+                                    <label className="block">
+                                      <span className="mb-1 block text-xs font-semibold text-slate-600">Tác giả</span>
+                                      <input type="text"
+                                        value={sampleEditState!.author}
+                                        onChange={e => setSampleEditState(p => p ? { ...p, author: e.target.value } : null)}
+                                        className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring focus:ring-amber-100"
+                                      />
+                                    </label>
+                                  </div>
+                                  <label className="block">
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Nội dung bài mẫu (HTML)</span>
+                                    <textarea rows={8}
+                                      value={sampleEditState!.contentHtml}
+                                      onChange={e => setSampleEditState(p => p ? { ...p, contentHtml: e.target.value } : null)}
+                                      className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring focus:ring-amber-100"
+                                    />
+                                  </label>
+                                  <div className="flex justify-end gap-2">
+                                    <button type="button" onClick={() => setSampleEditState(null)}
+                                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                                    >Hủy</button>
+                                    <button type="submit" disabled={isSavingEdit}
+                                      className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-1.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60"
+                                    >
+                                      {isSavingEdit ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                      Lưu
+                                    </button>
+                                  </div>
+                                </form>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+          )}
+        </div>
+      )}
 
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -961,6 +1324,58 @@ export default function WritingTestManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/*  Sample Content Preview Modal                                 */}
+      {/* ============================================================ */}
+      {previewSample && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="flex w-full max-w-3xl flex-col max-h-[90vh] rounded-2xl bg-white shadow-2xl">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4 rounded-t-2xl border-b border-amber-100 bg-amber-50/80 px-6 py-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+                  <BookOpen className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-500">{previewSample.writingTitle}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-200/80 px-2.5 py-0.5 text-sm font-bold text-amber-800">
+                      <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                      Band {previewSample.bandScore.toFixed(1)}
+                    </span>
+                    <span className="text-sm text-slate-500">{previewSample.author}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewSample(null)}
+                className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-amber-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div
+              className="flex-1 overflow-y-auto px-8 py-6 prose prose-slate max-w-none text-[15px] leading-8 prose-headings:text-slate-900 prose-strong:text-slate-900 prose-a:text-red-600"
+              dangerouslySetInnerHTML={{ __html: previewSample.contentHtml }}
+            />
+
+            {/* Footer */}
+            <div className="flex justify-end border-t border-slate-100 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setPreviewSample(null)}
+                className="rounded-xl border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}
