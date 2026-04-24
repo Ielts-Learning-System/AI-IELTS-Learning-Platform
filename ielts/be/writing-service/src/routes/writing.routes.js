@@ -10,6 +10,7 @@ const {
   updateTest,
   deleteTest,
   addSample,
+  updateSample,
   deleteSample,
 } = require('../controllers/writing.controller');
 const { verifyToken, isTeacher } = require('../middlewares/auth.middleware');
@@ -36,6 +37,9 @@ router.delete('/:id', verifyToken, isTeacher, deleteTest);
 // ── Sample sub-resource ──────────────────────────────────────────────────────
 // POST   /:id/samples        — append a sample essay to an existing prompt
 router.post('/:id/samples', verifyToken, isTeacher, addSample);
+
+// PUT    /:id/samples/:sampleId — update a specific sample essay
+router.put('/:id/samples/:sampleId', verifyToken, isTeacher, updateSample);
 
 // DELETE /:id/samples/:sampleId — remove a specific sample essay
 router.delete('/:id/samples/:sampleId', verifyToken, isTeacher, deleteSample);
