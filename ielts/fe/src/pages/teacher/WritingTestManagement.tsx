@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import MiniRichEditor from '../../components/MiniRichEditor';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import {
@@ -921,14 +922,17 @@ export default function WritingTestManagement() {
                                       />
                                     </label>
                                   </div>
-                                  <label className="block">
-                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Nội dung bài mẫu (HTML)</span>
-                                    <textarea rows={8}
+                                  <div className="block">
+                                    <span className="mb-1 block text-xs font-semibold text-slate-600">Nội dung bài mẫu</span>
+                                    <MiniRichEditor
                                       value={sampleEditState!.contentHtml}
-                                      onChange={e => setSampleEditState(p => p ? { ...p, contentHtml: e.target.value } : null)}
-                                      className="w-full rounded-lg border border-amber-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring focus:ring-amber-100"
+                                      onChange={(html) => setSampleEditState(p => p ? { ...p, contentHtml: html } : null)}
+                                      placeholder="Nhập nội dung bài mẫu..."
+                                      minHeight={200}
+                                      borderColor="border-amber-300"
+                                      focusBorderColor="focus-within:border-amber-400"
                                     />
-                                  </label>
+                                  </div>
                                   <div className="flex justify-end gap-2">
                                     <button type="button" onClick={() => setSampleEditState(null)}
                                       className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
@@ -1058,19 +1062,17 @@ export default function WritingTestManagement() {
                 </label>
               )}
 
-              <label className="block">
-                <span className="mb-1 block text-sm font-semibold text-slate-700">Prompt Content (HTML)</span>
-                <textarea
+              <div className="block">
+                <span className="mb-1 block text-sm font-semibold text-slate-700">Prompt Content <span className="text-red-500">*</span></span>
+                <MiniRichEditor
                   value={formState.contentHtml}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, contentHtml: event.target.value }))
-                  }
-                  rows={8}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none ring-red-100 transition focus:border-red-300 focus:ring"
-                  placeholder="Nhập nội dung đề bài (hỗ trợ HTML cơ bản)."
-                  required
+                  onChange={(html) => setFormState((prev) => ({ ...prev, contentHtml: html }))}
+                  placeholder="Nhập nội dung đề bài..."
+                  minHeight={200}
+                  borderColor="border-slate-300"
+                  focusBorderColor="focus-within:border-red-300"
                 />
-              </label>
+              </div>
 
               <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                 <button
@@ -1279,17 +1281,17 @@ export default function WritingTestManagement() {
                   </label>
                 </div>
 
-                <label className="mt-4 block">
-                  <span className="mb-1 block text-sm font-semibold text-slate-700">Nội dung bài mẫu (HTML) <span className="text-red-500">*</span></span>
-                  <textarea
+                <div className="mt-4 block">
+                  <span className="mb-1 block text-sm font-semibold text-slate-700">Nội dung bài mẫu <span className="text-red-500">*</span></span>
+                  <MiniRichEditor
                     value={sampleForm.sampleContentHtml}
-                    onChange={(e) => setSampleForm((p) => ({ ...p, sampleContentHtml: e.target.value }))}
-                    rows={10}
-                    className="w-full rounded-xl border border-amber-300 px-4 py-3 text-sm outline-none ring-amber-100 transition focus:border-amber-400 focus:ring"
-                    placeholder="Nhập nội dung bài viết mẫu (hỗ trợ HTML). VD: <p>In today's world...</p>"
-                    required
+                    onChange={(html) => setSampleForm((p) => ({ ...p, sampleContentHtml: html }))}
+                    placeholder="Nhập nội dung bài viết mẫu..."
+                    minHeight={260}
+                    borderColor="border-amber-300"
+                    focusBorderColor="focus-within:border-amber-400"
                   />
-                </label>
+                </div>
 
                 {sampleForm.sampleContentHtml.trim() && (
                   <div className="mt-3 rounded-xl border border-amber-200 bg-white p-4">
