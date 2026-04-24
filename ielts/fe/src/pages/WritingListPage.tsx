@@ -9,7 +9,8 @@ import axios from 'axios';
 
 type TaskType = 'Task 1' | 'Task 2';
 
-interface SampleInfo {
+interface SampleInfoEntry {
+  _id: string;
   bandScore: number;
   contentHtml: string;
   author: string;
@@ -23,7 +24,7 @@ interface WritingItem {
   timeLimit: number;
   contentHtml: string;
   isSample: boolean;
-  sampleInfo?: SampleInfo;
+  sampleInfos: SampleInfoEntry[];
   tags: string[];
 }
 
@@ -69,12 +70,13 @@ export default function WritingListPage() {
 
   /* ---------- derived / filtered data ---------- */
   const practiceItems = useMemo(
-    () => items.filter((i) => !i.isSample && (filter === 'All' || i.type === filter)),
+    () => items.filter((i) => (filter === 'All' || i.type === filter)),
     [items, filter],
   );
 
+  // A "sample" card = any writing that has at least one sampleInfo entry
   const sampleItems = useMemo(
-    () => items.filter((i) => i.isSample && (filter === 'All' || i.type === filter)),
+    () => items.filter((i) => i.sampleInfos?.length > 0 && (filter === 'All' || i.type === filter)),
     [items, filter],
   );
 
@@ -217,20 +219,30 @@ function PracticeCard({ item }: { item: WritingItem }) {
 }
 
 function SampleCard({ item }: { item: WritingItem }) {
+  const samples = item.sampleInfos ?? [];
+  const maxBand = samples.length > 0 ? Math.max(...samples.map((s) => s.bandScore)) : null;
+
   return (
     <div className="group flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
       <div className="flex-1 p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <TaskBadge type={item.type} />
           <span className="rounded-full bg-amber-50 px-3 py-0.5 text-xs font-semibold text-amber-700">
-            {item.sampleInfo?.author ?? 'IELTS Master'}
+            {samples.length} bài mẫu
           </span>
         </div>
         <h3 className="mb-3 text-base font-bold text-slate-800 line-clamp-2">{item.title}</h3>
-        {item.sampleInfo && (
-          <div className="flex items-center gap-1.5">
-            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-            <span className="text-lg font-bold text-amber-600">{item.sampleInfo.bandScore.toFixed(1)}</span>
+        {maxBand !== null && (
+          <div className="flex flex-wrap items-center gap-2">
+            {samples.map((s) => (
+              <span
+                key={s._id}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-600"
+              >
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                Band {s.bandScore.toFixed(1)}
+              </span>
+            ))}
           </div>
         )}
         <div className="mt-3 flex flex-wrap gap-1.5">

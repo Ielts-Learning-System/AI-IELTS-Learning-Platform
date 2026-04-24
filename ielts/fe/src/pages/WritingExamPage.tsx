@@ -16,6 +16,13 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 
+interface SampleInfoEntry {
+  _id: string;
+  bandScore: number;
+  contentHtml: string;
+  author: string;
+}
+
 interface Writing {
   _id: string;
   title: string;
@@ -24,11 +31,7 @@ interface Writing {
   timeLimit: number;
   contentHtml: string;
   isSample: boolean;
-  sampleInfo?: {
-    bandScore: number;
-    contentHtml: string;
-    author: string;
-  };
+  sampleInfos: SampleInfoEntry[];
   tags: string[];
 }
 
@@ -58,6 +61,7 @@ export function WritingExamPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [essay, setEssay] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSampleIdx, setActiveSampleIdx] = useState(0);
 
   const promptImage = useMemo(
     () => (writing ? extractFirstImage(writing.contentHtml) : null),
@@ -99,6 +103,10 @@ export function WritingExamPage() {
   const wordCount = useMemo(() => getWordCount(essay), [essay]);
   const minWords = writing?.type === 'Task 1' ? 150 : 250;
   const isWordCountValid = wordCount >= minWords;
+
+  // Derived helpers for the samples list
+  const hasSamples = (writing?.sampleInfos?.length ?? 0) > 0;
+  const activeSample = hasSamples ? writing!.sampleInfos[activeSampleIdx] : null;
 
   const handleSubmit = async () => {
     if (!writing) return;
@@ -171,10 +179,10 @@ export function WritingExamPage() {
         <div className="border-b border-red-100/80 bg-white/85 px-6 py-5 backdrop-blur sm:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
-              {writing.isSample ? (
+              {hasSamples ? (
                 <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">
                   <BookOpen className="h-3.5 w-3.5" />
-                  Bài mẫu
+                  Bài mẫu ({writing!.sampleInfos.length})
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-red-600">
@@ -186,16 +194,16 @@ export function WritingExamPage() {
                 <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{writing.title}</h1>
                 <p className="mt-1 text-sm text-slate-500">
                   {writing.type} · {writing.category || 'Mixed'}
-                  {!writing.isSample && ` · ${writing.timeLimit} phút`}
-                  {writing.isSample && writing.sampleInfo && (
-                    <> · <span className="font-semibold text-amber-600">Band {writing.sampleInfo.bandScore.toFixed(1)}</span> · {writing.sampleInfo.author}</>
+                  {!hasSamples && ` · ${writing.timeLimit} phút`}
+                  {hasSamples && activeSample && (
+                    <> · <span className="font-semibold text-amber-600">Band {activeSample.bandScore.toFixed(1)}</span> · {activeSample.author}</>
                   )}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {!writing.isSample && (
+              {!hasSamples && (
                 <>
                   <div className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
                     <AlarmClock className="h-4 w-4" />
@@ -217,10 +225,10 @@ export function WritingExamPage() {
                   </button>
                 </>
               )}
-              {writing.isSample && writing.sampleInfo && (
+              {hasSamples && activeSample && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  Band {writing.sampleInfo.bandScore.toFixed(1)}
+                  Band {activeSample.bandScore.toFixed(1)}
                 </div>
               )}
             </div>
@@ -288,7 +296,7 @@ export function WritingExamPage() {
             <div className="mx-auto flex h-full w-full max-w-4xl flex-col gap-5">
 
               {/* Stats row — practice only */}
-              {!writing.isSample && (
+              {!hasSamples && (
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="rounded-[24px] border border-red-100 bg-white px-4 py-4 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Task</p>
@@ -305,26 +313,52 @@ export function WritingExamPage() {
                 </div>
               )}
 
-              {/* Sample meta row */}
-              {writing.isSample && writing.sampleInfo && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-[24px] border border-amber-100 bg-amber-50 px-4 py-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">Band Score</p>
-                    <p className="mt-2 text-lg font-bold text-amber-900">{writing.sampleInfo.bandScore.toFixed(1)}</p>
-                  </div>
-                  <div className="rounded-[24px] border border-red-100 bg-white px-4 py-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Task</p>
-                    <p className="mt-2 text-lg font-bold text-slate-900">{writing.type}</p>
-                  </div>
-                  <div className="rounded-[24px] border border-slate-100 bg-slate-50 px-4 py-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Tác giả</p>
-                    <p className="mt-2 text-sm font-bold text-slate-700 truncate">{writing.sampleInfo.author}</p>
-                  </div>
+              {/* Sample meta row + tab selector */}
+              {hasSamples && (
+                <div className="space-y-3">
+                  {/* Band tabs */}
+                  {writing.sampleInfos.length > 1 && (
+                    <div className="flex flex-wrap gap-2">
+                      {writing.sampleInfos.map((s, idx) => (
+                        <button
+                          key={s._id}
+                          type="button"
+                          onClick={() => setActiveSampleIdx(idx)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                            activeSampleIdx === idx
+                              ? 'bg-amber-500 text-white shadow'
+                              : 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                          }`}
+                        >
+                          <Star className="h-3 w-3" />
+                          Band {s.bandScore.toFixed(1)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Active sample meta */}
+                  {activeSample && (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-[20px] border border-amber-100 bg-amber-50 px-4 py-3 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-600">Band Score</p>
+                        <p className="mt-1 text-lg font-bold text-amber-900">{activeSample.bandScore.toFixed(1)}</p>
+                      </div>
+                      <div className="rounded-[20px] border border-red-100 bg-white px-4 py-3 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Task</p>
+                        <p className="mt-1 text-lg font-bold text-slate-900">{writing.type}</p>
+                      </div>
+                      <div className="rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Tác giả</p>
+                        <p className="mt-1 text-sm font-bold text-slate-700 truncate">{activeSample.author}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* ---- Sample essay viewer ---- */}
-              {writing.isSample ? (
+              {hasSamples ? (
                 <div className="flex-1 overflow-hidden rounded-[30px] border border-red-100 bg-white shadow-[0_20px_60px_rgba(127,29,29,0.08)]">
                   <div className="flex items-center gap-3 border-b border-red-50 px-5 py-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50">
@@ -332,22 +366,22 @@ export function WritingExamPage() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-900">Bài mẫu tham khảo</p>
-                      {writing.sampleInfo && (
+                      {activeSample && (
                         <p className="text-xs text-slate-500 flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          {writing.sampleInfo.author}
+                          {activeSample.author}
                           <span className="mx-1">·</span>
                           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                          Band {writing.sampleInfo.bandScore.toFixed(1)}
+                          Band {activeSample.bandScore.toFixed(1)}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {writing.sampleInfo?.contentHtml ? (
+                  {activeSample?.contentHtml ? (
                     <div
                       className="h-[calc(100%-4.5rem)] overflow-y-auto px-6 py-6 text-[15px] leading-8 text-slate-700 prose prose-slate max-w-none prose-headings:text-slate-900 prose-strong:text-slate-900 prose-a:text-red-600"
-                      dangerouslySetInnerHTML={{ __html: writing.sampleInfo.contentHtml }}
+                      dangerouslySetInnerHTML={{ __html: activeSample.contentHtml }}
                     />
                   ) : (
                     <div className="flex h-[calc(100%-4.5rem)] flex-col items-center justify-center gap-3 text-slate-400">

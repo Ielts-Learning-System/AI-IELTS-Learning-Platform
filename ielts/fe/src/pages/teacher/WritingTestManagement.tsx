@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import {
+  BookOpen,
   CalendarDays,
   FilePenLine,
   LoaderCircle,
@@ -9,6 +10,7 @@ import {
   Plus,
   Search,
   Send,
+  Star,
   Trash2,
   Upload,
   UserPlus,
@@ -25,6 +27,13 @@ type WritingTestItem = {
   type: WritingType;
   category: string;
   contentHtml?: string;
+  isSample?: boolean;
+  sampleInfos?: Array<{
+    _id: string;
+    bandScore: number;
+    author: string;
+    contentHtml: string;
+  }>;
   createdAt?: string;
 };
 
@@ -44,6 +53,13 @@ type FormState = {
   contentHtml: string;
 };
 
+type SampleFormState = {
+  selectedWritingId: string;
+  bandScore: string;
+  author: string;
+  sampleContentHtml: string;
+};
+
 const API_BASE = 'http://localhost:3000';
 
 const defaultFormState: FormState = {
@@ -51,6 +67,13 @@ const defaultFormState: FormState = {
   type: 'Task 1',
   category: '',
   contentHtml: '',
+};
+
+const defaultSampleFormState: SampleFormState = {
+  selectedWritingId: '',
+  bandScore: '7.0',
+  author: '',
+  sampleContentHtml: '',
 };
 
 const getToken = (fallbackToken: string | null) =>
@@ -78,6 +101,11 @@ export default function WritingTestManagement() {
   const [existingTaskImageUrl, setExistingTaskImageUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // --- Sample modal state ---
+  const [isSampleModalOpen, setIsSampleModalOpen] = useState(false);
+  const [sampleForm, setSampleForm] = useState<SampleFormState>(defaultSampleFormState);
+  const [isSavingSample, setIsSavingSample] = useState(false);
+
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assigningTest, setAssigningTest] = useState<WritingTestItem | null>(null);
   const [students, setStudents] = useState<UserOption[]>([]);
@@ -97,6 +125,9 @@ export default function WritingTestManagement() {
       return title.includes(q) || category.includes(q) || type.includes(q);
     });
   }, [tests, searchQuery]);
+
+  // Practice items only (not already a sample) — used in sample creation dropdown
+  const practiceTests = useMemo(() => (tests as any[]).filter((t) => !t.isSample), [tests]);
 
   const filteredStudents = useMemo(() => {
     const q = studentSearch.trim().toLowerCase();
@@ -318,6 +349,55 @@ export default function WritingTestManagement() {
     }
   };
 
+  const openCreateSampleModal = () => {
+    setSampleForm(defaultSampleFormState);
+    setIsSampleModalOpen(true);
+  };
+
+  const handleSaveSample = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const band = parseFloat(sampleForm.bandScore);
+    if (!sampleForm.selectedWritingId) {
+      toast.error('Vui lòng chọn đề bài Writing.');
+      return;
+    }
+    if (!sampleForm.sampleContentHtml.trim()) {
+      toast.error('Vui lòng nhập nội dung bài mẫu.');
+      return;
+    }
+    if (isNaN(band) || band < 1 || band > 9) {
+      toast.error('Band score phải là số từ 1 đến 9.');
+      return;
+    }
+
+    try {
+      setIsSavingSample(true);
+      const authToken = getToken(token);
+
+      // Push a new sample into the writing's sampleInfos array
+      await axios.post(
+        `${API_BASE}/api/writing/${sampleForm.selectedWritingId}/samples`,
+        {
+          bandScore: band,
+          author: sampleForm.author.trim() || 'IELTS Master',
+          contentHtml: sampleForm.sampleContentHtml.trim(),
+        },
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+
+      toast.success('Đã thêm bài mẫu thành công.');
+      setIsSampleModalOpen(false);
+      setSampleForm(defaultSampleFormState);
+      fetchTests();
+    } catch (error: any) {
+      console.error('Failed to save sample:', error);
+      toast.error(error.response?.data?.message || 'Không thể lưu bài mẫu.');
+    } finally {
+      setIsSavingSample(false);
+    }
+  };
+
   const openAssignModal = async (test: WritingTestItem) => {
     setAssigningTest(test);
     setSelectedStudentId('');
@@ -401,14 +481,24 @@ export default function WritingTestManagement() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-[#c9142f]"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo Prompt
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={openCreateSampleModal}
+              className="inline-flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-amber-100"
+            >
+              <BookOpen className="h-4 w-4" />
+              Tạo Bài Mẫu
+            </button>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-red-200 transition hover:bg-[#c9142f]"
+            >
+              <Plus className="h-4 w-4" />
+              Tạo Prompt
+            </button>
+          </div>
         </div>
 
         <label className="relative mt-5 block max-w-xl">
@@ -714,6 +804,163 @@ export default function WritingTestManagement() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/*  Sample Creation Modal                                        */}
+      {/* ============================================================ */}
+      {isSampleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-amber-100 bg-amber-50/90 px-6 py-4 backdrop-blur">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100">
+                  <BookOpen className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">Tạo Bài Mẫu Writing</h3>
+                  <p className="text-xs text-slate-500">Chọn đề bài có sẵn, nhập band score và nội dung bài mẫu.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSampleModalOpen(false);
+                  setSampleForm(defaultSampleFormState);
+                }}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-amber-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSample} className="space-y-5 px-6 py-6">
+
+              {/* ---- Section 1: Chọn đề bài có sẵn ---- */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Chọn đề bài</p>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-semibold text-slate-700">
+                    Đề bài Writing <span className="text-red-500">*</span>
+                  </span>
+                  <select
+                    value={sampleForm.selectedWritingId}
+                    onChange={(e) => setSampleForm((p) => ({ ...p, selectedWritingId: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none ring-amber-100 transition focus:border-amber-300 focus:ring"
+                    required
+                  >
+                    <option value="">-- Chọn đề bài --</option>
+                    {practiceTests.map((t: any) => (
+                      <option key={t._id} value={t._id}>
+                        [{t.type}] {t.title}{t.category ? ` — ${t.category}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Preview của đề bài đã chọn */}
+                {sampleForm.selectedWritingId && (() => {
+                  const w = (tests as any[]).find((t) => t._id === sampleForm.selectedWritingId);
+                  if (!w) return null;
+                  return (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                          w.type === 'Task 1' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                        }`}>{w.type}</span>
+                        {w.category && (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-500">{w.category}</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold text-slate-800">{w.title}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* ---- Section 2: Thông tin bài mẫu ---- */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.15em] text-amber-600">Thông tin bài mẫu</p>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 flex items-center gap-1 text-sm font-semibold text-slate-700">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      Band Score <span className="text-red-500">*</span>
+                    </span>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="1"
+                      max="9"
+                      value={sampleForm.bandScore}
+                      onChange={(e) => setSampleForm((p) => ({ ...p, bandScore: e.target.value }))}
+                      className="w-full rounded-xl border border-amber-300 px-4 py-2.5 text-sm outline-none ring-amber-100 transition focus:border-amber-400 focus:ring"
+                      required
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-semibold text-slate-700">Tác giả / Nguồn</span>
+                    <input
+                      type="text"
+                      value={sampleForm.author}
+                      onChange={(e) => setSampleForm((p) => ({ ...p, author: e.target.value }))}
+                      className="w-full rounded-xl border border-amber-300 px-4 py-2.5 text-sm outline-none ring-amber-100 transition focus:border-amber-400 focus:ring"
+                      placeholder="VD: IELTS Master / Band 8.0 Sample"
+                    />
+                  </label>
+                </div>
+
+                <label className="mt-4 block">
+                  <span className="mb-1 block text-sm font-semibold text-slate-700">Nội dung bài mẫu (HTML) <span className="text-red-500">*</span></span>
+                  <textarea
+                    value={sampleForm.sampleContentHtml}
+                    onChange={(e) => setSampleForm((p) => ({ ...p, sampleContentHtml: e.target.value }))}
+                    rows={10}
+                    className="w-full rounded-xl border border-amber-300 px-4 py-3 text-sm outline-none ring-amber-100 transition focus:border-amber-400 focus:ring"
+                    placeholder="Nhập nội dung bài viết mẫu (hỗ trợ HTML). VD: <p>In today's world...</p>"
+                    required
+                  />
+                </label>
+
+                {sampleForm.sampleContentHtml.trim() && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-white p-4">
+                    <p className="mb-2 text-xs font-semibold text-amber-600 uppercase tracking-wide">Xem trước nội dung bài mẫu</p>
+                    <div
+                      className="prose prose-slate max-w-none text-sm leading-7 prose-headings:text-slate-900 prose-strong:text-slate-900"
+                      dangerouslySetInnerHTML={{ __html: sampleForm.sampleContentHtml }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* ---- Actions ---- */}
+              <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSampleModalOpen(false);
+                    setSampleForm(defaultSampleFormState);
+                  }}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSample}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-300"
+                >
+                  {isSavingSample ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                  Tạo Bài Mẫu
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

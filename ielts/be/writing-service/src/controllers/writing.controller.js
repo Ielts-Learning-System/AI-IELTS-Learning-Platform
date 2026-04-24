@@ -32,17 +32,20 @@ exports.getItemById = async (req, res) => {
   }
 };
 
-// Get all writings (legacy list endpoint)
+// Get all writings (teacher management list)
 exports.getAllTests = async (req, res) => {
   try {
-    const items = await Writing.find({}, '_id title type category isSample');
+    const items = await Writing.find(
+      {},
+      '_id title type category contentHtml isSample sampleInfos createdAt'
+    );
     res.json(items);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// Get test by ID (legacy)
+// Get test by ID (used by exam page)
 exports.getTestById = async (req, res) => {
   try {
     const item = await Writing.findById(req.params.id);
@@ -55,7 +58,7 @@ exports.getTestById = async (req, res) => {
   }
 };
 
-// Submit test answers
+// Submit test answers (legacy)
 exports.submitTest = async (req, res) => {
   try {
     const { testId, answers } = req.body;
@@ -75,7 +78,7 @@ exports.submitTest = async (req, res) => {
   }
 };
 
-// Create a new writing test (teacher CRUD)
+// Create a new writing prompt (teacher CRUD) — isSample flag no longer used here
 exports.createTest = async (req, res) => {
   try {
     const { title, type, category, contentHtml } = req.body;
@@ -92,11 +95,13 @@ exports.createTest = async (req, res) => {
       type,
       category: category || 'Mixed',
       contentHtml: String(contentHtml).trim(),
+      isSample: false,
+      sampleInfos: [],
     });
 
     res.status(201).json({
       success: true,
-      message: 'Writing test created successfully',
+      message: 'Writing prompt created successfully',
       data: newWriting,
     });
   } catch (error) {
@@ -107,7 +112,7 @@ exports.createTest = async (req, res) => {
   }
 };
 
-// Update a writing test (teacher CRUD)
+// Update a writing prompt (teacher CRUD)
 exports.updateTest = async (req, res) => {
   try {
     const { title, type, category, contentHtml } = req.body;
@@ -141,7 +146,7 @@ exports.updateTest = async (req, res) => {
   }
 };
 
-// Delete a writing test (teacher CRUD)
+// DELETE /:id  — remove entire writing prompt
 exports.deleteTest = async (req, res) => {
   try {
     const testId = req.params.id;
@@ -164,5 +169,90 @@ exports.deleteTest = async (req, res) => {
       success: false,
       error: error.message,
     });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Sample-list sub-resource  POST /:id/samples  &  DELETE /:id/samples/:sampleId
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /:id/samples
+ * Append a new sample essay to an existing Writing prompt.
+ * Body: { bandScore, author, contentHtml }
+ */
+exports.addSample = async (req, res) => {
+  try {
+    const { bandScore, author, contentHtml } = req.body;
+
+    if (bandScore == null || !contentHtml) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: bandScore, contentHtml',
+      });
+    }
+
+    const band = Number(bandScore);
+    if (isNaN(band) || band < 1 || band > 9) {
+      return res.status(400).json({
+        success: false,
+        error: 'bandScore must be a number between 1 and 9',
+      });
+    }
+
+    const writing = await Writing.findById(req.params.id);
+    if (!writing) {
+      return res.status(404).json({ success: false, error: 'Writing not found' });
+    }
+
+    const newSample = {
+      bandScore: band,
+      contentHtml: String(contentHtml).trim(),
+      author: author ? String(author).trim() : 'IELTS Master',
+    };
+
+    writing.sampleInfos.push(newSample);
+    await writing.save();
+
+    const added = writing.sampleInfos[writing.sampleInfos.length - 1];
+
+    res.status(201).json({
+      success: true,
+      message: 'Sample added successfully',
+      data: added,
+      writing,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * DELETE /:id/samples/:sampleId
+ * Remove a specific sample essay from a Writing prompt.
+ */
+exports.deleteSample = async (req, res) => {
+  try {
+    const { id, sampleId } = req.params;
+
+    const writing = await Writing.findById(id);
+    if (!writing) {
+      return res.status(404).json({ success: false, error: 'Writing not found' });
+    }
+
+    const before = writing.sampleInfos.length;
+    writing.sampleInfos = writing.sampleInfos.filter(
+      (s) => String(s._id) !== String(sampleId)
+    );
+
+    if (writing.sampleInfos.length === before) {
+      return res.status(404).json({ success: false, error: 'Sample not found' });
+    }
+
+    await writing.save();
+
+    res.json({ success: true, message: 'Sample deleted successfully', writing });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
