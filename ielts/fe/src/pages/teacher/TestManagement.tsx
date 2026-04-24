@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Loader2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { TestModal } from './TestModal';
 import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 import { apiClient } from '../../lib/api/client';
@@ -289,6 +290,7 @@ export function TestManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTest, setEditingTest] = useState<TestListItem | null>(null);
   const [form, setForm] = useState<TestFormState>(createInitialForm(routeModule === 'all' ? 'reading' : routeModule));
@@ -656,6 +658,15 @@ export function TestManagement() {
 
           <button
             type="button"
+            onClick={() => setIsAIModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2 font-semibold text-white transition hover:bg-violet-700"
+          >
+            <Sparkles className="h-4 w-4" />
+            Tạo đề bằng AI
+          </button>
+
+          <button
+            type="button"
             onClick={openCreateModal}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
           >
@@ -741,6 +752,15 @@ export function TestManagement() {
           </table>
         </div>
       </div>
+
+      <TestModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        onTestCreated={() => {
+          setIsAIModalOpen(false);
+          fetchTests();
+        }}
+      />
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">

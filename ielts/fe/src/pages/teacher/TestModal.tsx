@@ -3,6 +3,7 @@ import { X, Plus, AlertCircle, Loader, Edit3, Trash2 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import axios from 'axios';
+import { useUserStore } from '../../store/useUserStore';
 
 interface TestModalProps {
   isOpen: boolean;
@@ -78,6 +79,9 @@ function MenuBar({ editor }: MenuBarProps) {
 }
 
 export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
+  const { token: storeToken } = useUserStore();
+  const getToken = () => storeToken || localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+
   const [bandScore, setBandScore] = useState<string>('6.5');
   const [keywords, setKeywords] = useState<string>('');
   const [passageType, setPassageType] = useState<'1' | '2' | '3'>('1');
@@ -127,7 +131,7 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
     setIsGenerating(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
 
       console.log('📤 Sending request:', { bandScore, keywords, passageType });
 
@@ -184,7 +188,7 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
 
       // Build payload matching ReadingTest schema
       const payload = {
