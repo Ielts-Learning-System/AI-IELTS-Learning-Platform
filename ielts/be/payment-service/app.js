@@ -10,6 +10,14 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
+// Health check endpoints
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'OK', service: 'payment-service' });
+});
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', service: 'payment-service' });
+});
+
 app.use('/', paymentRoutes);
 
 module.exports = app;
