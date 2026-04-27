@@ -3,7 +3,7 @@ dotenv.config();
 
 const app = require('./app');
 
-const PORT = process.env.PORT || 3008;
+const PORT = process.env.PORT || 3010;
 
 app.listen(PORT, () => {
   console.log(`cloud-media-service is running on port ${PORT}`);
