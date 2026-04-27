@@ -6,7 +6,7 @@ const SampleInfoSchema = new mongoose.Schema(
     contentHtml: { type: String, required: true },
     author: { type: String, default: 'IELTS Master' },
   },
-  { _id: false }
+  { _id: true, timestamps: true }
 );
 
 const WritingSchema = new mongoose.Schema(
@@ -17,7 +17,10 @@ const WritingSchema = new mongoose.Schema(
     timeLimit: { type: Number },
     contentHtml: { type: String, required: true },
     isSample: { type: Boolean, default: false },
-    sampleInfo: { type: SampleInfoSchema, default: undefined },
+    // Legacy single sampleInfo kept for backward compat (read-only, no longer written)
+    sampleInfo: { type: Object, default: undefined },
+    // New: list of sample essays attached to this prompt
+    sampleInfos: { type: [SampleInfoSchema], default: [] },
     tags: [{ type: String }],
   },
   { timestamps: true }

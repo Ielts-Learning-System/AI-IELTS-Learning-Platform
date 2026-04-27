@@ -22,6 +22,11 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Health check endpoints
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'OK', service: 'cloud-media-service' });
+});
+
 app.use('/api/media', mediaRoutes);
 
 app.use((err, req, res, next) => {

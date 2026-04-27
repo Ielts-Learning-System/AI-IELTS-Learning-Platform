@@ -132,6 +132,8 @@ services:
       - "3010:3010"
     env_file:
       - .env
+    environment:
+      - PORT=3010
     restart: unless-stopped
 
   payment-service:
