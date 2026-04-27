@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Bold,
   Italic,
@@ -11,6 +11,8 @@ import {
   Minus,
   RotateCcw,
   RotateCw,
+  Table,
+  SquareDashed,
 } from 'lucide-react';
 
 interface Props {
@@ -18,8 +20,8 @@ interface Props {
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: number;
-  borderColor?: string; // tailwind border class e.g. 'border-slate-300'
-  focusBorderColor?: string; // tailwind focus border class e.g. 'focus:border-red-300'
+  borderColor?: string;
+  focusBorderColor?: string;
 }
 
 type FormatCmd =
@@ -58,6 +60,110 @@ const TOOLBAR_GROUPS: ToolbarButton[][] = [
   ],
 ];
 
+const MAX_ROWS = 8;
+const MAX_COLS = 8;
+
+/** Builds a bordered HTML table with empty cells */
+function buildTableHtml(rows: number, cols: number): string {
+  const cellStyle =
+    'border:1px solid #cbd5e1;padding:6px 10px;min-width:60px;text-align:left;';
+  const headerStyle =
+    'border:1px solid #cbd5e1;padding:6px 10px;background:#f1f5f9;font-weight:600;text-align:left;';
+
+  const headerRow = `<tr>${Array.from({ length: cols })
+    .map(() => `<th style="${headerStyle}">&nbsp;</th>`)
+    .join('')}</tr>`;
+
+  const bodyRows = Array.from({ length: rows - 1 })
+    .map(
+      () =>
+        `<tr>${Array.from({ length: cols })
+          .map(() => `<td style="${cellStyle}">&nbsp;</td>`)
+          .join('')}</tr>`
+    )
+    .join('');
+
+  return `<table style="border-collapse:collapse;width:100%;margin:8px 0;">
+<thead>${headerRow}</thead>
+<tbody>${bodyRows}</tbody>
+</table><p><br></p>`;
+}
+
+/** Table size picker dropdown */
+function TablePicker({ onInsert }: { onInsert: (rows: number, cols: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState<{ r: number; c: number } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const label = hover ? `${hover.r} × ${hover.c}` : 'Bảng';
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        title="Chèn bảng"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        className="flex h-7 items-center gap-1 rounded-md px-1.5 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800"
+      >
+        <Table className="h-3.5 w-3.5" />
+        <span className="text-[10px] font-semibold leading-none">{label}</span>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+          onMouseLeave={() => setHover(null)}
+        >
+          <p className="mb-1.5 text-center text-[10px] font-bold uppercase tracking-wide text-slate-400">
+            {hover ? `${hover.r} hàng × ${hover.c} cột` : 'Chọn kích thước bảng'}
+          </p>
+          <div
+            className="grid gap-0.5"
+            style={{ gridTemplateColumns: `repeat(${MAX_COLS}, 1fr)` }}
+          >
+            {Array.from({ length: MAX_ROWS }).map((_, ri) =>
+              Array.from({ length: MAX_COLS }).map((_, ci) => {
+                const isActive = hover && ri < hover.r && ci < hover.c;
+                return (
+                  <div
+                    key={`${ri}-${ci}`}
+                    onMouseEnter={() => setHover({ r: ri + 1, c: ci + 1 })}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onInsert(ri + 1, ci + 1);
+                      setOpen(false);
+                      setHover(null);
+                    }}
+                    className={`h-5 w-5 cursor-pointer rounded-sm border transition ${
+                      isActive
+                        ? 'border-blue-400 bg-blue-100'
+                        : 'border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50'
+                    }`}
+                  />
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MiniRichEditor({
   value,
   onChange,
@@ -87,7 +193,6 @@ export default function MiniRichEditor({
   const execCmd = useCallback((cmd: FormatCmd, arg?: string) => {
     document.execCommand(cmd, false, arg);
     editorRef.current?.focus();
-    // Emit updated html
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
@@ -97,6 +202,29 @@ export default function MiniRichEditor({
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
+  }, [onChange]);
+
+  const insertTable = useCallback((rows: number, cols: number) => {
+    editorRef.current?.focus();
+    document.execCommand('insertHTML', false, buildTableHtml(rows, cols));
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [onChange]);
+
+  const insertBorderBox = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const sel = window.getSelection();
+    const selectedText = sel && sel.rangeCount > 0 ? sel.toString() : '';
+    const inner = selectedText.trim()
+      ? selectedText
+      : '\u00a0'; // non-breaking space so box is not empty
+    const boxHtml =
+      `<div style="border:2px solid #333;padding:15px;margin-bottom:20px;">${inner}</div><p><br></p>`;
+    document.execCommand('insertHTML', false, boxHtml);
+    onChange(editor.innerHTML);
   }, [onChange]);
 
   return (
@@ -112,7 +240,7 @@ export default function MiniRichEditor({
                 type="button"
                 title={btn.title}
                 onMouseDown={(e) => {
-                  e.preventDefault(); // Prevents blur on editor
+                  e.preventDefault();
                   execCmd(btn.cmd, btn.arg);
                 }}
                 className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-200 hover:text-slate-800"
@@ -122,6 +250,23 @@ export default function MiniRichEditor({
             ))}
           </React.Fragment>
         ))}
+
+        {/* Separator before table */}
+        <span className="mx-1 h-4 w-px bg-slate-300" />
+        <TablePicker onInsert={insertTable} />
+
+        {/* Border box */}
+        <button
+          type="button"
+          title="Chèn khung viền (border box)"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            insertBorderBox();
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-200 hover:text-slate-800"
+        >
+          <SquareDashed className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* Editable area */}
@@ -137,7 +282,11 @@ export default function MiniRichEditor({
           [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-slate-500
           [&_ul]:list-disc [&_ul]:pl-5
           [&_ol]:list-decimal [&_ol]:pl-5
-          empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none"
+          [&_table]:w-full [&_table]:border-collapse [&_table]:my-2
+          [&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:px-2.5 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold
+          [&_td]:border [&_td]:border-slate-300 [&_td]:px-2.5 [&_td]:py-1.5
+          empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none
+          [&_div[style*='border']]:rounded-sm"
         style={{ minHeight }}
       />
     </div>
