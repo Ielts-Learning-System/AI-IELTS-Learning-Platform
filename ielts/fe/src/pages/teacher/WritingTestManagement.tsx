@@ -960,8 +960,10 @@ export default function WritingTestManagement() {
 
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div className="flex w-full max-w-2xl flex-col max-h-[92vh] rounded-2xl bg-white shadow-2xl">
+
+            {/* ── Sticky Header ── */}
+            <div className="flex shrink-0 items-center justify-between rounded-t-2xl border-b border-slate-200 bg-white px-6 py-4">
               <div>
                 <h3 className="text-xl font-black text-slate-900">
                   {formMode === 'create' ? 'Create Writing Prompt' : 'Edit Writing Prompt'}
@@ -980,7 +982,12 @@ export default function WritingTestManagement() {
               </button>
             </div>
 
-            <form onSubmit={handleSavePrompt} className="space-y-4 px-6 py-5">
+            {/* ── Scrollable Body ── */}
+            <form
+              id="prompt-form"
+              onSubmit={handleSavePrompt}
+              className="flex-1 overflow-y-auto space-y-4 px-6 py-5"
+            >
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-sm font-semibold text-slate-700">Title</span>
@@ -1054,7 +1061,7 @@ export default function WritingTestManagement() {
                         <img
                           src={taskImageFile ? URL.createObjectURL(taskImageFile) : existingTaskImageUrl}
                           alt="Task 1 preview"
-                          className="max-h-48 w-full rounded object-contain"
+                          className="max-h-56 w-full rounded object-contain"
                         />
                       </div>
                     )}
@@ -1073,28 +1080,31 @@ export default function WritingTestManagement() {
                   focusBorderColor="focus-within:border-red-300"
                 />
               </div>
-
-              <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsFormModalOpen(false);
-                    resetFormState();
-                  }}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#E31837] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c9142f] disabled:cursor-not-allowed disabled:bg-red-300"
-                >
-                  {isSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <FilePenLine className="h-4 w-4" />}
-                  {formMode === 'create' ? 'Create Prompt' : 'Save Changes'}
-                </button>
-              </div>
             </form>
+
+            {/* ── Sticky Footer ── */}
+            <div className="flex shrink-0 items-center justify-end gap-3 rounded-b-2xl border-t border-slate-200 bg-white px-6 py-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFormModalOpen(false);
+                  resetFormState();
+                }}
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="prompt-form"
+                disabled={isSaving}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#E31837] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#c9142f] disabled:cursor-not-allowed disabled:bg-red-300"
+              >
+                {isSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <FilePenLine className="h-4 w-4" />}
+                {formMode === 'create' ? 'Create Prompt' : 'Save Changes'}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
