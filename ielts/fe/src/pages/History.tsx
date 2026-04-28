@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { format } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
@@ -194,6 +195,7 @@ interface FetchResult {
 
 export default function MySkillsHistory() {
   const { token } = useUserStore();
+  const navigate = useNavigate();
   const [allItems, setAllItems] = useState<UnifiedHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -303,30 +305,28 @@ export default function MySkillsHistory() {
 
       {/* Header */}
       <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-[linear-gradient(135deg,#f8f9fA_0%,#ffffff_45%,#f5f7fb_100%)] shadow-[0_24px_80px_rgba(0,0,0,0.04)]">
-        <div className="grid gap-4 border-b border-slate-200 bg-white/85 px-6 py-6 sm:grid-cols-4 sm:px-8">
-          <div className="space-y-2 sm:col-span-2">
+        <div className="flex flex-col gap-4 border-b border-slate-200 bg-white/85 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          {/* Left: title */}
+          <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
               <ClipboardList className="h-3.5 w-3.5" />
               Learning history
             </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">Lịch sử học tập</h1>
-            <p className="max-w-2xl text-sm leading-6 text-slate-500">
+            <p className="max-w-xl text-sm leading-6 text-slate-500">
               Xem chi tiết kết quả của bạn trên tất cả các kỹ năng: Reading, Listening, Writing, và Speaking.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 sm:self-start">
-            <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          {/* Right: stats */}
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="rounded-[20px] border border-slate-200 bg-white px-5 py-3 text-center shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Tổng số</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{skillCounts.all}</p>
+              <p className="mt-1 text-2xl font-black text-slate-900">{skillCounts.all}</p>
             </div>
-            <div className="rounded-[24px] border border-emerald-100 bg-emerald-50 px-4 py-4 shadow-sm">
+            <div className="rounded-[20px] border border-emerald-100 bg-emerald-50 px-5 py-3 text-center shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Đã chấm</p>
-              <p className="mt-2 text-2xl font-black text-emerald-900">{gradedCount}</p>
-            </div>
-            <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Kỳ thi</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{skillCounts.all}</p>
+              <p className="mt-1 text-2xl font-black text-emerald-900">{gradedCount}</p>
             </div>
           </div>
         </div>
@@ -341,11 +341,10 @@ export default function MySkillsHistory() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`whitespace-nowrap border-b-2 px-4 py-4 text-sm font-bold transition ${
-                    isActive
+                  className={`whitespace-nowrap border-b-2 px-4 py-4 text-sm font-bold transition ${isActive
                       ? 'border-slate-900 text-slate-900'
                       : 'border-transparent text-slate-500 hover:text-slate-700'
-                  }`}
+                    }`}
                 >
                   {tab.label} <span className="ml-2 text-xs text-slate-400">({count})</span>
                 </button>
@@ -374,15 +373,15 @@ export default function MySkillsHistory() {
           ) : (
             <div className="overflow-hidden rounded-[24px] border border-slate-200">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px] bg-white">
+                <table className="w-full min-w-[700px] bg-white">
                   <thead>
                     <tr className="bg-slate-50/70 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
                       <th className="px-5 py-4 font-semibold">Kỹ Năng</th>
                       <th className="px-5 py-4 font-semibold">Tiêu Đề</th>
-                      <th className="px-5 py-4 font-semibold">Ngày Làm</th>
+                      <th className="px-5 py-4 font-semibold whitespace-nowrap">Ngày Làm</th>
                       <th className="px-5 py-4 font-semibold">Trạng Thái</th>
                       <th className="px-5 py-4 font-semibold text-right">Kết Quả</th>
-                      <th className="px-5 py-4 font-semibold text-right">Hành Động</th>
+                      <th className="px-5 py-4 font-semibold text-center w-14"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -391,53 +390,68 @@ export default function MySkillsHistory() {
                       const colors = skillColors[item.skill];
                       return (
                         <tr key={item.id} className="border-t border-slate-100 transition hover:bg-slate-50/30">
-                          <td className="px-5 py-5 align-top">
-                            <div className={`inline-flex items-center gap-2 rounded-full ${colors.badge} px-3 py-1 text-xs font-bold`}>
-                              <Icon className="h-4 w-4" />
+
+                          {/* Kỹ năng */}
+                          <td className="px-5 py-4 align-middle">
+                            <div className={`inline-flex items-center gap-2 rounded-full ${colors.badge} px-3 py-1 text-xs font-bold whitespace-nowrap`}>
+                              <Icon className="h-3.5 w-3.5" />
                               {item.skill}
                             </div>
                           </td>
-                          <td className="px-5 py-5 align-top">
-                            <div className="space-y-1">
-                              <p className="font-bold text-slate-900">{item.title}</p>
-                              {item.taskType && <p className="text-sm text-slate-500">{item.taskType}</p>}
-                              {item.wordCount && <p className="text-sm text-slate-500">{item.wordCount} từ</p>}
-                            </div>
+
+                          {/* Tiêu đề — taskType & wordCount cùng dòng */}
+                          <td className="px-5 py-4 align-middle">
+                            <p className="font-bold text-slate-900 leading-snug">{item.title}</p>
+                            {(item.taskType || item.wordCount) && (
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                                {item.taskType && <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-500">{item.taskType}</span>}
+                                {item.wordCount && <span>{item.wordCount} từ</span>}
+                              </div>
+                            )}
                           </td>
-                          <td className="px-5 py-5 align-top text-sm text-slate-600">
-                            <div className="inline-flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-slate-400" />
+
+                          {/* Ngày */}
+                          <td className="px-5 py-4 align-middle text-sm text-slate-500 whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
                               {format(new Date(item.date), 'dd/MM/yyyy HH:mm')}
                             </div>
                           </td>
-                          <td className="px-5 py-5 align-top">
+
+                          {/* Trạng thái */}
+                          <td className="px-5 py-4 align-middle">
                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${statusBadgeMap[item.status]}`}>
                               {item.status === 'Pending' ? 'Chờ chấm' : 'Đã chấm'}
                             </span>
                           </td>
-                          <td className="px-5 py-5 align-top text-right text-sm font-bold text-slate-900">
+
+                          {/* Kết quả */}
+                          <td className="px-5 py-4 align-middle text-right font-bold text-slate-900">
                             {item.skill === 'Reading' || item.skill === 'Listening' ? (
-                              <div className="text-base">
-                                {item.score ?? '-'} / {item.totalScore ?? '-'}
-                              </div>
+                              <span>{item.score ?? '-'}&nbsp;/&nbsp;{item.totalScore ?? '-'}</span>
                             ) : (
-                              <div className="text-base">{item.bandScore?.toFixed(1) ?? '-'}</div>
+                              <span className="text-[#E31837]">
+                                {item.bandScore != null ? item.bandScore.toFixed(1) : '—'}
+                              </span>
                             )}
                           </td>
-                          <td className="px-5 py-5 align-top text-right">
-                            {item.status === 'Graded' && (item.grading || (item.skill === 'Reading' || item.skill === 'Listening')) ? (
+
+                          {/* Hành động — icon only */}
+                          <td className="px-5 py-4 align-middle text-center">
+                            {item.status === 'Graded' && (item.grading || item.skill === 'Reading' || item.skill === 'Listening') ? (
                               <button
                                 type="button"
-                                onClick={() => setSelectedItem(item)}
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                                onClick={() => navigate(`/history/writing/${item.id}`)}
+                                title="Xem nhận xét"
+                                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                               >
                                 <MessageSquareQuote className="h-4 w-4" />
-                                {item.skill === 'Reading' || item.skill === 'Listening' ? 'Xem đáp án' : 'Xem nhận xét'}
                               </button>
                             ) : (
-                              <span className="text-sm text-slate-400">Chưa có</span>
+                              <span className="text-slate-300 select-none">—</span>
                             )}
                           </td>
+
                         </tr>
                       );
                     })}
