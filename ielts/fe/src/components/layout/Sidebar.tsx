@@ -30,6 +30,7 @@ import { cn } from '../../lib/utils';
 import { useUserStore } from '../../store/useUserStore';
 import { useAllowedSkills, type Skill } from '../../hooks/useAllowedSkills';
 import CheckoutModal from '../CheckoutModal';
+import AuthModal from '../AuthModal';
 
 // ─────────────────────────────────────────────────────────────────
 // Kiểu dữ liệu
@@ -209,6 +210,70 @@ function UpgradeModal({ isOpen, featureName, onClose, onUpgrade }: UpgradeModalP
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Component RequireAuthModal
+// ─────────────────────────────────────────────────────────────────
+
+interface RequireAuthModalProps {
+  isOpen: boolean;
+  featureName: string;
+  onClose: () => void;
+  onLoginClick: () => void;
+}
+
+function RequireAuthModal({ isOpen, featureName, onClose, onLoginClick }: RequireAuthModalProps) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className={cn(
+          'relative z-10 w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 text-center',
+          'animate-in fade-in zoom-in-95 duration-200'
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+          <Lock className="h-6 w-6 text-slate-400" />
+        </div>
+        <h2 className="mb-2 text-xl font-bold text-slate-800">Yêu cầu đăng nhập</h2>
+        <p className="mb-6 text-sm text-slate-500 leading-relaxed">
+          Bạn cần đăng nhập để truy cập tính năng <span className="font-bold text-[#E31837]">{featureName}</span>.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            Để sau
+          </button>
+          <button
+            onClick={() => {
+              onClose();
+              onLoginClick();
+            }}
+            className="flex-1 rounded-xl bg-[#E31837] py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#c91530]"
+          >
+            Đăng nhập
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Component Sidebar chính
 // ─────────────────────────────────────────────────────────────────
 
@@ -225,6 +290,15 @@ export function Sidebar() {
     open: false,
     featureName: '',
   });
+
+  // State cho Modal yêu cầu đăng nhập
+  const [authModal, setAuthModal] = useState<{ open: boolean; featureName: string }>({
+    open: false,
+    featureName: '',
+  });
+
+  // State cho Auth Modal (Đăng nhập/Đăng ký)
+  const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
 
   // State cho Checkout Modal
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -256,13 +330,19 @@ export function Sidebar() {
     const targetPath = subItem?.path ?? item.path;
     const featureName = subItem?.name ?? item.name;
 
+    // Check authentication for ANY restricted feature
+    if (!isAuthenticated && (item.skill || item.name === 'Lessons')) {
+      setAuthModal({ open: true, featureName });
+      return;
+    }
+
     // Nếu item không có skill → cho phép tự do (Dashboard, History...)
-    if (!item.skill) {
+    if (!item.skill && item.name !== 'Lessons') {
       navigate(targetPath);
       return;
     }
 
-    // Kiểm tra quyền
+    // Kiểm tra quyền (cho người đã đăng nhập)
     if (isItemAllowed(item)) {
       navigate(targetPath);
     } else {
@@ -296,11 +376,13 @@ export function Sidebar() {
               Luyện tập
             </p>
 
-            {navItems.map((item) => {
+            {navItems
+              .filter((item) => isAuthenticated || item.name !== 'Dashboard')
+              .map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               const isItemExpanded = expandedItem === item.name;
               const hasSubItems = Boolean(item.subItems?.length);
-              const allowed = isItemAllowed(item);
+              const allowed = !isAuthenticated && (item.skill || item.name === 'Lessons') ? false : isItemAllowed(item);
 
               const baseClasses = cn(
                 'w-full rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300',
@@ -343,6 +425,10 @@ export function Sidebar() {
                     <button
                       type="button"
                       onClick={() => {
+                        if (!isAuthenticated) {
+                          setAuthModal({ open: true, featureName: item.name });
+                          return;
+                        }
                         if (allowed) {
                           setExpandedItem(isItemExpanded ? null : item.name);
                         } else {
@@ -440,6 +526,20 @@ export function Sidebar() {
       <CheckoutModal
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
+      />
+
+      {/* Modal yêu cầu đăng nhập */}
+      <RequireAuthModal
+        isOpen={authModal.open}
+        featureName={authModal.featureName}
+        onClose={() => setAuthModal({ open: false, featureName: '' })}
+        onLoginClick={() => setIsLoginPopupOpen(true)}
+      />
+
+      {/* Auth Modal (Đăng nhập/Đăng ký) */}
+      <AuthModal
+        isOpen={isLoginPopupOpen}
+        onClose={() => setIsLoginPopupOpen(false)}
       />
     </>
   );
