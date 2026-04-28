@@ -16,6 +16,7 @@ import { BillingSubscriptionsManagement } from './pages/admin/BillingSubscriptio
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
 import GradingDashboard from './pages/teacher/GradingDashboard';
+import DetailGradingDashboard from './pages/teacher/DetailGradingDashboard';
 import { ReadingExamPage } from './pages/ReadingExamPage';
 import ReadingListPage from './pages/ReadingListPage';
 import { ListeningExamPage } from './pages/ListeningExamPage';
@@ -23,6 +24,7 @@ import ListeningListPage from './pages/ListeningListPage';
 import { WritingExamPage } from './pages/WritingExamPage';
 import WritingListPage from './pages/WritingListPage';
 import History from './pages/History';
+import DetailHistory from './pages/DetailHistory';
 import SpeakingTest from './pages/SpeakingTest';
 import SpeakingListPage from './pages/SpeakingListPage';
 import SpeakingPracticePage from './pages/SpeakingPracticePage';
@@ -122,6 +124,7 @@ export default function App() {
         <Route path="/history" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<History />} />
+            <Route path="writing/:id" element={<DetailHistory />} />
           </Route>
         </Route>
 
@@ -167,6 +170,7 @@ export default function App() {
             <Route path="reading" element={<Navigate to="/teacher/tests" replace />} />
             <Route path="listening" element={<Navigate to="/teacher/tests" replace />} />
             <Route path="writing" element={<GradingDashboard />} />
+            <Route path="writing/:id" element={<DetailGradingDashboard />} />
             <Route path="writing-management" element={<WritingTestManagement />} />
             <Route path="speaking-management" element={<SpeakingTestManagement />} />
             <Route path="speaking" element={<SpeakingGrading />} />
