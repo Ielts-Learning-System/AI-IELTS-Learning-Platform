@@ -20,12 +20,19 @@ interface UserState {
   logout: () => void;
 }
 
+// rehydrate from localStorage on module load (survives page refresh)
+const _savedToken = localStorage.getItem('accessToken');
+const _savedUser  = (() => { try { return JSON.parse(localStorage.getItem('user') || ''); } catch { return null; } })();
+
 export const useUserStore = create<UserState>()((set) => ({
-  user: null,
-  isAuthenticated: false,
-  token: null,
+  user:            _savedUser  || null,
+  isAuthenticated: !!(_savedToken && _savedUser),
+  token:           _savedToken || null,
 
   setAuth: (user, token) => {
+    // persist token so apiClient interceptor (localStorage.getItem('accessToken')) works
+    localStorage.setItem('accessToken', token);
+    localStorage.setItem('user', JSON.stringify(user));
     set({ 
       user, 
       token, 
@@ -34,7 +41,8 @@ export const useUserStore = create<UserState>()((set) => ({
   },
 
   logout: () => {
-    localStorage.clear();
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
     sessionStorage.clear();
     set({ 
       user: null, 

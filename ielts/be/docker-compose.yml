@@ -147,6 +147,14 @@ services:
       - rabbitmq
     restart: unless-stopped
 
+  # --- SYNC DAEMON — bi-directional DB sync (service DBs ↔ ielts_backup_db) ---
+  sync-daemon:
+    build: ./sync-daemon
+    container_name: ielts_sync_daemon
+    env_file:
+      - .env          # provides MONGO_URI_BACKUP + all MONGO_URI_* service vars
+    restart: unless-stopped
+
   # (Tạm thời map 2 service Gateway và Auth trước để test. 
   # Khi nào code xong các service khác, ta sẽ copy block trên paste xuống và đổi tên)
 

@@ -1,0 +1,13 @@
+{
+  "name": "ielts-sync-daemon",
+  "version": "1.0.0",
+  "description": "Bi-directional real-time sync between per-service MongoDB databases and the central backup database",
+  "main": "sync-daemon.js",
+  "scripts": {
+    "start": "node sync-daemon.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.7.0"
+  }
+}
