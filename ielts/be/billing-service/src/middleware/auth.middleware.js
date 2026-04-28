@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
-const verifyToken = async (req, res, next) => {
+const verifyToken = (req, res, next) => {
   try {
     let token;
 
@@ -14,12 +13,9 @@ const verifyToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    // Build req.user from JWT payload — no cross-DB User lookup needed.
+    req.user = { id: decoded.id, _id: decoded.id, role: decoded.role };
     req.userId = decoded.id;
-
-    if (!req.user) {
-      return res.status(401).json({ message: 'Not authorized, user not found' });
-    }
 
     next();
   } catch (error) {

@@ -1,0 +1,85 @@
+[
+  {
+    "_id": "69afd5ebc52b82b781bd453d",
+    "code": "FREE",
+    "name": "GÓI FREE",
+    "price": 0,
+    "features": [
+      "Reading: Không giới hạn",
+      "Listening: Không giới hạn"
+    ],
+    "ui": {
+      "borderColor": "border-slate-200",
+      "buttonText": "Đang sử dụng",
+      "buttonColor": "bg-slate-200 text-slate-500 cursor-not-allowed",
+      "badge": ""
+    },
+    "maxFullTests": 0,
+    "__v": 0,
+    "createdAt": "2026-03-10T08:27:23.793Z",
+    "updatedAt": "2026-04-23T08:47:30.152Z",
+    "benefits": {
+      "skills": [
+        "reading",
+        "listening"
+      ]
+    },
+    "durationMonths": 1200,
+    "isActive": true
+  },
+  {
+    "_id": "69cb999a1892b4e37872e07a",
+    "code": "PLUS",
+    "name": "GÓI PLUS",
+    "price": 499000,
+    "isActive": true,
+    "durationMonths": 12,
+    "features": [
+      "Thêm kỹ năng Writing được chấm bởi AI và Giáo viên"
+    ],
+    "benefits": {
+      "skills": [
+        "reading",
+        "listening",
+        "writing"
+      ]
+    },
+    "ui": {
+      "borderColor": "",
+      "buttonText": "",
+      "buttonColor": "",
+      "badge": ""
+    },
+    "createdAt": "2026-03-31T09:53:30.745Z",
+    "updatedAt": "2026-04-23T08:48:39.487Z",
+    "__v": 0
+  },
+  {
+    "_id": "69cb99b91892b4e37872e07f",
+    "code": "PRO",
+    "name": "GÓI PRO",
+    "price": 999000,
+    "isActive": true,
+    "durationMonths": 12,
+    "features": [
+      "Tất cả không giới hạn"
+    ],
+    "benefits": {
+      "skills": [
+        "reading",
+        "listening",
+        "writing",
+        "speaking"
+      ]
+    },
+    "ui": {
+      "borderColor": "",
+      "buttonText": "",
+      "buttonColor": "",
+      "badge": ""
+    },
+    "createdAt": "2026-03-31T09:54:01.606Z",
+    "updatedAt": "2026-04-23T08:48:53.724Z",
+    "__v": 0
+  }
+]

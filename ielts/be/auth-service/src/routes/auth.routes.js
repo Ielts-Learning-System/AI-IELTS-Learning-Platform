@@ -7,6 +7,7 @@ const {
 	updateProfile,
 	changePassword,
 	batchGetUsersInternal,
+	updateSubscriptionInternal,
 } = require('../controllers/auth.controller');
 const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
 
@@ -16,8 +17,9 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 
-// Internal service route (API Composition)
+// Internal service routes (API Composition — no JWT required, network-internal only)
 router.post('/internal/users/batch', batchGetUsersInternal);
+router.patch('/internal/users/:id/subscription', updateSubscriptionInternal);
 
 // Protected routes - Require authentication
 router.get('/profile', verifyToken, getProfile);

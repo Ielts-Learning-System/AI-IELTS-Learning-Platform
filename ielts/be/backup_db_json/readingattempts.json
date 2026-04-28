@@ -1,0 +1,214 @@
+[
+  {
+    "_id": "69bbdfacf827ebb5e1954477",
+    "testId": "69b3bf4c11d941696fc96574",
+    "studentId": "69ae89eab4685bb8b89d11bf",
+    "studentAnswers": [
+      "FALSE",
+      "FALSE",
+      "FALSE",
+      "FALSE",
+      "TRUE",
+      "FALSE",
+      "FALSE",
+      "availability",
+      "Spyware",
+      "emails",
+      "reputation",
+      "vulnerabilities",
+      "human"
+    ],
+    "rawScore": 13,
+    "bandScore": 4.5,
+    "timeSpent": 421,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "FALSE",
+        "correctAnswer": "FALSE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "FALSE",
+        "correctAnswer": "FALSE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "FALSE",
+        "correctAnswer": "FALSE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "FALSE",
+        "correctAnswer": "FALSE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "TRUE",
+        "correctAnswer": "TRUE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "FALSE",
+        "correctAnswer": "FALSE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "FALSE",
+        "correctAnswer": "FALSE",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "availability",
+        "correctAnswer": "availability",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "Spyware",
+        "correctAnswer": "Spyware",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "emails",
+        "correctAnswer": "emails",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 11,
+        "studentAnswer": "reputation",
+        "correctAnswer": "reputation",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 12,
+        "studentAnswer": "vulnerabilities",
+        "correctAnswer": "vulnerabilities",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 13,
+        "studentAnswer": "human",
+        "correctAnswer": "human",
+        "isCorrect": true
+      }
+    ],
+    "createdAt": "2026-03-19T11:36:12.034Z",
+    "updatedAt": "2026-03-19T11:36:12.034Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e9e1625888c74d4274f06b",
+    "testId": "69b3bf4c11d941696fc96574",
+    "studentId": "69e9dd66e5cb1559298b3fab",
+    "studentAnswers": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "rawScore": 0,
+    "bandScore": 1.5,
+    "timeSpent": 4,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "",
+        "correctAnswer": "FALSE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "",
+        "correctAnswer": "FALSE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "",
+        "correctAnswer": "FALSE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "",
+        "correctAnswer": "FALSE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "",
+        "correctAnswer": "TRUE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "",
+        "correctAnswer": "FALSE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "",
+        "correctAnswer": "FALSE",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "",
+        "correctAnswer": "availability",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "",
+        "correctAnswer": "Spyware",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "",
+        "correctAnswer": "emails",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 11,
+        "studentAnswer": "",
+        "correctAnswer": "reputation",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 12,
+        "studentAnswer": "",
+        "correctAnswer": "vulnerabilities",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 13,
+        "studentAnswer": "",
+        "correctAnswer": "human",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-04-23T09:07:46.064Z",
+    "updatedAt": "2026-04-23T09:07:46.064Z",
+    "__v": 0
+  }
+]

@@ -71,8 +71,10 @@ export default function App() {
           <Route index element={<HomePage />} />
         </Route>
 
-        {/* Register Route (login is handled via Navbar modal) */}
+        {/* Register Route */}
         <Route path="/register" element={<RegisterPage />} />
+        {/* Login redirect — login UI is a modal in the Navbar */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
 
         {/* Protected Routes — blur overlay when unauthenticated */}
         <Route path="/dashboard" element={<DashboardLayout />}>

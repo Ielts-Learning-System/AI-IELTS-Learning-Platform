@@ -323,28 +323,32 @@ const changePassword = async (req, res) => {
  */
 const batchGetUsersInternal = async (req, res) => {
   try {
-    const { userIds } = req.body;
+    // Accept both 'userIds' (legacy) and 'ids' field names
+    const { userIds, ids } = req.body;
+    const rawIds = userIds || ids;
 
-    if (!Array.isArray(userIds)) {
+    if (!Array.isArray(rawIds)) {
       return res.status(400).json({
         success: false,
-        message: 'userIds must be an array',
+        message: 'userIds (or ids) must be an array',
       });
     }
 
-    const cleanedIds = [...new Set(userIds.map((id) => String(id).trim()).filter(Boolean))];
+    const cleanedIds = [...new Set(rawIds.map((id) => String(id).trim()).filter(Boolean))];
 
     if (!cleanedIds.length) {
       return res.json({ success: true, data: [] });
     }
 
     const users = await User.find({ _id: { $in: cleanedIds } })
-      .select('name email')
+      .select('name fullName email')
       .lean();
 
     return res.json({
       success: true,
       data: users,
+      // Also expose as 'users' key so callers can use either
+      users,
     });
   } catch (error) {
     console.error('BATCH GET USERS ERROR:', error.message);
@@ -352,6 +356,37 @@ const batchGetUsersInternal = async (req, res) => {
       success: false,
       message: 'Failed to fetch users in batch',
     });
+  }
+};
+
+/**
+ * Internal endpoint for payment-service to upgrade a user's subscription.
+ * PATCH /internal/users/:id/subscription
+ * Input: { subscriptionPlan, vipValidUntil }
+ */
+const updateSubscriptionInternal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subscriptionPlan, vipValidUntil } = req.body;
+
+    if (!subscriptionPlan) {
+      return res.status(400).json({ success: false, message: 'subscriptionPlan is required' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { subscriptionPlan, vipValidUntil: vipValidUntil || null },
+      { new: true, runValidators: true }
+    ).select('_id subscriptionPlan vipValidUntil');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.json({ success: true, data: user });
+  } catch (error) {
+    console.error('UPDATE SUBSCRIPTION INTERNAL ERROR:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to update subscription' });
   }
 };
 
@@ -363,4 +398,5 @@ module.exports = {
   updateProfile,
   changePassword,
   batchGetUsersInternal,
+  updateSubscriptionInternal,
 };

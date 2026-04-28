@@ -19,7 +19,7 @@ const NEW_PRO_ID = "69cb99b91892b4e37872e07f";
 async function runFix() {
   try {
     console.log('🔄 Đang kết nối tới MongoDB...');
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/ielts_billing');
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Kết nối thành công!\n');
 
     // Cập nhật toàn bộ user đang cầm ID cũ của PLUS sang ID mới

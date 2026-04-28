@@ -61,7 +61,7 @@ services:
     ports:
       - "3001:3001"
     env_file:
-      - .env
+      - ./auth-service/.env
     restart: unless-stopped
 
   reading-service:
@@ -70,7 +70,7 @@ services:
     ports:
       - "3002:3002"
     env_file:
-      - .env
+      - ./reading-service/.env
     restart: unless-stopped
 
   listening-service:
@@ -79,7 +79,7 @@ services:
     ports:
       - "3003:3003"
     env_file:
-      - .env
+      - ./listening-service/.env
     restart: unless-stopped
 
   writing-service:
@@ -88,7 +88,7 @@ services:
     ports:
       - "3004:3004"
     env_file:
-      - .env
+      - ./writing-service/.env
     restart: unless-stopped
 
   speaking-service:
@@ -97,9 +97,7 @@ services:
     ports:
       - "3008:3008"
     env_file:
-      - .env
-    environment:
-      - PORT=3008
+      - ./speaking-service/.env
     restart: unless-stopped
 
   billing-service:
@@ -108,10 +106,7 @@ services:
     ports:
       - "3005:3005"
     env_file:
-      - .env
-    environment:
-      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:3001
-      - AUTH_SERVICE_TIMEOUT_MS=3000
+      - ./billing-service/.env
     restart: unless-stopped
 
   lesson-service:
@@ -120,9 +115,7 @@ services:
     ports:
       - "3007:3007"
     env_file:
-      - .env
-    environment:
-      - PORT=3007
+      - ./lesson-service/.env
     restart: unless-stopped
     
   media-service:
@@ -131,7 +124,7 @@ services:
     ports:
       - "3010:3010"
     env_file:
-      - .env
+      - ./cloud-media-service/.env
     restart: unless-stopped
 
   payment-service:
@@ -140,9 +133,7 @@ services:
     ports:
       - "3009:3009"
     env_file:
-      - .env
-    environment:
-      - PORT=3009
+      - ./payment-service/.env
     restart: unless-stopped
 
   notification-service:
@@ -151,9 +142,7 @@ services:
     ports:
       - "3011:3011"
     env_file:
-      - .env
-    environment:
-      - PORT=3011
+      - ./notification-service/.env
     depends_on:
       - rabbitmq
     restart: unless-stopped

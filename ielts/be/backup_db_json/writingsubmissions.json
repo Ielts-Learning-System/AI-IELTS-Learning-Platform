@@ -1,0 +1,38 @@
+[
+  {
+    "_id": "69bbd46d6239f1d8c57be628",
+    "studentId": "69ae89eab4685bb8b89d11bf",
+    "writingId": "69b7a4b2dc05b4d575cdbad2",
+    "taskType": "Task 1",
+    "content": "The chart below shows the number of households in the US by their annual income in 2007, 2011, and 2015.\n\nSummarize the information by selecting and reporting the main features and making comparisons where relevant.\n\nThe bar chart compares the number of households in the United States categorized by annual income, for the years 2007, 2011, and 2015.\n\nOverall, upon analyzing the data, it is evident that there is no clear trend in the number of households across various income brackets. Notably, the category with the lowest number of households consistently falls within the $75,000 to $99,999 income range.\n\nIn 2007, approximately 25 million households earned less than $25,000 in the United States. This figure experienced a slight increase to around 29 million in 2011, followed by a marginal decrease to 27 million in 2015. A similar pattern emerged for the $25,000 to $49,999 income bracket, which saw an increase from roughly 26 million to 30 million between 2007 and 2011, before dropping to approximately 28 million in 2015.\n\nThe number of households within the $50,000 to $74,999 and $75,000 to $99,999 income ranges remained relatively stable across all three years, hovering around 20 million and 15 million respectively. Lastly, households with an annual income exceeding $100,000 declined from just under 30 million in 2007 to approximately 27 million in 2011, only to experience a significant rise to around 33 million in 2015.",
+    "wordCount": 233,
+    "status": "Graded",
+    "createdAt": "2026-03-19T10:48:13.170Z",
+    "updatedAt": "2026-03-19T10:49:36.487Z",
+    "__v": 0,
+    "grading": {
+      "criteria": {
+        "TR": 9,
+        "CC": 9,
+        "LR": 9,
+        "GRA": 9
+      },
+      "overallBand": 9,
+      "teacherFeedback": "giỏi vl em ơi",
+      "gradedBy": "69ae8c7ed3a57de6189f9789",
+      "gradedAt": "2026-03-19T10:49:36.480Z"
+    }
+  },
+  {
+    "_id": "69ca45b6da92d07edb965f8a",
+    "studentId": "69c3bba8c74d083fddab8b58",
+    "writingId": "69b7a4b2dc05b4d575cdbad2",
+    "taskType": "Task 1",
+    "content": "test",
+    "wordCount": 1,
+    "status": "Pending",
+    "createdAt": "2026-03-30T09:43:18.645Z",
+    "updatedAt": "2026-03-30T09:43:18.645Z",
+    "__v": 0
+  }
+]

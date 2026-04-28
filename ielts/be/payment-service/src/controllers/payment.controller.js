@@ -1,5 +1,8 @@
 const Transaction = require('../models/transaction.model');
-const User = require('../models/user.model');
+const axios = require('axios');
+
+// Internal URL for auth-service — injected via docker-compose environment
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_INTERNAL_URL || 'http://auth-service:3001';
 
 const PLAN_UPGRADE_CONFIG = {
   PLUS: {
@@ -129,11 +132,36 @@ const getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find()
       .sort({ createdAt: -1 })
-      .populate('userId', 'name fullName email');
+      .lean();
+
+    // API Composition: fetch user details from auth-service for each unique userId
+    const uniqueUserIds = [...new Set(transactions.map(t => String(t.userId)))];
+
+    let userMap = {};
+    try {
+      const { data } = await axios.post(
+        `${AUTH_SERVICE_URL}/api/auth/internal/users/batch`,
+        { ids: uniqueUserIds },
+        { timeout: 5000 }
+      );
+      if (data && Array.isArray(data.users)) {
+        data.users.forEach(u => {
+          userMap[String(u._id)] = { name: u.name, fullName: u.fullName, email: u.email };
+        });
+      }
+    } catch (err) {
+      // Non-fatal: return transactions without user details rather than crashing
+      console.error('getTransactions: failed to fetch user details from auth-service:', err.message);
+    }
+
+    const enriched = transactions.map(t => ({
+      ...t,
+      userId: userMap[String(t.userId)] || { _id: t.userId },
+    }));
 
     return res.status(200).json({
       success: true,
-      data: transactions,
+      data: enriched,
     });
   } catch (error) {
     console.error('getTransactions error:', error.message);
@@ -180,11 +208,23 @@ const approveTransaction = async (req, res) => {
       Date.now() + upgradeConfig.durationDays * 24 * 60 * 60 * 1000
     );
 
-    await User.findByIdAndUpdate(transaction.userId, {
-      subscriptionPlan: upgradeConfig.subscriptionPlan,
-      plan: upgradeConfig.legacyPlan,
-      vipValidUntil,
-    });
+    // API Composition: delegate user VIP upgrade to auth-service
+    try {
+      await axios.patch(
+        `${AUTH_SERVICE_URL}/api/auth/internal/users/${transaction.userId}/subscription`,
+        {
+          subscriptionPlan: upgradeConfig.subscriptionPlan,
+          vipValidUntil,
+        },
+        { timeout: 5000 }
+      );
+    } catch (err) {
+      console.error('approveTransaction: failed to update user subscription in auth-service:', err.message);
+      return res.status(502).json({
+        success: false,
+        message: 'Transaction found but failed to upgrade user subscription. Please retry.',
+      });
+    }
 
     transaction.status = 'Success';
     await transaction.save();

@@ -9,10 +9,14 @@ const Subscription = require('./src/models/Subscription');
 const Plan = require('./src/models/Plan');
 
 // --- MongoDB connection ---
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/ielts_billing';
+const MONGO_URI = process.env.MONGO_URI;
 
 async function main() {
-  await mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+  if (!MONGO_URI) {
+    console.error('❌ MONGO_URI environment variable is not set. Aborting.');
+    process.exit(1);
+  }
+  await mongoose.connect(MONGO_URI);
   console.log('✓ Connected to MongoDB');
 
   // Fetch all subscriptions, populate planId to get durationMonths
