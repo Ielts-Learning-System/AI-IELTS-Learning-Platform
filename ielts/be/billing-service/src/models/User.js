@@ -22,10 +22,12 @@ const userSchema = new mongoose.Schema({
     default: 'student',
     enum: ['student', 'admin', 'teacher'],
   },
+  // plan lưu trực tiếp plan.code từ collection plans
+  // Giúp tra cứu quyền nhanh: user.plan → Plan.findOne({ code }) → benefits.skills
   plan: {
     type: String,
-    default: 'free',
-    enum: ['free', 'premium'],
+    default: 'FREE',
+    enum: ['FREE', 'PLUS', 'PRO'],
   },
 
   avatar: { 

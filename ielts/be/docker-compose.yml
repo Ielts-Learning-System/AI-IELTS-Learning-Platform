@@ -61,7 +61,7 @@ services:
     ports:
       - "3001:3001"
     env_file:
-      - ./auth-service/.env
+      - .env
     restart: unless-stopped
 
   reading-service:
@@ -70,7 +70,7 @@ services:
     ports:
       - "3002:3002"
     env_file:
-      - ./reading-service/.env
+      - .env
     restart: unless-stopped
 
   listening-service:
@@ -79,7 +79,7 @@ services:
     ports:
       - "3003:3003"
     env_file:
-      - ./listening-service/.env
+      - .env
     restart: unless-stopped
 
   writing-service:
@@ -88,7 +88,7 @@ services:
     ports:
       - "3004:3004"
     env_file:
-      - ./writing-service/.env
+      - .env
     restart: unless-stopped
 
   speaking-service:
@@ -97,7 +97,9 @@ services:
     ports:
       - "3008:3008"
     env_file:
-      - ./speaking-service/.env
+      - .env
+    environment:
+      - PORT=3008
     restart: unless-stopped
 
   billing-service:
@@ -106,7 +108,10 @@ services:
     ports:
       - "3005:3005"
     env_file:
-      - ./billing-service/.env
+      - .env
+    environment:
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:3001
+      - AUTH_SERVICE_TIMEOUT_MS=3000
     restart: unless-stopped
 
   lesson-service:
@@ -115,7 +120,9 @@ services:
     ports:
       - "3007:3007"
     env_file:
-      - ./lesson-service/.env
+      - .env
+    environment:
+      - PORT=3007
     restart: unless-stopped
     
   media-service:
@@ -124,7 +131,9 @@ services:
     ports:
       - "3010:3010"
     env_file:
-      - ./cloud-media-service/.env
+      - .env
+    environment:
+      - PORT=3010
     restart: unless-stopped
 
   payment-service:
@@ -133,7 +142,9 @@ services:
     ports:
       - "3009:3009"
     env_file:
-      - ./payment-service/.env
+      - .env
+    environment:
+      - PORT=3009
     restart: unless-stopped
 
   notification-service:
@@ -142,7 +153,9 @@ services:
     ports:
       - "3011:3011"
     env_file:
-      - ./notification-service/.env
+      - .env
+    environment:
+      - PORT=3011
     depends_on:
       - rabbitmq
     restart: unless-stopped
