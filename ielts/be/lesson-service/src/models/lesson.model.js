@@ -15,6 +15,11 @@ const lessonSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    videoType: {
+      type: String,
+      enum: ['cloudinary', 'youtube'],
+      default: 'cloudinary',
+    },
     thumbnailUrl: {
       type: String,
     },
