@@ -8,6 +8,7 @@ import {
   ReceiptText,
   BadgeDollarSign,
   BellRing,
+  BotMessageSquare,
 } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +21,7 @@ const adminMenuItems = [
   { name: 'Quản lý giao dịch', path: '/admin/transactions', icon: ReceiptText },
   { name: 'Gói cước', path: '/admin/billing/plans', icon: BadgeDollarSign },
   { name: 'Subscriptions', path: '/admin/billing/subscriptions', icon: BellRing },
+  { name: 'AI Manager', path: '/admin/ai', icon: BotMessageSquare },
   { name: 'Quản lý tài nguyên', path: '/admin/resources', icon: FileText },
   { name: 'Báo cáo', path: '/admin/reports', icon: BarChart3 },
 ];

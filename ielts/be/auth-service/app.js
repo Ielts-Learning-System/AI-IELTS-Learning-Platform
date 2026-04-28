@@ -3,6 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
+const systemConfigRoutes = require('./src/routes/systemConfig.routes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/', systemConfigRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

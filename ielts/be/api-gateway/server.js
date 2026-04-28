@@ -58,6 +58,7 @@ app.use('/api/media', noCacheHeaders);
 app.use('/api/payment', noCacheHeaders);
 app.use('/api/notification', noCacheHeaders);
 app.use('/api/users', noCacheHeaders);
+app.use('/api/ai', noCacheHeaders);
 
 /**
  * =============================
@@ -258,6 +259,49 @@ app.use(
     target: process.env.MEDIA_SERVICE_URL || 'http://localhost:3010',
     changeOrigin: true,
     pathRewrite: (path, req) => req.originalUrl,
+  })
+);
+
+/**
+ * Admin System Config (Auth Service)
+ * URL: http://localhost:3000/api/admin/...
+ */
+app.use(
+  '/api/admin',
+  createProxyMiddleware({
+    target: process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:3001',
+    changeOrigin: true,
+    // Keep /api/admin prefix — auth-service mounts routes at /api/admin/...
+    pathRewrite: (path, req) => req.originalUrl,
+  })
+);
+
+/**
+ * Internal config endpoint (Docker-internal only, forwarded to auth-service)
+ * URL: http://localhost:3000/api/internal/...
+ */
+app.use(
+  '/api/internal',
+  createProxyMiddleware({
+    target: process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:3001',
+    changeOrigin: true,
+    pathRewrite: (path, req) => req.originalUrl,
+  })
+);
+
+/**
+ * AI Service (FastAPI)
+ * URL: http://localhost:3000/api/ai/...
+ */
+app.use(
+  '/api/ai',
+  createProxyMiddleware({
+    target: process.env.AI_SERVICE_URL || 'http://127.0.0.1:3012',
+    changeOrigin: true,
+    pathRewrite: (path, req) => req.originalUrl,
+    // Generous timeout for Gemini inference calls
+    proxyTimeout: 120000,
+    timeout: 120000,
   })
 );
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Loader2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { ImageUp, Loader2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { TestModal } from './TestModal';
+import { AIImageParseModal, type ParsedListeningTest } from './AIImageParseModal';
 import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 import { apiClient } from '../../lib/api/client';
@@ -291,6 +292,7 @@ export function TestManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isAIImageModalOpen, setIsAIImageModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTest, setEditingTest] = useState<TestListItem | null>(null);
   const [form, setForm] = useState<TestFormState>(createInitialForm(routeModule === 'all' ? 'reading' : routeModule));
@@ -344,6 +346,33 @@ export function TestManagement() {
     const module = routeModule === 'all' ? (selectedModule === 'all' ? 'reading' : selectedModule) : routeModule;
     setEditingTest(null);
     setForm(createInitialForm(module));
+    setIsModalOpen(true);
+  }
+
+  /** Apply AI-parsed listening JSON directly to the create-test form */
+  function applyParsedListeningTest(parsed: ParsedListeningTest) {
+    const normalizedParts: ListeningPartForm[] = (parsed.parts ?? []).map((part) => ({
+      partNumber: part.partNumber ?? 1,
+      title: part.title ?? '',
+      audioUrl: part.audioUrl ?? '',
+      description: part.description ?? '',
+      questions: (part.questions ?? []).map((q) => ({
+        questionText: q.questionText ?? '',
+        type: (q.type as ListeningQuestionType) ?? 'fill_blank',
+        options: q.options ?? [],
+        imageUrl: q.imageUrl ?? '',
+        correctAnswer: q.correctAnswer ?? '',
+      })),
+    }));
+
+    setEditingTest(null);
+    setForm({
+      module: 'listening',
+      title: parsed.title ?? '',
+      description: parsed.description ?? '',
+      readingPassages: [createEmptyReadingPassage(1)],
+      listeningParts: normalizedParts.length > 0 ? normalizedParts : [createEmptyListeningPart(1)],
+    });
     setIsModalOpen(true);
   }
 
@@ -667,6 +696,15 @@ export function TestManagement() {
 
           <button
             type="button"
+            onClick={() => setIsAIImageModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700"
+          >
+            <ImageUp className="h-4 w-4" />
+            Tạo từ ảnh (AI)
+          </button>
+
+          <button
+            type="button"
             onClick={openCreateModal}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
           >
@@ -760,6 +798,13 @@ export function TestManagement() {
           setIsAIModalOpen(false);
           fetchTests();
         }}
+      />
+
+      <AIImageParseModal
+        isOpen={isAIImageModalOpen}
+        onClose={() => setIsAIImageModalOpen(false)}
+        onApply={applyParsedListeningTest}
+        module="listening"
       />
 
       {isModalOpen && (
