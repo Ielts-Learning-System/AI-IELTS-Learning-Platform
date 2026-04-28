@@ -14,7 +14,7 @@ const verifyToken = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     // Build req.user from JWT payload — no cross-DB User lookup needed.
-    req.user = { id: decoded.id, _id: decoded.id, role: decoded.role };
+    req.user = { id: decoded.id, _id: decoded.id, role: decoded.role, plan: decoded.plan || 'FREE' };
     req.userId = decoded.id;
 
     next();

@@ -2,8 +2,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { publishEvent } = require('../services/rabbitmq.service');
 
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+const generateToken = (id, role, plan) => {
+  return jwt.sign({ id, role, plan: plan || 'FREE' }, process.env.JWT_SECRET, {
     expiresIn: '7d',
   });
 };
@@ -39,7 +39,7 @@ const register = async (req, res) => {
     });
 
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id, user.role, user.plan);
 
     res.status(201).json({
       success: true,
@@ -87,7 +87,7 @@ const login = async (req, res) => {
     }
 
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id, user.role, user.plan);
 
     res.json({
       success: true,
