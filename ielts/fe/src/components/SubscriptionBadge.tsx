@@ -35,8 +35,14 @@ interface Subscription {
   };
 }
 
+interface PlanTier {
+  code: string;
+  price: number;
+}
+
 interface SubscriptionBadgeProps {
-  onUpgradeClick?: () => void;
+  /** Called when a higher plan exists. Receives the current plan's price so the modal can filter. */
+  onUpgradeClick?: (currentPlanPrice: number) => void;
   onManageClick?: () => void;
 }
 
@@ -125,6 +131,8 @@ export function SubscriptionBadge({
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
   // Thông tin subscription chi tiết (có thể null nếu FREE)
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  // Danh sách tất cả plans để xác định tier hiện tại
+  const [allPlanTiers, setAllPlanTiers] = useState<PlanTier[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -143,13 +151,27 @@ export function SubscriptionBadge({
     const fetchData = async () => {
       setLoading(true);
       try {
-        // --- Bước 1: Gọi /my-skills để lấy allowedSkills (luôn trả 200) ---
-        const skillsResp = await apiClient.get('/billing/my-skills', {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortController.signal,
-        });
-        const skillsData = skillsResp.data?.data;
+        // --- Gọi song song 3 API ---
+        const [skillsResp, subResp, plansResp] = await Promise.all([
+          apiClient.get('/billing/my-skills', {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: abortController.signal,
+          }),
+          apiClient.get('/billing/my-subscription', {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: abortController.signal,
+          }),
+          apiClient.get('/billing/plans', {
+            signal: abortController.signal,
+          }),
+        ]);
 
+        // --- Plans list ---
+        const rawPlans: Array<{ code: string; price: number }> = plansResp.data?.data || [];
+        setAllPlanTiers(rawPlans.map((p) => ({ code: p.code, price: p.price })));
+
+        // --- My skills ---
+        const skillsData = skillsResp.data?.data;
         setPlanInfo({
           plan: skillsData?.plan || 'FREE',
           planName: skillsData?.planName || 'Gói Miễn Phí',
@@ -157,15 +179,8 @@ export function SubscriptionBadge({
           isPro: skillsData?.isPro === true,
         });
 
-        // --- Bước 2: Gọi /my-subscription để lấy thông tin chi tiết ---
-        // Luôn trả 200: data = subscription object (nếu có) hoặc null (user FREE)
-        const subResp = await apiClient.get('/billing/my-subscription', {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortController.signal,
-        });
+        // --- My subscription ---
         const subData = subResp.data?.data;
-
-        // data: null + planFallback = user FREE, không có subscription record
         if (subData && subData.status === 'ACTIVE') {
           setSubscription(subData);
         } else {
@@ -220,7 +235,12 @@ export function SubscriptionBadge({
     planInfo?.allowedSkills ||
     [];
   const statusBadge = getStatusBadge(subscription?.status);
-  const isFreeOrInactive = !subscription || subscription.status !== 'ACTIVE';
+
+  // Tính giá gói hiện tại để so sánh
+  const currentPlanPrice =
+    allPlanTiers.find((p) => p.code.toUpperCase() === planCode.toUpperCase())?.price ?? 0;
+  // canUpgrade = true nếu tồn tại ít nhất 1 gói có giá cao hơn gói hiện tại
+  const canUpgrade = allPlanTiers.some((p) => p.price > currentPlanPrice);
 
   // ── Loading skeleton ──────────────────────────────────────────
   if (loading) {
@@ -340,9 +360,9 @@ export function SubscriptionBadge({
             <button
               onClick={() => {
                 setIsDropdownOpen(false);
-                if (isFreeOrInactive && onUpgradeClick) {
-                  onUpgradeClick();
-                } else if (!isFreeOrInactive && onManageClick) {
+                if (canUpgrade && onUpgradeClick) {
+                  onUpgradeClick(currentPlanPrice);
+                } else if (onManageClick) {
                   onManageClick();
                 }
               }}
@@ -351,7 +371,7 @@ export function SubscriptionBadge({
                 ${getPlanBadgeButtonColor(planCode)}`}
             >
               <Zap className="h-4 w-4" />
-              {isFreeOrInactive ? 'Nâng cấp gói 🚀' : 'Quản lý gói'}
+              {canUpgrade ? 'Nâng cấp gói 🚀' : 'Quản lý gói'}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const SpeakingSubmission = require('../models/SpeakingSubmission');
+const SpeakingTest = require('../models/SpeakingTest');
 
 const roundToNearestHalf = (value) => Math.round(value * 2) / 2;
 
@@ -135,10 +136,35 @@ exports.submitSpeakingAudio = async (req, res) => {
 
 exports.getPendingSpeakingSubmissions = async (req, res) => {
   try {
+    // Accept both legacy single-audio submissions and new per-question ones
     const submissions = await SpeakingSubmission.find({
       status: 'Pending',
-      audioUrl: { $ne: '' },
-    }).sort({ createdAt: 1 });
+      $or: [
+        { 'answers.0': { $exists: true } },
+        { audioUrl: { $ne: '' } },
+      ],
+    })
+      .populate('testId', 'title part1 part2 part3')
+      .sort({ createdAt: 1 });
+
+    return res.json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.getGradedSpeakingSubmissions = async (req, res) => {
+  try {
+    const submissions = await SpeakingSubmission.find({ status: 'Graded' })
+      .populate('testId', 'title part1 part2 part3')
+      .sort({ 'grading.gradedAt': -1 });
 
     return res.json({
       success: true,
@@ -185,10 +211,10 @@ exports.gradeSpeakingSubmission = async (req, res) => {
       });
     }
 
-    if (!submission.audioUrl) {
+    if (!submission.answers?.length && !submission.audioUrl) {
       return res.status(400).json({
         success: false,
-        message: 'Student has not submitted an audio recording yet',
+        message: 'Student has not submitted any audio recordings yet',
       });
     }
 
@@ -216,5 +242,122 @@ exports.gradeSpeakingSubmission = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+/**
+ * Student: Submit (or re-submit) per-question audio answers for a specific speaking test.
+ * `answers` is an array of { questionKey, audioUrl } pairs.
+ * questionKey format: 'p1_0', 'p1_1', ..., 'p2', 'p3_0', 'p3_1', ...
+ * Creates a new submission if none exists, or replaces the answers on the existing one.
+ */
+exports.startOrUpdateAttempt = async (req, res) => {
+  try {
+    const { answers, forceNew } = req.body;
+    const { testId } = req.params;
+
+    if (!testId || !isObjectId(testId)) {
+      return res.status(400).json({ success: false, message: 'Valid testId is required' });
+    }
+
+    if (!Array.isArray(answers) || answers.length === 0) {
+      return res.status(400).json({ success: false, message: 'answers must be a non-empty array' });
+    }
+
+    // Validate each entry
+    for (const entry of answers) {
+      if (!entry.questionKey || !entry.audioUrl) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each answer must have questionKey and audioUrl',
+        });
+      }
+    }
+
+    const test = await SpeakingTest.findById(testId);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Speaking test not found' });
+    }
+
+    const mappedAnswers = answers.map((a) => ({
+      questionKey: String(a.questionKey).trim(),
+      audioUrl: String(a.audioUrl).trim(),
+    }));
+
+    let submission;
+    if (!forceNew) {
+      // Upsert: update the most recent Pending submission for this student+test
+      const existing = await SpeakingSubmission.findOne({
+        studentId: req.user.id,
+        testId,
+        status: 'Pending',
+      }).sort({ createdAt: -1 });
+
+      if (existing) {
+        existing.answers = mappedAnswers;
+        await existing.save();
+        submission = existing;
+      }
+    }
+
+    if (!submission) {
+      // Create a fresh attempt (either forceNew=true or no existing Pending found)
+      submission = await SpeakingSubmission.create({
+        studentId: req.user.id,
+        testId,
+        answers: mappedAnswers,
+        status: 'Pending',
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Answers submitted successfully',
+      data: submission,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Student: Get my own speaking submission history, populated with test data.
+ */
+exports.getMySubmissions = async (req, res) => {
+  try {
+    const submissions = await SpeakingSubmission.find({ studentId: req.user.id })
+      .populate('testId', 'title part1 part2 part3')
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Teacher: Get all submissions for a specific test (with audio).
+ */
+exports.getSubmissionsByTest = async (req, res) => {
+  try {
+    const { testId } = req.params;
+    if (!testId || !isObjectId(testId)) {
+      return res.status(400).json({ success: false, message: 'Valid testId is required' });
+    }
+
+    const submissions = await SpeakingSubmission.find({ testId })
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

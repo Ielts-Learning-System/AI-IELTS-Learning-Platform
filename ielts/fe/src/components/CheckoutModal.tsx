@@ -8,6 +8,8 @@ import { useUserStore } from '../store/useUserStore';
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Giá gói hiện tại của user — chỉ hiển thị những gói có giá cao hơn. Nếu undefined, hiển thị tất cả. */
+  currentPlanPrice?: number;
 }
 
 interface Plan {
@@ -31,7 +33,7 @@ interface VietQRData {
   planName: string;
 }
 
-export default function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
+export default function CheckoutModal({ isOpen, onClose, currentPlanPrice }: CheckoutModalProps) {
   const navigate = useNavigate();
   const { token } = useUserStore();
 
@@ -39,6 +41,11 @@ export default function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
   const [qrData, setQrData] = useState<VietQRData | null>(null);
+
+  // Không filter — luôn hiển thị tất cả gói, chỉ đánh dấu unavailable
+  const displayPlans = plans;
+  const isUnavailable = (plan: Plan) =>
+    currentPlanPrice !== undefined && plan.price <= currentPlanPrice;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -162,16 +169,27 @@ export default function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 max-w-4xl mx-auto">
-                  {plans.map((plan) => (
+                  {displayPlans.map((plan) => {
+                    const unavailable = isUnavailable(plan);
+                    return (
                     <div
                       key={plan._id}
-                      className={`relative flex flex-col rounded-2xl border-2 bg-white p-4 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${plan.ui.borderColor || 'border-slate-200'}`}
+                      className={`relative flex flex-col rounded-2xl border-2 bg-white p-4 shadow-sm transition-all duration-300 ${
+                        unavailable
+                          ? 'opacity-60 grayscale'
+                          : 'hover:shadow-md hover:-translate-y-1'
+                      } ${plan.ui.borderColor || 'border-slate-200'}`}
                     >
-                      {plan.ui.badge && (
+                      {/* Badge góc trên */}
+                      {unavailable ? (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-400 px-3 py-1 text-xs font-bold text-white shadow-sm whitespace-nowrap">
+                          Không khả dụng
+                        </div>
+                      ) : plan.ui.badge ? (
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-[#E31837] to-[#ff4e1a] px-3 py-1 text-xs font-bold text-white shadow-sm whitespace-nowrap">
                           {plan.ui.badge}
                         </div>
-                      )}
+                      ) : null}
 
                       <h3 className="mb-1 text-lg font-bold text-slate-800 text-center">{plan.name}</h3>
                       <div className="mb-4 text-center">
@@ -191,23 +209,23 @@ export default function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                       </ul>
 
                       <button
-                        onClick={() => handleCreateVietQR(plan)}
-                        disabled={plan.code === 'FREE' || processingPlanId !== null}
+                        onClick={() => !unavailable && handleCreateVietQR(plan)}
+                        disabled={unavailable || processingPlanId !== null}
                         className={`mt-auto flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-white shadow-sm transition-all duration-200 ${
-                          plan.ui.buttonColor ? `bg-gradient-to-r ${plan.ui.buttonColor}` : 'bg-gradient-to-r from-slate-400 to-slate-500'
-                        } ${
-                          plan.code === 'FREE' || processingPlanId !== null
-                            ? 'cursor-not-allowed opacity-60'
-                            : 'hover:shadow-md hover:-translate-y-0.5'
-                        }`}
+                          unavailable
+                            ? 'cursor-not-allowed bg-slate-300'
+                            : plan.ui.buttonColor
+                            ? `bg-gradient-to-r ${plan.ui.buttonColor} hover:shadow-md hover:-translate-y-0.5`
+                            : 'bg-gradient-to-r from-slate-400 to-slate-500'
+                        } ${processingPlanId !== null && !unavailable ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         {processingPlanId === plan.code ? (
                           <>
                             <Loader2 className="h-5 w-5 animate-spin" />
                             Đang xử lý...
                           </>
-                        ) : plan.code === 'FREE' ? (
-                          'Đang sử dụng'
+                        ) : unavailable ? (
+                          plan.price === 0 ? 'Đang sử dụng' : 'Không khả dụng'
                         ) : (
                           <>
                             <QrCode className="h-5 w-5" />
@@ -216,7 +234,8 @@ export default function CheckoutModal({ isOpen, onClose }: CheckoutModalProps) {
                         )}
                       </button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>

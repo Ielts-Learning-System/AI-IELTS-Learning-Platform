@@ -31,12 +31,24 @@ exports.getAllSpeakingTests = async (req, res) => {
  */
 exports.getAllTests = async (req, res) => {
   try {
-    const tests = await SpeakingTest.find({})
-      .sort({ createdAt: -1 });
+    const tests = await SpeakingTest.find({}).sort({ createdAt: -1 });
+
+    // Attach submission counts so the frontend can disable delete when attempts exist
+    const testIds = tests.map((t) => t._id);
+    const counts = await SpeakingSubmission.aggregate([
+      { $match: { testId: { $in: testIds } } },
+      { $group: { _id: '$testId', count: { $sum: 1 } } },
+    ]);
+    const countMap = Object.fromEntries(counts.map((c) => [String(c._id), c.count]));
+
+    const data = tests.map((t) => ({
+      ...t.toObject(),
+      submissionCount: countMap[String(t._id)] ?? 0,
+    }));
 
     return res.json({
       success: true,
-      data: tests,
+      data,
     });
   } catch (error) {
     return res.status(500).json({
@@ -169,10 +181,19 @@ exports.updateTest = async (req, res) => {
 };
 
 /**
- * Delete a speaking test (teacher/admin only)
+ * Delete a speaking test (teacher/admin only).
+ * Blocked if any student has already submitted an attempt for this test.
  */
 exports.deleteTest = async (req, res) => {
   try {
+    const hasAttempts = await SpeakingSubmission.exists({ testId: req.params.id });
+    if (hasAttempts) {
+      return res.status(409).json({
+        success: false,
+        message: 'Cannot delete: students have already taken this test.',
+      });
+    }
+
     const test = await SpeakingTest.findByIdAndDelete(req.params.id);
 
     if (!test) {

@@ -22,14 +22,28 @@ const SpeakingSubmissionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    testId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SpeakingTest',
+      index: true,
+      default: null,
+    },
     questions: {
       type: [String],
-      required: true,
-      validate: {
-        validator: (value) => Array.isArray(value) && value.length > 0,
-        message: 'At least one speaking question is required',
-      },
+      default: [],
     },
+    // Per-question audio answers: each entry links a stable questionKey to a Cloudinary URL.
+    // questionKey format: 'p1_0', 'p1_1', ..., 'p2', 'p3_0', 'p3_1', ...
+    answers: {
+      type: [
+        {
+          questionKey: { type: String, required: true },
+          audioUrl: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
+    // Kept for backward-compatibility with legacy single-audio submissions.
     audioUrl: { type: String, default: '' },
     status: {
       type: String,

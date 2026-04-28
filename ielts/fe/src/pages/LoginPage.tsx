@@ -41,7 +41,8 @@ export default function LoginPage() {
         email: userEmail,
         avatar,
         role: normalizedRole,
-        isVip: plan !== 'FREE' && plan !== 'Free',
+        plan: (plan || 'FREE').toUpperCase(),
+        isVip: !!(plan && plan.toUpperCase() !== 'FREE'),
         subscriptionPlan: subscriptionPlan || 'Free',
         vipValidUntil: vipValidUntil || null,
       };

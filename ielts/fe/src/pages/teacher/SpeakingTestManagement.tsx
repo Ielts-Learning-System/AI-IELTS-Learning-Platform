@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
-import { Edit, LoaderCircle, Mic, Plus, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { Edit, LoaderCircle, Mic, Plus, Search, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUserStore } from '../../store/useUserStore';
 
@@ -14,13 +14,7 @@ type SpeakingTest = {
   createdAt?: string;
   updatedAt?: string;
   questions?: string[];
-};
-
-type Student = {
-  _id: string;
-  name?: string;
-  email?: string;
-  role?: string;
+  submissionCount?: number;
 };
 
 type FormMode = 'create' | 'edit';
@@ -72,6 +66,7 @@ const parseSpeakingTest = (raw: any): SpeakingTest => {
     createdAt: raw?.createdAt,
     updatedAt: raw?.updatedAt,
     questions: Array.isArray(raw?.questions) ? raw.questions : undefined,
+    submissionCount: typeof raw?.submissionCount === 'number' ? raw.submissionCount : 0,
   };
 };
 
@@ -144,34 +139,11 @@ export default function SpeakingTestManagement() {
   const [formState, setFormState] = useState<SpeakingFormState>(emptyFormState);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assigningTest, setAssigningTest] = useState<SpeakingTest | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [studentSearch, setStudentSearch] = useState('');
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
-
   const filteredTests = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return tests;
-
-    return tests.filter((test) => {
-      const title = String(test.title || '').toLowerCase();
-      return title.includes(q);
-    });
+    return tests.filter((test) => String(test.title || '').toLowerCase().includes(q));
   }, [tests, searchQuery]);
-
-  const filteredStudents = useMemo(() => {
-    const q = studentSearch.trim().toLowerCase();
-    if (!q) return students;
-
-    return students.filter((student) => {
-      const name = String(student.name || '').toLowerCase();
-      const email = String(student.email || '').toLowerCase();
-      return name.includes(q) || email.includes(q);
-    });
-  }, [students, studentSearch]);
 
   const resetForm = () => {
     setFormMode('create');
@@ -202,29 +174,6 @@ export default function SpeakingTestManagement() {
   useEffect(() => {
     fetchTests();
   }, []);
-
-  const fetchStudents = async () => {
-    try {
-      setIsLoadingStudents(true);
-      const authToken = getToken(token);
-
-      const response = await axios.get(`${API_BASE}/api/users`, {
-        params: { role: 'Student' },
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      const payload = response.data?.data ?? [];
-      const nextStudents = Array.isArray(payload) ? payload : [];
-      setStudents(nextStudents);
-    } catch (error: any) {
-      console.error('Failed to fetch students:', error);
-      toast.error(error.response?.data?.message || 'Could not load student list.');
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
 
   const openCreateModal = () => {
     resetForm();
@@ -338,15 +287,14 @@ export default function SpeakingTestManagement() {
     }
   };
 
-  const handleDeleteTest = async (testId: string) => {
+  const handleDeleteTest = async (testId: string, submissionCount: number) => {
+    if (submissionCount > 0) return; // guard: button should already be disabled
     if (!window.confirm('Delete this speaking test?')) return;
 
     try {
       const authToken = getToken(token);
       await axios.delete(`${API_BASE}/api/speaking/tests/${testId}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
 
       toast.success('Deleted speaking test.');
@@ -354,59 +302,6 @@ export default function SpeakingTestManagement() {
     } catch (error: any) {
       console.error('Failed to delete speaking test:', error);
       toast.error(error.response?.data?.message || 'Could not delete speaking test.');
-    }
-  };
-
-  const openAssignModal = async (test: SpeakingTest) => {
-    setAssigningTest(test);
-    setSelectedStudentId('');
-    setStudentSearch('');
-    setIsAssignModalOpen(true);
-    await fetchStudents();
-  };
-
-  const closeAssignModal = () => {
-    setAssigningTest(null);
-    setSelectedStudentId('');
-    setStudentSearch('');
-    setIsAssignModalOpen(false);
-  };
-
-  const handleAssignTest = async () => {
-    if (!assigningTest) {
-      toast.error('Please choose a speaking test first.');
-      return;
-    }
-
-    if (!selectedStudentId) {
-      toast.error('Please select a student.');
-      return;
-    }
-
-    try {
-      setIsAssigning(true);
-      const authToken = getToken(token);
-
-      await axios.post(
-        `${API_BASE}/api/speaking/assign`,
-        {
-          studentId: selectedStudentId,
-          testId: assigningTest._id,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        },
-      );
-
-      toast.success('Assigned speaking test successfully.');
-      closeAssignModal();
-    } catch (error: any) {
-      console.error('Failed to assign speaking test:', error);
-      toast.error(error.response?.data?.message || 'Could not assign speaking test.');
-    } finally {
-      setIsAssigning(false);
     }
   };
 
@@ -505,23 +400,29 @@ export default function SpeakingTestManagement() {
                           Edit
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteTest(test._id)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                        <span
+                          title={
+                            (test.submissionCount ?? 0) > 0
+                              ? 'Cannot delete: Students have already taken this test.'
+                              : undefined
+                          }
+                          className="inline-flex"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openAssignModal(test)}
-                          className="inline-flex items-center gap-1 rounded-xl bg-[#E31837] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#C51430]"
-                        >
-                          <UserPlus className="h-3.5 w-3.5" />
-                          Assign to Student
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTest(test._id, test.submissionCount ?? 0)}
+                            disabled={(test.submissionCount ?? 0) > 0}
+                            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                            {(test.submissionCount ?? 0) > 0 && (
+                              <span className="ml-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                {test.submissionCount}
+                              </span>
+                            )}
+                          </button>
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -616,91 +517,6 @@ export default function SpeakingTestManagement() {
         </div>
       )}
 
-      {isAssignModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4">
-          <div className="w-full max-w-xl rounded-[26px] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.24)]">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-500">Assign</p>
-                <h3 className="mt-1 text-xl font-black text-slate-900">Assign Speaking Test</h3>
-              </div>
-              <button
-                type="button"
-                onClick={closeAssignModal}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-5 py-4">
-              <div className="rounded-xl border border-red-100 bg-red-50/50 px-4 py-3 text-sm text-slate-700">
-                <p className="font-semibold text-slate-900">{assigningTest?.title || 'No test selected'}</p>
-                <p className="mt-1 text-xs text-slate-500">Select a student to create a pending speaking submission.</p>
-              </div>
-
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <Search className="h-4 w-4 text-slate-400" />
-                <input
-                  value={studentSearch}
-                  onChange={(event) => setStudentSearch(event.target.value)}
-                  placeholder="Search student by name or email"
-                  className="h-8 flex-1 border-none bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                />
-              </div>
-
-              <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
-                {isLoadingStudents ? (
-                  <div className="flex h-32 items-center justify-center text-red-600">
-                    <LoaderCircle className="h-5 w-5 animate-spin" />
-                  </div>
-                ) : filteredStudents.length === 0 ? (
-                  <div className="flex h-32 items-center justify-center text-sm text-slate-500">No students found.</div>
-                ) : (
-                  filteredStudents.map((student) => {
-                    const active = selectedStudentId === student._id;
-
-                    return (
-                      <button
-                        key={student._id}
-                        type="button"
-                        onClick={() => setSelectedStudentId(student._id)}
-                        className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                          active
-                            ? 'border-red-300 bg-red-50'
-                            : 'border-slate-200 bg-white hover:border-red-200 hover:bg-red-50/60'
-                        }`}
-                      >
-                        <p className="truncate text-sm font-semibold text-slate-900">{student.name || 'Unnamed student'}</p>
-                        <p className="truncate text-xs text-slate-500">{student.email || 'No email'}</p>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeAssignModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAssignTest}
-                  disabled={isAssigning || !selectedStudentId}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#E31837] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#C51430] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isAssigning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                  {isAssigning ? 'Assigning...' : 'Assign to Student'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }

@@ -102,6 +102,25 @@ exports.getPendingSubmissions = async (req, res) => {
   }
 };
 
+exports.getGradedSubmissions = async (req, res) => {
+  try {
+    const submissions = await WritingSubmission.find({ status: 'Graded' })
+      .populate('writingId', 'title type')
+      .sort({ 'grading.gradedAt': -1 });
+
+    return res.json({
+      success: true,
+      count: submissions.length,
+      data: submissions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 exports.gradeSubmission = async (req, res) => {
   try {
     const { criteria, teacherFeedback } = req.body;

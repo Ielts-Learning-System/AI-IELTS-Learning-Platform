@@ -55,11 +55,21 @@ interface WritingSubmission {
 
 interface SpeakingSubmission {
   _id: string;
-  speakingId?: string;
-  title?: string;
+  studentId?: string;
+  testId?: { _id: string; title: string } | string;
+  questions?: string[];
+  audioUrl?: string;
   status: 'Pending' | 'Graded';
   createdAt: string;
-  grading?: GradingInfo;
+  grading?: {
+    FC: number;
+    LR: number;
+    GRA: number;
+    PR: number;
+    overallBand: number;
+    teacherFeedback?: string;
+    gradedAt?: string;
+  };
 }
 
 interface ReadingTest {
@@ -92,6 +102,9 @@ interface UnifiedHistoryItem {
   taskType?: string;
   content?: string;
   writingId?: string | WritingRef;
+  // Speaking-specific
+  audioUrl?: string;
+  speakingGrading?: SpeakingSubmission['grading'];
 }
 
 const API_BASE = 'http://localhost:3000/api';
@@ -169,15 +182,23 @@ const transformWritingData = (items: WritingSubmission[]): UnifiedHistoryItem[] 
   }));
 
 const transformSpeakingData = (items: SpeakingSubmission[]): UnifiedHistoryItem[] =>
-  (Array.isArray(items) ? items : []).map((item) => ({
-    id: item._id,
-    skill: 'Speaking',
-    title: item.title || 'Speaking Prompt',
-    date: item.createdAt,
-    status: item.status,
-    bandScore: item.grading?.overallBand,
-    grading: item.grading,
-  }));
+  (Array.isArray(items) ? items : []).map((item) => {
+    const testRef = item.testId;
+    const title =
+      typeof testRef === 'object' && testRef !== null
+        ? testRef.title
+        : 'Speaking Submission';
+    return {
+      id: item._id,
+      skill: 'Speaking',
+      title,
+      date: item.createdAt,
+      status: item.status,
+      bandScore: item.grading?.overallBand,
+      audioUrl: item.audioUrl,
+      speakingGrading: item.grading,
+    };
+  });
 
 const TAB_CONFIG: Array<{ id: TabType; label: string; skill?: SkillType }> = [
   { id: 'all', label: 'Tất cả' },
@@ -438,7 +459,16 @@ export default function MySkillsHistory() {
 
                           {/* Hành động — icon only */}
                           <td className="px-5 py-4 align-middle text-center">
-                            {item.status === 'Graded' && (item.grading || item.skill === 'Reading' || item.skill === 'Listening') ? (
+                            {item.skill === 'Speaking' ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedItem(item)}
+                                title="Nghe lại & xem nhận xét"
+                                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600"
+                              >
+                                <Mic2 className="h-4 w-4" />
+                              </button>
+                            ) : item.status === 'Graded' && (item.grading || item.skill === 'Reading' || item.skill === 'Listening') ? (
                               <button
                                 type="button"
                                 onClick={() => navigate(`/history/writing/${item.id}`)}
@@ -448,7 +478,7 @@ export default function MySkillsHistory() {
                                 <MessageSquareQuote className="h-4 w-4" />
                               </button>
                             ) : (
-                              <span className="text-slate-300 select-none">—</span>
+                              <span className="select-none text-slate-300">—</span>
                             )}
                           </td>
 
@@ -487,8 +517,124 @@ function DetailsModal({ item, onClose }: DetailsModalProps) {
   const colors = skillColors[item.skill];
   const Icon = skillIcons[item.skill];
 
-  // For Writing and Speaking with grading
-  if ((item.skill === 'Writing' || item.skill === 'Speaking') && item.grading) {
+  // Speaking submission view
+  if (item.skill === 'Speaking') {
+    const sg = item.speakingGrading;
+    type SpeakingCriteriaKey = 'FC' | 'LR' | 'GRA' | 'PR';
+    const speakingCriteria: Array<{ key: SpeakingCriteriaKey; label: string }> = [
+      { key: 'FC', label: 'Fluency & Coherence' },
+      { key: 'LR', label: 'Lexical Resource' },
+      { key: 'GRA', label: 'Grammar Range & Accuracy' },
+      { key: 'PR', label: 'Pronunciation' },
+    ];
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8 backdrop-blur-sm"
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <div className="relative max-h-[92vh] w-full max-w-xl overflow-hidden rounded-[32px] border border-amber-100 bg-white shadow-[0_32px_120px_rgba(15,23,42,0.28)]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-5 top-5 z-10 rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:text-slate-700"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          <div className="max-h-[92vh] space-y-5 overflow-y-auto p-6 lg:p-8">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-amber-50 p-3 text-amber-700">
+                <Mic2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">Speaking</p>
+                <h2 className="text-xl font-black text-slate-900">{item.title}</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  {format(new Date(item.date), 'dd/MM/yyyy HH:mm')}
+                </p>
+              </div>
+            </div>
+
+            {/* Status */}
+            {item.status === 'Pending' ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <LoaderCircle className="h-5 w-5 animate-spin text-amber-600" />
+                <div>
+                  <p className="font-semibold text-amber-900">Đang chờ giáo viên chấm</p>
+                  <p className="text-xs text-amber-700">Giáo viên sẽ nghe và phản hồi sớm nhất có thể.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <div>
+                  <p className="font-semibold text-emerald-900">Đã được chấm</p>
+                  {sg?.gradedAt && (
+                    <p className="text-xs text-emerald-700">
+                      {format(new Date(sg.gradedAt), 'dd/MM/yyyy HH:mm')}
+                    </p>
+                  )}
+                </div>
+                {sg && (
+                  <span className="ml-auto text-3xl font-black text-amber-600">
+                    {sg.overallBand.toFixed(1)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Audio player */}
+            {item.audioUrl ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Bài ghi âm của bạn
+                </p>
+                <audio controls src={item.audioUrl} className="w-full" />
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center text-sm text-slate-400">
+                Chưa có file ghi âm.
+              </div>
+            )}
+
+            {/* Feedback */}
+            {sg && (
+              <>
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/50 px-4 py-4">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
+                    Nhận xét của giáo viên
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                    {sg.teacherFeedback || 'Giáo viên chưa để lại nhận xét chi tiết.'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {speakingCriteria.map(({ key, label }) => {
+                    const score = sg[key] as number | undefined;
+                    return (
+                      <div key={key} className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">{key}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{label}</p>
+                        <p className="mt-2 text-2xl font-black text-amber-600">
+                          {typeof score === 'number' ? score.toFixed(1) : '—'}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For Writing with grading
+  if (item.skill === 'Writing' && item.grading) {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8 backdrop-blur-sm"
@@ -585,7 +731,7 @@ function DetailsModal({ item, onClose }: DetailsModalProps) {
                       <div className={`rounded-2xl ${colors.bg} px-4 py-3 text-right`}>
                         <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${colors.text}`}>Score</p>
                         <p className="mt-1 text-2xl font-black text-red-600">
-                          {item.grading.criteria[criterion.key].toFixed(1)}
+                          {item.grading?.criteria[criterion.key].toFixed(1)}
                         </p>
                       </div>
                     </div>

@@ -4,14 +4,24 @@ import axios from 'axios';
 import {
   AlertTriangle,
   CalendarDays,
+  CheckCircle2,
   ChevronRight,
+  Clock3,
   Mic,
+  RefreshCcw,
   Search,
 } from 'lucide-react';
 import {
   fetchSpeakingTests,
   type SpeakingTestListItem,
 } from '../api/speaking.api';
+import { apiClient } from '../lib/api/client';
+
+interface SubmissionStatus {
+  /** Most recent submission id for this test */
+  id: string;
+  status: 'Pending' | 'Graded';
+}
 
 function formatDate(dateString?: string): string {
   if (!dateString) return 'Ngày chưa cập nhật';
@@ -66,6 +76,8 @@ export default function SpeakingListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  /** Map of testId → most recent submission status */
+  const [submissionMap, setSubmissionMap] = useState<Record<string, SubmissionStatus>>({});
 
   useEffect(() => {
     const controller = new AbortController();
@@ -84,7 +96,28 @@ export default function SpeakingListPage() {
       }
     };
 
+    const loadSubmissions = async () => {
+      try {
+        const res = await apiClient.get('/speaking/submissions/my-submissions', {
+          signal: controller.signal,
+        });
+        const all = (res.data?.data ?? []) as any[];
+        // Build map: testId → most recent submission (array is already sorted desc)
+        const map: Record<string, SubmissionStatus> = {};
+        for (const sub of all) {
+          const tid = sub.testId?._id ?? String(sub.testId);
+          if (tid && !map[tid]) {
+            map[tid] = { id: sub._id, status: sub.status };
+          }
+        }
+        setSubmissionMap(map);
+      } catch {
+        // not critical — just won't show badges
+      }
+    };
+
     loadTests();
+    loadSubmissions();
 
     return () => controller.abort();
   }, []);
@@ -169,9 +202,22 @@ export default function SpeakingListPage() {
                     <Mic className="h-3.5 w-3.5" />
                     Speaking Test
                   </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    3 Parts
-                  </span>
+                  {(() => {
+                    const sub = submissionMap[test._id];
+                    if (!sub) return (
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">3 Parts</span>
+                    );
+                    if (sub.status === 'Graded') return (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                        <CheckCircle2 className="h-3.5 w-3.5" />Đã chấm
+                      </span>
+                    );
+                    return (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                        <Clock3 className="h-3.5 w-3.5" />Chờ chấm
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <h2 className="line-clamp-2 min-h-14 text-xl font-bold leading-8 text-slate-900">
@@ -185,13 +231,31 @@ export default function SpeakingListPage() {
                   Đề luyện nói theo cấu trúc IELTS chuẩn với Part 1, cue card Part 2 và phần thảo luận mở rộng ở Part 3.
                 </p>
 
-                <Link
-                  to={`/speaking/${test._id}`}
-                  className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
-                >
-                  Luyện tập ngay
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
+                {submissionMap[test._id] ? (
+                  <div className="mt-6 flex flex-col gap-2">
+                    <Link
+                      to={`/speaking/${test._id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      Xem lại bài đã nộp
+                    </Link>
+                    <Link
+                      to={`/speaking/${test._id}?redo=true`}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                    >
+                      <RefreshCcw className="h-4 w-4" />
+                      Làm lại
+                    </Link>
+                  </div>
+                ) : (
+                  <Link
+                    to={`/speaking/${test._id}`}
+                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                  >
+                    Luyện tập ngay
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                )}
               </article>
             ))}
           </section>

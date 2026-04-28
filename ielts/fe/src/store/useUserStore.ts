@@ -6,8 +6,11 @@ interface User {
   email: string;
   avatar: string;
   isVip: boolean;
-  role: string; // added for user role
-  subscriptionPlan: 'Free' | 'VIP_1_MONTH' | 'VIP_6_MONTH' | 'VIP_1_YEAR';
+  role: string;
+  /** Active plan from auth-service: 'FREE' | 'PLUS' | 'PRO' (or any future tier) */
+  plan: string;
+  /** Legacy VIP field — kept for backward compat, do not use for access control */
+  subscriptionPlan: string;
   vipValidUntil: string | null;
 }
 

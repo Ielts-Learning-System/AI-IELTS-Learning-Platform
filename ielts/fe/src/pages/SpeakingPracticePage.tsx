@@ -1,21 +1,23 @@
-﻿import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+﻿import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   ChevronRight,
   CloudUpload,
   FileAudio,
   LoaderCircle,
   Mic,
-  Square,
+  Trash2,
   Upload,
   Volume2,
 } from 'lucide-react';
 import { fetchSpeakingTestById, type SpeakingTestDetail } from '../api/speaking.api';
 import { apiClient } from '../lib/api/client';
+import { useTextToSpeech } from '../hooks/useTextToSpeech';
 
 
 function AnimatedExaminer({
@@ -83,10 +85,20 @@ function AnimatedExaminer({
 }
 
 
-interface PendingSubmission {
-  _id: string;
-  audioUrl?: string;
-  status: 'Pending' | 'Graded';
+// Stable key for identifying each question's audio slot.
+// Part 1: 'p1_0', 'p1_1', ...  Part 2: 'p2'  Part 3: 'p3_0', 'p3_1', ...
+function getQuestionKey(part: 1 | 2 | 3, index: number): string {
+  return part === 2 ? 'p2' : `p${part}_${index}`;
+}
+
+// One audio answer for a single question.
+interface AnswerEntry {
+  /** Local File — present when uploaded this session, absent for server-loaded entries. */
+  file?: File;
+  /** Object URL for immediate local playback — must be revoked on removal / unmount. */
+  previewUrl?: string;
+  /** Cloudinary URL — present once upload succeeds or loaded from server. */
+  cloudUrl: string;
 }
 
 function getErrorMessage(err: unknown): string {
@@ -99,35 +111,47 @@ function getErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu.';
 }
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-  const s = (seconds % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-}
-
  
 export default function SpeakingPracticePage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  /** When true, start a fresh attempt — don't load the existing submission. */
+  const isRedo = searchParams.get('redo') === 'true';
+  /** Track whether this is the very first upload of a redo session
+   *  (so we pass forceNew=true only once, on the first backend call). */
+  const isFirstRedoUploadRef = useRef(true);
 
   // Data
   const [test, setTest] = useState<SpeakingTestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submission, setSubmission] = useState<PendingSubmission | null>(null);
+
+  // Per-question audio answers: questionKey → AnswerEntry
+  const [answers, setAnswers] = useState<Record<string, AnswerEntry>>({});
+  // Set of question keys currently being uploaded to Cloudinary
+  const [uploadingKeys, setUploadingKeys] = useState<Set<string>>(new Set());
+  // Submission metadata
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<'Pending' | 'Graded' | null>(null);
 
   // Exam flow
   const [isExamStarted, setIsExamStarted] = useState(false);
   const [currentPart, setCurrentPart] = useState<1 | 2 | 3>(1);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isExaminerSpeaking, setIsExaminerSpeaking] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
-  // Upload
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  // TTS — extracted into reusable hook
+  const { speak, cancel, isPlaying: isExaminerSpeaking } = useTextToSpeech({ lang: 'en-GB', rate: 0.95 });
 
-  //  Load test + pending submission in parallel 
+  // Drag-over visual state for the current question's upload zone
+  const [dragOver, setDragOver] = useState(false);
+
+  // Keep a stable ref to answers so the unmount cleanup can revoke object URLs
+  // without capturing a stale closure.
+  const answersRef = useRef<Record<string, AnswerEntry>>({});
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+
+  //  Load test + check for existing submission for this test  
   useEffect(() => {
     const controller = new AbortController();
 
@@ -142,22 +166,40 @@ export default function SpeakingPracticePage() {
         setLoading(true);
         setError(null);
 
-        const [testResult, submissionResult] = await Promise.allSettled([
-          fetchSpeakingTestById(id, controller.signal),
-          apiClient.get('/speaking/my-pending', { signal: controller.signal }),
-        ]);
+        const testData = await fetchSpeakingTestById(id, controller.signal);
+        setTest(testData);
 
-        if (testResult.status === 'fulfilled') {
-          setTest(testResult.value);
-        } else if (!axios.isCancel(testResult.reason)) {
-          setError(getErrorMessage(testResult.reason));
+        // Populate per-question answers from existing submission
+        // Skip this when the student explicitly chose to redo.
+        if (!isRedo) {
+          try {
+            const res = await apiClient.get('/speaking/submissions/my-submissions', {
+              signal: controller.signal,
+            });
+            const all = (res.data?.data ?? []) as any[];
+            const existing = all.find(
+              (s: any) => s.testId?._id === id || String(s.testId) === id,
+            );
+            if (existing) {
+              setSubmissionId(existing._id);
+              setSubmissionStatus(existing.status);
+              // Hydrate answers from server (no local file, cloudUrl only)
+              const loaded: Record<string, AnswerEntry> = {};
+              for (const a of (existing.answers ?? [])) {
+                loaded[a.questionKey] = { cloudUrl: a.audioUrl };
+              }
+              // Legacy fallback: single audioUrl submission
+              if (!existing.answers?.length && existing.audioUrl) {
+                loaded['legacy'] = { cloudUrl: existing.audioUrl };
+              }
+              setAnswers(loaded);
+            }
+          } catch {
+            // No submission yet — that's fine
+          }
         }
-
-        if (submissionResult.status === 'fulfilled') {
-          const body = submissionResult.value.data as any;
-          setSubmission(body?.data ?? body ?? null);
-        }
-        // 404 on my-pending is normal (no teacher assignment) - silently ignore
+      } catch (err) {
+        if (!axios.isCancel(err)) setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -167,50 +209,27 @@ export default function SpeakingPracticePage() {
     return () => controller.abort();
   }, [id]);
 
-  //  Recording timer 
+
+  // Revoke all object URLs when the component unmounts to prevent memory leaks.
   useEffect(() => {
-    if (!isRecording) {
-      setRecordingSeconds(0);
-      return;
-    }
-    const interval = setInterval(() => setRecordingSeconds((prev) => prev + 1), 1000);
-    return () => clearInterval(interval);
-  }, [isRecording]);
+    return () => {
+      Object.values(answersRef.current).forEach((a) => {
+        if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+      });
+    };
+  }, []); // runs once on mount/unmount only
+
+
+  // Auto-play intentionally removed — TTS is manual-only (speaker icon).
 
   //  TTS 
   const getCurrentQuestionText = (): string => {
     if (!test) return '';
     if (currentPart === 1) return test.part1[currentQuestionIndex] ?? '';
-    if (currentPart === 2) return `Cue card topic: ${test.part2}`;
+    // Part 2: speak the raw topic text — no redundant "Cue card topic:" prefix
+    if (currentPart === 2) return test.part2;
     return test.part3[currentQuestionIndex] ?? '';
   };
-
-  const speakQuestion = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const ukVoice = voices.find((v) => v.lang.includes('en-GB'));
-    if (ukVoice) utterance.voice = ukVoice;
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    utterance.onstart = () => setIsExaminerSpeaking(true);
-    utterance.onend = () => setIsExaminerSpeaking(false);
-    utterance.onerror = () => setIsExaminerSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  };
-
-  useEffect(() => {
-    if (!isExamStarted) return;
-    const text = getCurrentQuestionText();
-    if (!text) return;
-    const timer = setTimeout(() => speakQuestion(text), 500);
-    return () => {
-      clearTimeout(timer);
-      window.speechSynthesis.cancel();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPart, currentQuestionIndex, isExamStarted]);
 
   //  Navigation 
   const isAtLastQuestion = (): boolean => {
@@ -221,8 +240,7 @@ export default function SpeakingPracticePage() {
   };
 
   const handleNextQuestion = () => {
-    window.speechSynthesis.cancel();
-    setIsRecording(false);
+    cancel(); // stop any in-progress TTS before advancing
     if (!test) return;
 
     if (currentPart === 1 && currentQuestionIndex < test.part1.length - 1) {
@@ -235,17 +253,20 @@ export default function SpeakingPracticePage() {
       setCurrentQuestionIndex(0);
     } else if (currentPart === 3 && currentQuestionIndex < test.part3.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
+    } else if (currentPart === 3 && isAtLastQuestion()) {
+      // Last question of Part 3 — finish the exam
+      toast.success('Bạn đã hoàn thành bài thi Speaking!');
+      navigate('/history');
     }
   };
 
   const handleTabChange = (part: 1 | 2 | 3) => {
-    window.speechSynthesis.cancel();
+    cancel(); // stop any in-progress TTS before switching part
     setCurrentPart(part);
     setCurrentQuestionIndex(0);
-    setIsRecording(false);
   };
 
-  //  Cloudinary + Submit 
+  //  Cloudinary + Per-question submit 
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const sigRes = await apiClient.get('/media/generate-signature', {
       params: { folderName: 'ielts_platform/speaking' },
@@ -270,23 +291,102 @@ export default function SpeakingPracticePage() {
     return url;
   };
 
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    setSelectedFile(file);
-    if (!file || !submission) return;
+  /**
+   * Upload the selected file for a specific question key, then persist the full
+   * answers map to the backend (upsert). Using the current `answers` ref to build
+   * the payload avoids stale closure issues across concurrent uploads.
+   */
+  const handleFileSelectedForKey = async (qKey: string, file: File) => {
+    if (!id) return;
+
+    if (!file.type.startsWith('audio/')) {
+      toast.error('Chỉ chấp nhận file âm thanh (.mp3, .wav, .m4a, .ogg...)');
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error('File quá lớn. Vui lòng chọn file dưới 100 MB.');
+      return;
+    }
+
+    // Revoke any existing object URL for this question slot.
+    const existingEntry = answers[qKey];
+    if (existingEntry?.previewUrl) URL.revokeObjectURL(existingEntry.previewUrl);
+
+    const previewUrl = URL.createObjectURL(file);
+    // Optimistically set the entry with empty cloudUrl while uploading.
+    setAnswers((prev) => ({ ...prev, [qKey]: { file, previewUrl, cloudUrl: '' } }));
+    setUploadingKeys((prev) => new Set(prev).add(qKey));
 
     try {
-      setIsUploading(true);
-      const audioUrl = await uploadToCloudinary(file);
-      await apiClient.put(`/speaking/${submission._id}/submit`, { audioUrl });
-      toast.success('Nộp bài nói thành công! Giáo viên sẽ chấm sớm nhất có thể.');
-      setSubmission((prev) => (prev ? { ...prev, audioUrl } : prev));
+      const cloudUrl = await uploadToCloudinary(file);
+
+      // Build the full answers payload using the ref (latest state, not stale closure).
+      const updatedAnswers = {
+        ...answersRef.current,
+        [qKey]: { file, previewUrl, cloudUrl },
+      };
+      const answersPayload = Object.entries(updatedAnswers)
+        .filter(([, v]) => v.cloudUrl)
+        .map(([key, v]) => ({ questionKey: key, audioUrl: v.cloudUrl }));
+
+      const res = await apiClient.post(`/speaking/tests/${id}/attempt`, {
+        answers: answersPayload,
+        // On redo: force-create a new submission on the very first upload only.
+        ...(isRedo && isFirstRedoUploadRef.current ? { forceNew: true } : {}),
+      });
+      const sub = (res.data?.data ?? res.data) as { _id: string; status: 'Pending' | 'Graded' };
+      // After the first upload in a redo, subsequent uploads update the NEW submission.
+      isFirstRedoUploadRef.current = false;
+
+      setAnswers((prev) => ({ ...prev, [qKey]: { file, previewUrl, cloudUrl } }));
+      setSubmissionId(sub._id);
+      setSubmissionStatus('Pending');
+      toast.success('Ghi âm câu này đã được lưu!');
     } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message || err?.message || 'Không thể nộp bài nói.',
-      );
+      toast.error(err?.response?.data?.message || err?.message || 'Không thể lưu bài ghi âm.');
+      // Revert the optimistic entry if upload failed.
+      setAnswers((prev) => {
+        const next = { ...prev };
+        if (!next[qKey]?.cloudUrl) delete next[qKey];
+        return next;
+      });
     } finally {
-      setIsUploading(false);
+      setUploadingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(qKey);
+        return next;
+      });
+    }
+  };
+
+  const handleDropForKey = (e: React.DragEvent<HTMLLabelElement>, qKey: string) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelectedForKey(qKey, file);
+  };
+
+  /** Remove the audio for a specific question and re-sync answers with the backend. */
+  const handleRemoveAnswer = async (qKey: string) => {
+    const entry = answers[qKey];
+    if (entry?.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+
+    const updated = { ...answersRef.current };
+    delete updated[qKey];
+    setAnswers(updated);
+
+    if (!id) return;
+    const payload = Object.entries(updated)
+      .filter(([, v]) => v.cloudUrl)
+      .map(([key, v]) => ({ questionKey: key, audioUrl: v.cloudUrl }));
+
+    // If no answers remain, don't call the backend (empty submission meaningless).
+    if (payload.length === 0) return;
+
+    try {
+      await apiClient.post(`/speaking/tests/${id}/attempt`, { answers: payload });
+    } catch {
+      // Non-critical: the backend will just keep the old entry. Silently ignore.
     }
   };
 
@@ -445,20 +545,21 @@ export default function SpeakingPracticePage() {
                       : `Part ${currentPart} — Câu ${currentQuestionIndex + 1}`}
                   </span>
                   <button
-                    onClick={() => speakQuestion(getCurrentQuestionText())}
-                    className="shrink-0 text-slate-400 transition hover:text-red-600"
-                    title="Nghe lại câu hỏi"
+                    onClick={() => speak(getCurrentQuestionText())}
+                    className={`shrink-0 transition ${
+                      isExaminerSpeaking
+                        ? 'animate-pulse text-red-600'
+                        : 'text-slate-400 hover:text-red-600'
+                    }`}
+                    title={isExaminerSpeaking ? 'Đang đọc câu hỏi...' : 'Nghe lại câu hỏi'}
                   >
                     <Volume2 className="h-5 w-5" />
                   </button>
                 </div>
 
-                <p className="text-xl font-medium leading-relaxed text-slate-800">
-                  {getCurrentQuestionText()}
-                </p>
-
-                {currentPart === 2 && (
-                  <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                {/* Part 2: show only the structured cue-card box — no plain-text duplicate */}
+                {currentPart === 2 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-600">
                       Chủ đề
                     </p>
@@ -468,122 +569,142 @@ export default function SpeakingPracticePage() {
                       <p>&#127908; 1–2 phút phát biểu</p>
                     </div>
                   </div>
+                ) : (
+                  <p className="text-xl font-medium leading-relaxed text-slate-800">
+                    {getCurrentQuestionText()}
+                  </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/*  User recording area  */}
-          <div className="flex flex-col items-center gap-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-800">Your Turn</h2>
-
-            <p className="text-sm font-medium text-slate-500">
-              {isExaminerSpeaking
-                ? 'Đang nghe giám khảo đọc câu hỏi...'
-                : isRecording
-                ? 'Đang ghi âm câu trả lời của bạn...'
-                : 'Bấm vào Micro để bắt đầu trả lời'}
-            </p>
+          {/*  Navigation + progress  */}
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+            {/* Progress indicator */}
+            {(() => {
+              const total = test
+                ? test.part1.length + 1 + test.part3.length
+                : 0;
+              const done = Object.values(answers).filter((a) => a.cloudUrl).length;
+              return (
+                <div className="flex items-center gap-2">
+                  {done > 0 && done === total ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  ) : (
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                      {done}/{total}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium text-slate-500">
+                    {done === total && total > 0
+                      ? 'Tất cả câu đã ghi âm'
+                      : `${done}/${total} câu đã ghi âm`}
+                  </span>
+                </div>
+              );
+            })()}
 
             <button
-              onClick={() => setIsRecording((prev) => !prev)}
-              disabled={isExaminerSpeaking}
-              className={`flex h-20 w-20 items-center justify-center rounded-full shadow-lg transition-all ${
-                isExaminerSpeaking
-                  ? 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-none'
-                  : isRecording
-                  ? 'animate-pulse bg-red-500 text-white shadow-red-200 hover:bg-red-600'
-                  : 'bg-slate-800 text-white shadow-slate-200 hover:bg-slate-900'
-              }`}
+              onClick={handleNextQuestion}
+              className="flex items-center gap-2 rounded-xl bg-red-600 px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700"
             >
-              {isRecording ? (
-                <Square className="h-8 w-8 fill-current" />
-              ) : (
-                <Mic className="h-8 w-8" />
-              )}
+              {currentPart === 3 && isAtLastQuestion()
+                ? 'Hoàn thành bài thi'
+                : 'Câu hỏi tiếp theo'}
+              <ChevronRight className="h-5 w-5" />
             </button>
-
-            {isRecording && (
-              <div className="font-mono text-2xl font-bold text-red-600">
-                {formatTime(recordingSeconds)}
-              </div>
-            )}
-
-            {!isRecording && !isExaminerSpeaking && (
-              <button
-                onClick={handleNextQuestion}
-                disabled={currentPart === 3 && isAtLastQuestion()}
-                className="mt-2 flex items-center gap-2 rounded-xl bg-red-600 px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {currentPart === 3 && isAtLastQuestion()
-                  ? 'Hoàn thành bài thi'
-                  : 'Câu hỏi tiếp theo'}
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            )}
           </div>
 
-          {/*  Audio submission area  */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">
-                  Audio Submission
-                </p>
-                <h3 className="mt-1 text-xl font-bold text-slate-900">
-                  Tải lên bài ghi âm của bạn
-                </h3>
-              </div>
+          {/*  Per-question audio upload  */}
+          {(() => {
+            const qKey = getQuestionKey(currentPart, currentQuestionIndex);
+            const entry = answers[qKey];
+            const isUploading = uploadingKeys.has(qKey);
+            const audioSrc = entry?.previewUrl ?? entry?.cloudUrl;
 
-              {submission ? (
-                <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                    submission.audioUrl
-                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                      : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+            return (
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">
+                      Audio Submission
+                    </p>
+                    <h3 className="mt-1 text-xl font-bold text-slate-900">
+                      {currentPart === 2 ? 'Ghi âm (Part 2)' : `Ghi âm câu ${currentQuestionIndex + 1} — Part ${currentPart}`}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Ghi âm riêng từng câu. Mỗi câu được lưu độc lập — tối đa 100 MB.
+                    </p>
+                  </div>
+
+                  {entry?.cloudUrl ? (
+                    <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                      ✓ Đã lưu audio
+                    </span>
+                  ) : (
+                    <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                      Chưa ghi âm
+                    </span>
+                  )}
+                </div>
+
+                {/* Upload zone — always visible so user can re-record */}
+                <label
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => handleDropForKey(e, qKey)}
+                  className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[22px] border-2 border-dashed px-6 py-8 text-center transition ${
+                    dragOver
+                      ? 'border-red-400 bg-red-50'
+                      : 'border-slate-200 bg-slate-50 hover:border-red-300 hover:bg-red-50/30'
                   }`}
                 >
-                  {submission.audioUrl ? 'Đã nộp audio' : 'Chưa nộp audio'}
-                </span>
-              ) : (
-                <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
-                  Luyện tập tự do
-                </span>
-              )}
-            </div>
-
-            {submission ? (
-              <>
-                <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[22px] border border-dashed border-red-200 bg-slate-50 px-6 py-10 text-center transition hover:border-red-300 hover:bg-red-50/30">
                   <div className="rounded-2xl bg-red-50 p-4 text-red-600">
                     <Upload className="h-6 w-6" />
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900">
-                      Chọn file âm thanh (.mp3, .wav, .m4a)
+                      {dragOver ? 'Thả file vào đây...' : entry?.cloudUrl ? 'Ghi âm lại câu này' : 'Kéo thả hoặc nhấn để chọn file âm thanh'}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Hệ thống sẽ upload lên Cloudinary và tự động nộp bài cho bạn.
+                      Hỗ trợ .mp3 · .wav · .m4a · .ogg — tối đa 100 MB
                     </p>
                   </div>
                   <input
                     type="file"
                     accept="audio/*"
                     className="hidden"
-                    onChange={handleFileSelected}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFileSelectedForKey(qKey, f);
+                      // Reset input so re-selecting the same file triggers onChange
+                      e.target.value = '';
+                    }}
                     disabled={isUploading}
                   />
                 </label>
 
-                {(selectedFile || submission.audioUrl) && (
+                {/* Playback + remove */}
+                {audioSrc && (
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                    <div className="flex items-center gap-2 font-semibold text-slate-800">
-                      <FileAudio className="h-4 w-4 text-red-500" />
-                      {selectedFile?.name || 'Bản ghi âm đã nộp'}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2 font-semibold text-slate-800">
+                        <FileAudio className="h-4 w-4 shrink-0 text-red-500" />
+                        <span className="truncate">
+                          {entry?.file?.name || 'Bản ghi âm đã lưu'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAnswer(qKey)}
+                        disabled={isUploading}
+                        title="Xóa ghi âm câu này"
+                        className="shrink-0 rounded-xl border border-red-200 bg-white p-1.5 text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                    {submission.audioUrl && (
-                      <audio controls src={submission.audioUrl} className="mt-3 w-full" />
-                    )}
+                    <audio controls src={audioSrc} className="mt-3 w-full" />
                   </div>
                 )}
 
@@ -591,34 +712,16 @@ export default function SpeakingPracticePage() {
                   <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
                     <LoaderCircle className="h-4 w-4 animate-spin text-red-600" />
                     <CloudUpload className="h-4 w-4 text-red-600" />
-                    Đang upload và nộp bài nói...
+                    Đang lưu bài ghi âm...
                   </div>
                 )}
-              </>
-            ) : null}
-
-            {!submission && (
-              <div className="rounded-[22px] border border-dashed border-blue-200 bg-blue-50/40 px-6 py-6 text-center">
-                <p className="font-semibold text-slate-800">
-                  Bạn đang ở chế độ luyện tập tự do.
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Muốn nộp bài để giáo viên chấm, vui lòng vào mục bài tập được giao.
-                </p>
-                <Link
-                  to="/speaking/assignment"
-                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-700"
-                >
-                  Mở trang bài tập được giao
-                </Link>
               </div>
-            )}
-          </div>
+            );
+          })()}
 
         </div>
       </div>
     </div>
   );
 }
-
 

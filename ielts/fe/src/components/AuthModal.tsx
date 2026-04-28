@@ -66,7 +66,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         email: userEmail,
         avatar,
         role: (role || 'student').toLowerCase(),
-        isVip: plan !== 'FREE' && plan !== 'Free',
+        plan: (plan || 'FREE').toUpperCase(),
+        isVip: !!(plan && plan.toUpperCase() !== 'FREE'),
         subscriptionPlan: subscriptionPlan || 'Free',
         vipValidUntil: vipValidUntil || null,
       };

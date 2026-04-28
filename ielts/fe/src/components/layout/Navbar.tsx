@@ -19,6 +19,7 @@ const ROLE_LABELS: Record<string, string> = {
 export function Navbar() {
   // ✅ 1. KÉO STATE VÀO TRONG HÀM (FIX LỖI MÀN HÌNH TRẮNG)
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
+  const [upgradeFromPrice, setUpgradeFromPrice] = useState<number | undefined>(undefined);
   
   const { isAuthenticated, user, logout } = useUserStore();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -28,7 +29,7 @@ export function Navbar() {
 
   useEffect(() => {
     const fetchPendingTransaction = async () => {
-      if (!isAuthenticated || !user || user.subscriptionPlan !== 'Free') {
+      if (!isAuthenticated || !user || user.isVip) {
         setPendingTx(null);
         setIsCheckingPending(false);
         return;
@@ -61,7 +62,8 @@ export function Navbar() {
     logout(); // clears storage and redirects via window.location.replace
   };
 
-  const handleSubscriptionUpgrade = () => {
+  const handleSubscriptionUpgrade = (currentPlanPrice: number) => {
+    setUpgradeFromPrice(currentPlanPrice);
     setIsUpgradeOpen(true);
   };
 
@@ -161,7 +163,11 @@ export function Navbar() {
 
     <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     
-    <CheckoutModal isOpen={isUpgradeOpen} onClose={() => setIsUpgradeOpen(false)} />
+    <CheckoutModal
+      isOpen={isUpgradeOpen}
+      onClose={() => setIsUpgradeOpen(false)}
+      currentPlanPrice={upgradeFromPrice}
+    />
     </>
   );
 }

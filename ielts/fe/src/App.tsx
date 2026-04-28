@@ -37,6 +37,7 @@ import SettingPage from './pages/SettingPage';
 import LessonPage from './pages/LessonPage';
 import { LessonManagement } from './pages/teacher/LessonManagement';
 import SpeakingGrading from './pages/teacher/SpeakingGrading';
+import SpeakingGradingDetail from './pages/teacher/SpeakingGradingDetail';
 import ResultPage from './pages/ResultPage';
 import ReadingListeningProgress from './pages/teacher/ReadingListeningProgress';
 import WritingTestManagement from './pages/teacher/WritingTestManagement';
@@ -174,6 +175,7 @@ export default function App() {
             <Route path="writing-management" element={<WritingTestManagement />} />
             <Route path="speaking-management" element={<SpeakingTestManagement />} />
             <Route path="speaking" element={<SpeakingGrading />} />
+            <Route path="speaking/:id" element={<SpeakingGradingDetail />} />
             <Route path="auto-graded-results" element={<ReadingListeningProgress />} />
             <Route path="students" element={<TeacherDashboard />} />
           </Route>
