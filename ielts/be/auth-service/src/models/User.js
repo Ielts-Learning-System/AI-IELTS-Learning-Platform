@@ -26,22 +26,15 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  // plan lưu trực tiếp plan.code từ collection plans
+  // Giúp tra cứu quyền nhanh: user.plan → Plan.findOne({ code }) → benefits.skills
   plan: {
     type: String,
-    default: 'free',
-    enum: ['free', 'premium'],
+    default: 'FREE',
+    enum: ['FREE', 'PLUS', 'PRO'],
   },
 
-  // Subscription tracking for MoMo payment integration
-  subscriptionPlan: {
-    type: String,
-    enum: ['Free', 'VIP_1_MONTH', 'VIP_6_MONTH', 'VIP_1_YEAR'],
-    default: 'Free',
-  },
-  vipValidUntil: {
-    type: Date,
-    default: null,
-  },
+
 
   avatar: { 
     type: String, 
