@@ -143,7 +143,7 @@ exports.gradeSubmission = async (req, res) => {
         GRA: Number(GRA),
       },
       overallBand: calculateOverallBand(scores),
-      teacherFeedback: teacherFeedback || '',
+      teacherFeedback: teacherFeedback || { content: '', overall_feedback: '' },
       gradedBy: req.user.id,
       gradedAt: new Date(),
     };

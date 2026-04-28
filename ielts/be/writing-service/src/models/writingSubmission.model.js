@@ -14,7 +14,10 @@ const GradingSchema = new mongoose.Schema(
   {
     criteria: { type: GradingCriteriaSchema, required: true },
     overallBand: { type: Number, required: true, min: 0, max: 9 },
-    teacherFeedback: { type: String, default: '' },
+    teacherFeedback: {
+      content: { type: String, default: '' },
+      overall_feedback: { type: String, default: '' }
+    },
     gradedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     gradedAt: { type: Date, required: true },
   },
