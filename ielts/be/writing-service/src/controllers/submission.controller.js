@@ -121,6 +121,35 @@ exports.getGradedSubmissions = async (req, res) => {
   }
 };
 
+exports.getSubmissionStats = async (req, res) => {
+  try {
+    const [pendingCount, gradedCount, totalSubmissions, avgBandAgg] = await Promise.all([
+      WritingSubmission.countDocuments({ status: 'Pending' }),
+      WritingSubmission.countDocuments({ status: 'Graded' }),
+      WritingSubmission.countDocuments({}),
+      WritingSubmission.aggregate([
+        { $match: { status: 'Graded' } },
+        { $group: { _id: null, avgBand: { $avg: '$grading.overallBand' } } },
+      ]),
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        pendingCount,
+        gradedCount,
+        totalSubmissions,
+        avgBand: Number((avgBandAgg?.[0]?.avgBand || 0).toFixed(2)),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 exports.gradeSubmission = async (req, res) => {
   try {
     const { criteria, teacherFeedback } = req.body;

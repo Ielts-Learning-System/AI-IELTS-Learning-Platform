@@ -44,7 +44,21 @@ const isTeacher = (req, res, next) => {
   });
 };
 
+const isTeacherOrAdmin = (req, res, next) => {
+  const role = String(req.user?.role || '').toLowerCase();
+
+  if (role === 'teacher' || role === 'admin') {
+    return next();
+  }
+
+  return res.status(403).json({
+    success: false,
+    message: 'Forbidden: teacher/admin access required',
+  });
+};
+
 module.exports = {
   verifyToken,
   isTeacher,
+  isTeacherOrAdmin,
 };

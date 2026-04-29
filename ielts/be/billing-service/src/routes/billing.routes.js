@@ -34,6 +34,7 @@ router.get('/my-skills', verifyToken, subscriptionController.getMySkills);
 
 // Admin endpoints
 router.get('/admin/plans', verifyToken, authorizeRoles('admin'), adminController.getAllPlansForAdmin);
+router.get('/admin/stats', verifyToken, authorizeRoles('admin'), adminController.getBillingStats);
 router.post('/admin/plans', verifyToken, authorizeRoles('admin'), adminController.createPlan);
 router.put('/admin/plans/:planId', verifyToken, authorizeRoles('admin'), adminController.updatePlan);
 router.patch('/admin/plans/:planId/toggle-active', verifyToken, authorizeRoles('admin'), adminController.togglePlanActive);

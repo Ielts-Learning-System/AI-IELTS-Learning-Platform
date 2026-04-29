@@ -179,6 +179,35 @@ exports.getGradedSpeakingSubmissions = async (req, res) => {
   }
 };
 
+exports.getSpeakingSubmissionStats = async (req, res) => {
+  try {
+    const [pendingCount, gradedCount, totalSubmissions, avgBandAgg] = await Promise.all([
+      SpeakingSubmission.countDocuments({ status: 'Pending' }),
+      SpeakingSubmission.countDocuments({ status: 'Graded' }),
+      SpeakingSubmission.countDocuments({}),
+      SpeakingSubmission.aggregate([
+        { $match: { status: 'Graded' } },
+        { $group: { _id: null, avgBand: { $avg: '$grading.overallBand' } } },
+      ]),
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        pendingCount,
+        gradedCount,
+        totalSubmissions,
+        avgBand: Number((avgBandAgg?.[0]?.avgBand || 0).toFixed(2)),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 exports.gradeSpeakingSubmission = async (req, res) => {
   try {
     const { criteria, teacherFeedback } = req.body;

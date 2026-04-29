@@ -40,6 +40,12 @@ router.get('/', listeningController.getAllTests);
 // GET /attempts - Teacher/Admin xem danh sách kết quả auto-graded
 router.get('/attempts', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.getAttempts);
 
+// GET /my-attempts - Student xem lịch sử làm bài của chính mình
+router.get('/my-attempts', verifyToken, authorizeRoles('student', 'teacher', 'admin'), listeningController.getMyAttempts);
+
+// GET /stats - Admin/Teacher lấy số liệu tổng quan attempts
+router.get('/stats', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.getAttemptStats);
+
 // GET /:id - Lấy chi tiết một đề thi (ẩn đáp án)
 router.get('/:id', listeningController.getTestById);
 

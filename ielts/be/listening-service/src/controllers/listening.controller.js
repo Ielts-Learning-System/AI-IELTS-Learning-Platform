@@ -215,3 +215,53 @@ exports.getAttempts = async (req, res) => {
   }
 };
 
+exports.getMyAttempts = async (req, res) => {
+  try {
+    const attempts = await ListeningAttempt.find({ studentId: req.user.id })
+      .populate('testId', 'title')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: attempts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy lịch sử làm bài Listening',
+      error: error.message,
+    });
+  }
+};
+
+exports.getAttemptStats = async (req, res) => {
+  try {
+    const [totalAttempts, stats] = await Promise.all([
+      ListeningAttempt.countDocuments({}),
+      ListeningAttempt.aggregate([
+        {
+          $group: {
+            _id: null,
+            avgBandScore: { $avg: '$bandScore' },
+          },
+        },
+      ]),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalAttempts,
+        avgBandScore: Number((stats?.[0]?.avgBandScore || 0).toFixed(2)),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy thống kê Listening attempts',
+      error: error.message,
+    });
+  }
+};
+

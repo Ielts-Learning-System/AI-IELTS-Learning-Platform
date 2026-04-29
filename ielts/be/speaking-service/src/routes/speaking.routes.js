@@ -5,6 +5,7 @@ const {
   submitSpeakingAudio,
   getPendingSpeakingSubmissions,
   getGradedSpeakingSubmissions,
+  getSpeakingSubmissionStats,
   gradeSpeakingSubmission,
   startOrUpdateAttempt,
   getMySubmissions,
@@ -47,6 +48,7 @@ router.put('/:id/submit', verifyToken, authorizeRoles('student', 'teacher', 'adm
 // ── Teacher grading ────────────────────────────────────────────────────────
 router.get('/pending', verifyToken, authorizeRoles('teacher', 'admin'), getPendingSpeakingSubmissions);
 router.get('/graded', verifyToken, authorizeRoles('teacher', 'admin'), getGradedSpeakingSubmissions);
+router.get('/stats', verifyToken, authorizeRoles('teacher', 'admin'), getSpeakingSubmissionStats);
 router.get('/tests/:testId/submissions', verifyToken, authorizeRoles('teacher', 'admin'), getSubmissionsByTest);
 router.put('/:id/grade', verifyToken, authorizeRoles('teacher', 'admin'), gradeSpeakingSubmission);
 

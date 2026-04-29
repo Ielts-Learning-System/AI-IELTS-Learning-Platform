@@ -255,6 +255,58 @@ exports.getAttempts = async (req, res) => {
   }
 };
 
+exports.getMyAttempts = async (req, res) => {
+  try {
+    const attempts = await ReadingAttempt.find({ studentId: req.user.id })
+      .populate('testId', 'title')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: attempts,
+    });
+  } catch (error) {
+    console.error('❌ Get My Reading Attempts Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy lịch sử làm bài Reading',
+      error: error.message,
+    });
+  }
+};
+
+exports.getAttemptStats = async (req, res) => {
+  try {
+    const [totalAttempts, stats] = await Promise.all([
+      ReadingAttempt.countDocuments({}),
+      ReadingAttempt.aggregate([
+        {
+          $group: {
+            _id: null,
+            avgBandScore: { $avg: '$bandScore' },
+          },
+        },
+      ]),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalAttempts,
+        avgBandScore: Number((stats?.[0]?.avgBandScore || 0).toFixed(2)),
+      },
+    });
+  } catch (error) {
+    console.error('❌ Get Reading Attempt Stats Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy thống kê Reading attempts',
+      error: error.message,
+    });
+  }
+};
+
 // ====== 5. Update Test ======
 exports.updateTest = async (req, res) => {
   try {

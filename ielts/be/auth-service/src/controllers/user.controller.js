@@ -159,9 +159,50 @@ const getUsersByIds = async (req, res) => {
   }
 };
 
+const getUserStats = async (req, res) => {
+  try {
+    const [totalUsers, activeUsers, byRole] = await Promise.all([
+      User.countDocuments({}),
+      User.countDocuments({ isActive: true }),
+      User.aggregate([
+        {
+          $group: {
+            _id: { $toLower: '$role' },
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const roleCounts = byRole.reduce(
+      (acc, item) => {
+        const role = String(item?._id || 'student');
+        acc[role] = Number(item?.count || 0);
+        return acc;
+      },
+      { admin: 0, teacher: 0, student: 0 }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        activeUsers,
+        roleCounts,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch user stats',
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   updateUserRole,
   toggleUserStatus,
   getUsersByIds,
+  getUserStats,
 };

@@ -436,6 +436,59 @@ const restoreSubscription = async (req, res) => {
   }
 };
 
+const getBillingStats = async (req, res) => {
+  try {
+    const [summary] = await Subscription.aggregate([
+      {
+        $lookup: {
+          from: 'plans',
+          localField: 'planId',
+          foreignField: '_id',
+          as: 'plan',
+        },
+      },
+      {
+        $unwind: {
+          path: '$plan',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalSubscriptions: { $sum: 1 },
+          activeSubscriptions: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'ACTIVE'] }, 1, 0],
+            },
+          },
+          totalRevenue: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['ACTIVE', 'EXPIRED', 'CANCELLED']] },
+                { $ifNull: ['$plan.price', 0] },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        totalSubscriptions: Number(summary?.totalSubscriptions || 0),
+        activeSubscriptions: Number(summary?.activeSubscriptions || 0),
+        totalRevenue: Number(summary?.totalRevenue || 0),
+      },
+    });
+  } catch (error) {
+    console.error('GET BILLING STATS ERROR', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createPlan,
   getAllPlansForAdmin,
@@ -446,4 +499,5 @@ module.exports = {
   triggerReminderNotification,
   cancelSubscription,
   restoreSubscription,
+  getBillingStats,
 };

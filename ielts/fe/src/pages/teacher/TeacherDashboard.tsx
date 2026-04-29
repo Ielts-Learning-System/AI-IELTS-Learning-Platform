@@ -1,164 +1,148 @@
-import { AlertCircle, Users, CheckCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle, Bell, FileCheck2 } from 'lucide-react';
+import { apiClient } from '../../lib/api/client';
 
-interface GradingTask {
-  id: string;
-  studentName: string;
-  testType: 'Writing' | 'Speaking';
-  submittedDate: string;
-  urgency: 'high' | 'medium' | 'low';
-}
+type NotificationItem = {
+  _id: string;
+  title?: string;
+  message?: string;
+  createdAt?: string;
+  isRead?: boolean;
+};
+
+const toNumber = (value: unknown) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const formatDate = (value?: string) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toLocaleString('vi-VN');
+};
 
 export function TeacherDashboard() {
-  // Sample data - Bài thi cần chấm gấp
-  const gradingTasks: GradingTask[] = [
-    {
-      id: '1',
-      studentName: 'Nguyễn Văn A',
-      testType: 'Writing',
-      submittedDate: '2 giờ trước',
-      urgency: 'high',
-    },
-    {
-      id: '2',
-      studentName: 'Trần Thị B',
-      testType: 'Speaking',
-      submittedDate: '4 giờ trước',
-      urgency: 'high',
-    },
-    {
-      id: '3',
-      studentName: 'Lê Văn C',
-      testType: 'Writing',
-      submittedDate: '1 ngày trước',
-      urgency: 'medium',
-    },
-    {
-      id: '4',
-      studentName: 'Phạm Huyền D',
-      testType: 'Speaking',
-      submittedDate: '2 ngày trước',
-      urgency: 'medium',
-    },
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [pendingWriting, setPendingWriting] = useState(0);
+  const [pendingSpeaking, setPendingSpeaking] = useState(0);
+  const [totalGraded, setTotalGraded] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  const urgencyColor = {
-    high: 'border-l-red-500 bg-red-50',
-    medium: 'border-l-yellow-500 bg-yellow-50',
-    low: 'border-l-green-500 bg-green-50',
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  const urgencyBadge = {
-    high: 'bg-red-100 text-red-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    low: 'bg-green-100 text-green-800',
-  };
+    const fetchDashboard = async () => {
+      setIsLoading(true);
 
-  const urgencyLabel = {
-    high: 'Gấp',
-    medium: 'Bình thường',
-    low: 'Không gấp',
-  };
+      const [writingStatsRes, speakingStatsRes, notificationRes] = await Promise.allSettled([
+        apiClient.get('/writing/submissions/stats'),
+        apiClient.get('/speaking/stats'),
+        apiClient.get('/notification', { params: { page: 1, limit: 6 } }),
+      ]);
+
+      if (cancelled) return;
+
+      const writingStats = writingStatsRes.status === 'fulfilled' ? writingStatsRes.value.data?.data : null;
+      const speakingStats = speakingStatsRes.status === 'fulfilled' ? speakingStatsRes.value.data?.data : null;
+      const notificationItems =
+        notificationRes.status === 'fulfilled'
+          ? (Array.isArray(notificationRes.value.data?.notifications)
+              ? notificationRes.value.data.notifications
+              : [])
+          : [];
+
+      const pendingW = toNumber(writingStats?.pendingCount);
+      const pendingS = toNumber(speakingStats?.pendingCount);
+      const gradedW = toNumber(writingStats?.gradedCount);
+      const gradedS = toNumber(speakingStats?.gradedCount);
+
+      setPendingWriting(pendingW);
+      setPendingSpeaking(pendingS);
+      setTotalGraded(gradedW + gradedS);
+      setNotifications(notificationItems);
+      setIsLoading(false);
+    };
+
+    fetchDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[240px] items-center justify-center rounded-2xl bg-white border border-slate-200">
+        <p className="text-slate-500 font-medium">Đang tải dữ liệu dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page Title */}
       <div>
         <h2 className="text-3xl font-bold text-slate-900">Bảng điều khiển Giáo viên</h2>
-        <p className="text-slate-600 mt-2">Quản lý bài thi, học viên và lịch dạy của bạn</p>
+        <p className="text-slate-600 mt-2">Theo dõi hàng đợi chấm bài và thông báo mới nhất</p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-l-red-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-600 text-sm font-medium">Cần chấm gấp</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">2</p>
+              <p className="text-slate-600 text-sm font-medium">Writing chờ chấm</p>
+              <p className="text-3xl font-bold text-slate-900 mt-2">{pendingWriting}</p>
             </div>
             <AlertCircle className="h-10 w-10 text-red-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-l-blue-500">
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-l-amber-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-600 text-sm font-medium">Số học viên</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">28</p>
+              <p className="text-slate-600 text-sm font-medium">Speaking chờ chấm</p>
+              <p className="text-3xl font-bold text-slate-900 mt-2">{pendingSpeaking}</p>
             </div>
-            <Users className="h-10 w-10 text-blue-500" />
+            <FileCheck2 className="h-10 w-10 text-amber-500" />
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-l-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-600 text-sm font-medium">Đã chấm tuần này</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">12</p>
+              <p className="text-slate-600 text-sm font-medium">Tổng bài đã chấm</p>
+              <p className="text-3xl font-bold text-slate-900 mt-2">{totalGraded}</p>
             </div>
             <CheckCircle className="h-10 w-10 text-green-500" />
           </div>
         </div>
       </div>
 
-      {/* Grading Tasks */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-bold text-slate-900 mb-4">Bài thi cần chấm</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-4">Thông báo gần đây</h3>
 
-        {gradingTasks.length > 0 ? (
+        {notifications.length > 0 ? (
           <div className="space-y-3">
-            {gradingTasks.map((task) => (
+            {notifications.map((item) => (
               <div
-                key={task.id}
-                className={`border-l-4 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow ${
-                  urgencyColor[task.urgency]
-                }`}
+                key={item._id}
+                className={`rounded-lg p-4 border ${item.isRead ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-200'}`}
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <p className="font-semibold text-slate-900">{task.studentName}</p>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${urgencyBadge[task.urgency]}`}>
-                      {urgencyLabel[task.urgency]}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-600">
-                    <span>{task.testType}</span>
-                    <span>•</span>
-                    <span>{task.submittedDate}</span>
-                  </div>
+                <p className="font-semibold text-slate-900">{item.title || 'Thông báo hệ thống'}</p>
+                <p className="text-sm text-slate-600 mt-1">{item.message || 'Không có nội dung'}</p>
+                <div className="flex items-center gap-2 text-xs text-slate-500 mt-2">
+                  <Bell className="h-3.5 w-3.5" />
+                  {formatDate(item.createdAt)}
                 </div>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                  Chấm bài
-                </button>
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center py-8">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-            <p className="text-slate-600">Không có bài thi nào cần chấm</p>
+            <p className="text-slate-600">Hiện chưa có thông báo mới</p>
           </div>
         )}
-      </div>
-
-      {/* My Classes */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-bold text-slate-900 mb-4">Lớp học của tôi</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { name: 'Lớp A1 - Sáng', students: 15, schedule: 'T2, T4, T6: 7:00-9:00' },
-            { name: 'Lớp A2 - Chiều', students: 18, schedule: 'T3, T5, T7: 14:00-16:00' },
-            { name: 'Lớp B1 - Tối', students: 12, schedule: 'T2, T4: 19:00-21:00' },
-          ].map((cls, idx) => (
-            <div key={idx} className="border border-slate-200 rounded-lg p-4">
-              <p className="font-semibold text-slate-900 mb-2">{cls.name}</p>
-              <p className="text-sm text-slate-600 mb-2">{cls.students} học viên</p>
-              <p className="text-xs text-slate-500">{cls.schedule}</p>
-              <button className="mt-3 w-full px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg text-sm font-medium transition-colors">
-                Xem chi tiết
-              </button>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
