@@ -620,6 +620,125 @@ _ANSWER_KEY_MIME_TYPES = {
     "image/gif",
 }
 
+# ---------------------------------------------------------------------------
+# Writing PDF system prompt
+# ---------------------------------------------------------------------------
+
+_PDF_WRITING_SYSTEM_PROMPT = """You are a professional IELTS Writing test digitizer.
+
+Carefully analyze the IELTS Writing test contained in this PDF and extract Task 1 and Task 2 prompts.
+
+═══════════════════════════════════════════════════════
+ABSOLUTE OUTPUT RULE: Return ONLY a single raw JSON object.
+  • NO markdown code fences (no ```json or ```)
+  • NO explanation text before or after the JSON
+  • NO comments inside the JSON
+═══════════════════════════════════════════════════════
+
+━━━ TASK EXTRACTION RULES ━━━
+Extract up to 2 writing tasks from the document.
+
+TASK 1 (Academic or General Training):
+  • Academic Task 1: Describes a graph, chart, table, map, diagram, or process.
+  • General Training Task 1: A formal or informal letter.
+  • taskNumber: 1
+  • title: A concise title derived from the prompt (e.g., "Academic Task 1: Bar Chart – Energy Sources")
+  • type: "Task 1"
+  • category: One of "Chart/Graph", "Map/Diagram", "Process", "Letter", or "Mixed"
+  • contentHtml: The COMPLETE task prompt as HTML, including:
+      - <p> for each paragraph of instructions
+      - If there is a chart/graph/table: describe it in a <div class="chart-placeholder"> with all visible data labels, axes, and values
+      - If there is a letter scenario: reproduce the scenario text in full
+      - <ul><li> for bullet instructions
+      - <strong> for bold text
+      - Include word count instruction (e.g., "Write at least 150 words.")
+  • minWords: 150
+
+TASK 2 (Essay):
+  • taskNumber: 2
+  • title: A concise title derived from the essay topic
+  • type: "Task 2"
+  • category: One of "Opinion", "Discussion", "Problem-Solution", "Advantage-Disadvantage", "Mixed"
+  • contentHtml: The COMPLETE task prompt as HTML
+      - <p> for the topic statement and each instruction paragraph
+      - <strong> for key instruction phrases
+      - Include word count instruction (e.g., "Write at least 250 words.")
+  • minWords: 250
+
+━━━ JSON SCHEMA ━━━
+{
+  "testTitle": "[Inferred test title, e.g. 'IELTS Academic Writing — Cambridge 15 Test 1']",
+  "tasks": [
+    {
+      "taskNumber": 1,
+      "title": "Academic Task 1: Bar Chart – Electricity Production",
+      "type": "Task 1",
+      "category": "Chart/Graph",
+      "contentHtml": "<p>The bar chart below shows the amount of electricity produced...</p><div class=\\"chart-placeholder\\"><p>[Chart: Bar chart showing electricity production by country (TWh), years 2000 and 2010. Countries: France, Germany, UK, USA. Values: France 2000=540, 2010=570; Germany 2000=580, 2010=610; UK 2000=375, 2010=380; USA 2000=4100, 2010=4320]</p></div><p>Summarise the information by selecting and reporting the main features, and make comparisons where relevant.</p><p><strong>Write at least 150 words.</strong></p>",
+      "minWords": 150
+    },
+    {
+      "taskNumber": 2,
+      "title": "Task 2: Technology and Social Isolation",
+      "type": "Task 2",
+      "category": "Discussion",
+      "contentHtml": "<p>Some people believe that modern technology has made people more isolated from each other. Others argue that it has brought people closer together.</p><p>Discuss both views and give your own opinion.</p><p><strong>Give reasons for your answer and include any relevant examples from your own knowledge or experience.</strong></p><p><strong>Write at least 250 words.</strong></p>",
+      "minWords": 250
+    }
+  ]
+}"""
+
+
+# ---------------------------------------------------------------------------
+# Speaking PDF system prompt
+# ---------------------------------------------------------------------------
+
+_PDF_SPEAKING_SYSTEM_PROMPT = """You are a professional IELTS Speaking test digitizer.
+
+Carefully analyze the IELTS Speaking test material contained in this PDF and extract all three parts.
+
+═══════════════════════════════════════════════════════
+ABSOLUTE OUTPUT RULE: Return ONLY a single raw JSON object.
+  • NO markdown code fences (no ```json or ```)
+  • NO explanation text before or after the JSON
+  • NO comments inside the JSON
+═══════════════════════════════════════════════════════
+
+━━━ PART EXTRACTION RULES ━━━
+
+PART 1 — Introduction & Interview (Short questions about familiar topics):
+  • Extract ALL individual questions as an array of plain strings.
+  • Questions are typically about the candidate's home, work, studies, hobbies, interests.
+  • Each string = one complete question, verbatim from the PDF.
+  • Example: ["Do you work or are you a student?", "What do you enjoy most about your studies?"]
+
+PART 2 — Individual Long Turn (Cue Card):
+  • Extract the ENTIRE cue card as a single string.
+  • Include the topic sentence AND all bullet points joined naturally.
+  • Format: "Describe [topic]. You should say:\n• [bullet 1]\n• [bullet 2]\n• [bullet 3]\nand explain [final instruction]."
+  • Include any time instructions ("You will have one minute to prepare...") if present.
+
+PART 3 — Two-way Discussion (Follow-up discussion questions):
+  • Extract ALL individual discussion questions as an array of plain strings.
+  • Questions are deeper, more abstract follow-ups related to the Part 2 topic.
+  • Each string = one complete question, verbatim from the PDF.
+
+━━━ JSON SCHEMA ━━━
+{
+  "title": "[Inferred test title, e.g. 'IELTS Speaking Test — Topic: Daily Routines']",
+  "part1": [
+    "Let's talk about your home town. Where are you from?",
+    "What do you like most about living there?",
+    "Has your home town changed much in recent years?"
+  ],
+  "part2": "Describe a time when you had to make an important decision. You should say:\\n• what the decision was\\n• why you had to make this decision\\n• what the result of the decision was\\nand explain how you felt about making this decision.",
+  "part3": [
+    "Do you think young people find it more difficult to make decisions than older people?",
+    "How has the way people make decisions changed in recent years?",
+    "What kinds of decisions do governments need to make carefully?"
+  ]
+}"""
+
 
 def _build_extract_prompt(
     part_selection: str,
@@ -824,11 +943,16 @@ async def _call_gemini_extract(
     system_prompt: str,
     key_bytes: bytes | None = None,
     key_mime: str | None = None,
-) -> dict:
+) -> tuple[dict, dict]:
     """
     Send one (or two) files to Gemini for advanced extraction.
     Uses EXTRACT_MODEL (default gemini-1.5-pro) for superior accuracy on dense text.
     Retries up to 3 times on 503 / UNAVAILABLE errors.
+
+    Returns a tuple of (parsed_result, usage_metadata) where usage_metadata contains:
+      - prompt_token_count
+      - candidates_token_count
+      - total_token_count
     """
     # gemini-1.5-pro (and 1.5-flash) are only accessible on v1beta, not v1.
     # Use v1beta unconditionally here; v1 models (2.x) also work on v1beta.
@@ -874,10 +998,23 @@ async def _call_gemini_extract(
             detail=f"Gemini API unavailable after retries: {last_exc}",
         )
 
+    # --- Extract token usage metadata ------------------------------------
+    usage = {}
+    try:
+        meta = response.usage_metadata
+        if meta:
+            usage = {
+                "promptTokenCount": getattr(meta, "prompt_token_count", 0) or 0,
+                "candidatesTokenCount": getattr(meta, "candidates_token_count", 0) or 0,
+                "totalTokenCount": getattr(meta, "total_token_count", 0) or 0,
+            }
+    except Exception:
+        pass  # usage tracking is best-effort
+
     raw_text: str = response.text or ""
     cleaned = _strip_markdown_fences(raw_text)
     try:
-        return json.loads(cleaned)
+        return json.loads(cleaned), usage
     except json.JSONDecodeError as exc:
         logger.error("Failed to parse Gemini extract response as JSON: %s", exc)
         logger.debug("Raw snippet: %s", raw_text[:3000])
@@ -903,24 +1040,24 @@ async def extract_test(
       • Part-level scope selection (Part 1/2/3/4 or All)
       • Optional answer key PDF/image — Gemini auto-maps answers per question number
 
-    Model: EXTRACT_MODEL env var (default: gemini-1.5-pro) for superior
+    Model: EXTRACT_MODEL env var (default: gemini-2.5-flash) for superior
     accuracy on dense Cambridge IELTS text.
 
     Form fields:
-      testType       – "reading" | "listening"             (default: "reading")
-      partSelection  – "All" | "Part 1" | "Part 2" | ...  (default: "All")
+      testType       – "reading" | "listening" | "writing" | "speaking"  (default: "reading")
+      partSelection  – "All" | "Part 1" | "Part 2" | ...                 (default: "All")
       testFile       – required PDF (max 50 MB)
-      answerKeyFile  – optional PDF or image (max 20 MB)
+      answerKeyFile  – optional PDF or image (max 20 MB), reading/listening only
     """
     # ── validate testType ────────────────────────────────────────────────
-    if testType not in ("reading", "listening"):
+    if testType not in ("reading", "listening", "writing", "speaking"):
         raise HTTPException(
-            status_code=400, detail="testType must be 'reading' or 'listening'."
+            status_code=400, detail="testType must be 'reading', 'listening', 'writing', or 'speaking'."
         )
 
-    # ── validate partSelection ───────────────────────────────────────────
+    # ── validate partSelection (only for reading/listening) ─────────────
     valid_parts = {"All", "Part 1", "Part 2", "Part 3", "Part 4"}
-    if partSelection not in valid_parts:
+    if testType in ("reading", "listening") and partSelection not in valid_parts:
         raise HTTPException(
             status_code=400,
             detail=f"partSelection must be one of: {', '.join(sorted(valid_parts))}.",
@@ -942,11 +1079,11 @@ async def extract_test(
     if len(test_bytes) < 512:
         raise HTTPException(status_code=400, detail="testFile appears empty or corrupt.")
 
-    # ── read answerKeyFile (optional) ────────────────────────────────────
+    # ── read answerKeyFile (optional, only for reading/listening) ────────
     key_bytes: bytes | None = None
     key_mime: str | None = None
 
-    if answerKeyFile and (answerKeyFile.filename or "").strip():
+    if testType in ("reading", "listening") and answerKeyFile and (answerKeyFile.filename or "").strip():
         key_ct = (answerKeyFile.content_type or "").lower()
         key_fn = (answerKeyFile.filename or "").lower()
 
@@ -994,14 +1131,19 @@ async def extract_test(
         )
 
     # ── build prompt ─────────────────────────────────────────────────────
-    system_prompt = _build_extract_prompt(
-        part_selection=partSelection,
-        test_type=testType,
-        has_answer_key=key_bytes is not None,
-    )
+    if testType == "writing":
+        system_prompt = _PDF_WRITING_SYSTEM_PROMPT
+    elif testType == "speaking":
+        system_prompt = _PDF_SPEAKING_SYSTEM_PROMPT
+    else:
+        system_prompt = _build_extract_prompt(
+            part_selection=partSelection,
+            test_type=testType,
+            has_answer_key=key_bytes is not None,
+        )
 
     # ── call Gemini ──────────────────────────────────────────────────────
-    result = await _call_gemini_extract(
+    result, usage = await _call_gemini_extract(
         api_key=api_key,
         test_bytes=test_bytes,
         test_mime="application/pdf",
@@ -1010,10 +1152,14 @@ async def extract_test(
         key_mime=key_mime,
     )
 
-    logger.info(
-        "extract-test | success | parts=%d | questions=%d",
-        len(result.get("parts", [])),
-        sum(len(p.get("questions", [])) for p in result.get("parts", [])),
-    )
-    return result
+    if testType in ("reading", "listening"):
+        logger.info(
+            "extract-test | success | parts=%d | questions=%d",
+            len(result.get("parts", [])),
+            sum(len(p.get("questions", [])) for p in result.get("parts", [])),
+        )
+    else:
+        logger.info("extract-test | success | testType=%s", testType)
 
+    result["_usage"] = usage
+    return result

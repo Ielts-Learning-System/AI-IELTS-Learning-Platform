@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
-import { Edit, LoaderCircle, Mic, Plus, Search, Trash2, X } from 'lucide-react';
+import { Edit, FileText, LoaderCircle, Mic, Plus, Search, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUserStore } from '../../store/useUserStore';
 
@@ -322,14 +323,23 @@ export default function SpeakingTestManagement() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(227,24,55,0.28)] transition hover:bg-[#C51430]"
-          >
-            <Plus className="h-4 w-4" />
-            New Speaking Test
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/teacher/speaking-pdf"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700"
+            >
+              <FileText className="h-4 w-4" />
+              Tạo từ PDF (AI)
+            </Link>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(227,24,55,0.28)] transition hover:bg-[#C51430]"
+            >
+              <Plus className="h-4 w-4" />
+              New Speaking Test
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">

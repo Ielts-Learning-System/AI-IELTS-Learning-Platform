@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import MiniRichEditor from '../../components/MiniRichEditor';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
@@ -22,6 +23,7 @@ import {
   Upload,
   UserPlus,
   X,
+  FileText,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUserStore } from '../../store/useUserStore';
@@ -564,6 +566,13 @@ export default function WritingTestManagement() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/teacher/writing-pdf"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700"
+            >
+              <FileText className="h-4 w-4" />
+              Tạo từ PDF (AI)
+            </Link>
             {mainTab === 'prompts' && (
               <>
                 <button

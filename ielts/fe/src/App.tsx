@@ -45,6 +45,8 @@ import WritingTestManagement from './pages/teacher/WritingTestManagement';
 import SpeakingTestManagement from './pages/teacher/SpeakingTestManagement';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentPending from './pages/PaymentPending';
+import WritingPdfExtractor from './pages/teacher/WritingPdfExtractor';
+import SpeakingPdfExtractor from './pages/teacher/SpeakingPdfExtractor';
 
 /**
  * NotFound (404) page component
@@ -176,6 +178,8 @@ export default function App() {
             <Route path="writing/:id" element={<DetailGradingDashboard />} />
             <Route path="writing-management" element={<WritingTestManagement />} />
             <Route path="speaking-management" element={<SpeakingTestManagement />} />
+            <Route path="writing-pdf" element={<WritingPdfExtractor />} />
+            <Route path="speaking-pdf" element={<SpeakingPdfExtractor />} />
             <Route path="speaking" element={<SpeakingGrading />} />
             <Route path="speaking/:id" element={<SpeakingGradingDetail />} />
             <Route path="auto-graded-results" element={<ReadingListeningProgress />} />

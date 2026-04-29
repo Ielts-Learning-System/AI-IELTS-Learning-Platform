@@ -17,12 +17,44 @@ const SystemConfigSchema = new mongoose.Schema(
       default: '',
       select: false, // never returned unless explicitly projected
     },
+    // Per-feature system prompts (image-based legacy endpoints)
     readingPromptTemplate: {
       type: String,
       default: '',
     },
     listeningPromptTemplate: {
       type: String,
+      default: '',
+    },
+    // PDF extraction prompts (stored in DB so admin can override via AIManager)
+    writingExtractPrompt: {
+      type: String,
+      default: '',
+    },
+    speakingExtractPrompt: {
+      type: String,
+      default: '',
+    },
+    // Grading prompts
+    writingGradingPrompt: {
+      type: String,
+      default: '',
+    },
+    speakingGradingPrompt: {
+      type: String,
+      default: '',
+    },
+    // Monthly quota tracking (token count)
+    monthlyTokenQuota: {
+      type: Number,
+      default: 1_000_000, // 1M tokens default
+    },
+    monthlyTokensUsed: {
+      type: Number,
+      default: 0,
+    },
+    quotaResetMonth: {
+      type: String, // "YYYY-MM"
       default: '',
     },
   },
