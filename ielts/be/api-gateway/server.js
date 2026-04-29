@@ -299,9 +299,9 @@ app.use(
     target: process.env.AI_SERVICE_URL || 'http://127.0.0.1:3012',
     changeOrigin: true,
     pathRewrite: (path, req) => req.originalUrl,
-    // Generous timeout for Gemini inference calls
-    proxyTimeout: 120000,
-    timeout: 120000,
+    // extract-test with gemini-1.5-pro can take up to 4 minutes on dense PDFs
+    proxyTimeout: 270000,
+    timeout: 270000,
   })
 );
 

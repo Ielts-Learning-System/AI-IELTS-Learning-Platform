@@ -3,8 +3,29 @@ const ReadingAttempt = require('../models/attempt.model');
 const { convertRawToBand } = require('../utils/scoreConverter');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// ====== Initialize Gemini API ======
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// ====== Dynamic Gemini key helper ======
+// Fetches the API key from auth-service DB config (set by admin).
+// Falls back to GEMINI_API_KEY env var if the internal endpoint is unavailable.
+async function _getGeminiClient() {
+  const authUrl = process.env.AUTH_SERVICE_INTERNAL_URL || 'http://auth-service:3001';
+  const secret = process.env.INTERNAL_SECRET || '';
+  try {
+    const resp = await fetch(`${authUrl}/api/internal/system-config`, {
+      headers: { 'x-internal-secret': secret },
+    });
+    if (resp.ok) {
+      const cfg = await resp.json();
+      const key = (cfg.geminiApiKey || '').trim();
+      if (key) return new GoogleGenerativeAI(key);
+    }
+  } catch (err) {
+    console.warn('[Reading] Could not fetch AI config from auth-service:', err.message);
+  }
+  // fallback to env var
+  const envKey = (process.env.GEMINI_API_KEY || '').trim();
+  if (!envKey) throw new Error('Gemini API key is not configured. Please set it in Admin → AI Manager.');
+  return new GoogleGenerativeAI(envKey);
+}
 
 const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
 
@@ -405,6 +426,7 @@ IMPORTANT:
 - Return only the raw JSON object`;
 
     console.log('🤖 Calling Google Gemini API for passage type:', passageType);
+    const genAI = await _getGeminiClient();
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
@@ -500,6 +522,7 @@ exports.extractTestFromImage = async (req, res) => {
     };
 
     // Initialize Gemini model
+    const genAI = await _getGeminiClient();
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Crafted prompt for IELTS test extraction

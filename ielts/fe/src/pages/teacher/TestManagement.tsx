@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { ImageUp, Loader2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { FileText, Loader2, Music2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { TestModal } from './TestModal';
-import { AIImageParseModal, type ParsedListeningTest } from './AIImageParseModal';
+import { AdvancedPdfExtractor, type PdfParsedTest } from './AdvancedPdfExtractor';
 import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 import { apiClient } from '../../lib/api/client';
+import axios from 'axios';
 
 type ModuleType = 'reading' | 'listening';
 type FilterType = 'all' | ModuleType;
@@ -292,8 +293,12 @@ export function TestManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
-  const [isAIImageModalOpen, setIsAIImageModalOpen] = useState(false);
+  const [isAIPdfModalOpen, setIsAIPdfModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [audioUploadingIdx, setAudioUploadingIdx] = useState<number | null>(null);
+  const audioInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [activeSectionIdx, setActiveSectionIdx] = useState(0);
+  const [editingContent, setEditingContent] = useState(false);
   const [editingTest, setEditingTest] = useState<TestListItem | null>(null);
   const [form, setForm] = useState<TestFormState>(createInitialForm(routeModule === 'all' ? 'reading' : routeModule));
 
@@ -346,34 +351,98 @@ export function TestManagement() {
     const module = routeModule === 'all' ? (selectedModule === 'all' ? 'reading' : selectedModule) : routeModule;
     setEditingTest(null);
     setForm(createInitialForm(module));
+    setActiveSectionIdx(0);
+    setEditingContent(false);
     setIsModalOpen(true);
   }
 
-  /** Apply AI-parsed listening JSON directly to the create-test form */
-  function applyParsedListeningTest(parsed: ParsedListeningTest) {
-    const normalizedParts: ListeningPartForm[] = (parsed.parts ?? []).map((part) => ({
-      partNumber: part.partNumber ?? 1,
-      title: part.title ?? '',
-      audioUrl: part.audioUrl ?? '',
-      description: part.description ?? '',
-      questions: (part.questions ?? []).map((q) => ({
-        questionText: q.questionText ?? '',
-        type: (q.type as ListeningQuestionType) ?? 'fill_blank',
-        options: q.options ?? [],
-        imageUrl: q.imageUrl ?? '',
-        correctAnswer: q.correctAnswer ?? '',
-      })),
-    }));
+  function mapPdfTypeToReading(type: string, options: string[]): ReadingQuestionType {
+    if (type === 'multiple_choice') return 'MULTIPLE_CHOICE';
+    if (type === 'fill_blank') return 'FILL_IN_BLANK';
+    if (type === 'matching') {
+      const upper = options.map((o) => o.toUpperCase());
+      if (upper.some((o) => o.includes('NOT GIVEN'))) {
+        if (upper.some((o) => o === 'YES' || o === 'NO')) return 'YNNG';
+        return 'TFNG';
+      }
+      return 'MATCHING';
+    }
+    return 'MULTIPLE_CHOICE';
+  }
 
+  function applyParsedTest(testType: 'reading' | 'listening', parsed: PdfParsedTest) {
     setEditingTest(null);
-    setForm({
-      module: 'listening',
-      title: parsed.title ?? '',
-      description: parsed.description ?? '',
-      readingPassages: [createEmptyReadingPassage(1)],
-      listeningParts: normalizedParts.length > 0 ? normalizedParts : [createEmptyListeningPart(1)],
-    });
+    if (testType === 'reading') {
+      const readingPassages: ReadingPassageForm[] = (parsed.parts ?? []).map((part, i) => ({
+        passageNumber: part.partNumber ?? i + 1,
+        title: part.title ?? '',
+        content: part.description ?? '',
+        image: '',
+        questions: (part.questions ?? []).map((q, qi) => ({
+          questionNumber: q.questionNumber ?? qi + 1,
+          type: mapPdfTypeToReading(q.type, q.options ?? []),
+          text: q.questionText ?? '',
+          options: q.options ?? [],
+          correctAnswer: q.correctAnswer ?? '',
+          explanation: '',
+        })),
+      }));
+      setForm({ module: 'reading', title: parsed.title ?? '', description: parsed.description ?? '',
+        readingPassages: readingPassages.length > 0 ? readingPassages : [createEmptyReadingPassage(1)],
+        listeningParts: [createEmptyListeningPart(1)] });
+    } else {
+      const listeningParts: ListeningPartForm[] = (parsed.parts ?? []).map((part, i) => ({
+        partNumber: part.partNumber ?? i + 1,
+        title: part.title ?? '',
+        audioUrl: part.audioUrl ?? '',
+        description: part.description ?? '',
+        questions: (part.questions ?? []).map((q) => ({
+          questionText: q.questionText ?? '',
+          type: (q.type as ListeningQuestionType) ?? 'fill_blank',
+          options: q.options ?? [],
+          imageUrl: q.imageUrl ?? '',
+          correctAnswer: q.correctAnswer ?? '',
+        })),
+      }));
+      setForm({ module: 'listening', title: parsed.title ?? '', description: parsed.description ?? '',
+        readingPassages: [createEmptyReadingPassage(1)],
+        listeningParts: listeningParts.length > 0 ? listeningParts : [createEmptyListeningPart(1)] });
+    }
+    setActiveSectionIdx(0);
+    setEditingContent(false);
     setIsModalOpen(true);
+  }
+
+  async function uploadAudioForPart(partIndex: number, file: File) {
+    setAudioUploadingIdx(partIndex);
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = localStorage.getItem('accessToken');
+      const sigRes = await axios.get(`${API_BASE}/media/generate-signature`, {
+        params: { folderName: 'ielts_platform/listening' },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const sd = sigRes.data?.data ?? sigRes.data;
+      const { signature, timestamp, cloud_name: cloudName, api_key: apiKey, folder } = sd;
+      if (!signature || !timestamp || !cloudName || !apiKey || !folder)
+        throw new Error('Không nhận được thông tin chữ ký Cloudinary hợp lệ');
+      const cloudFormData = new FormData();
+      cloudFormData.append('file', file);
+      cloudFormData.append('api_key', apiKey);
+      cloudFormData.append('timestamp', String(timestamp));
+      cloudFormData.append('signature', signature);
+      cloudFormData.append('folder', folder);
+      const cloudRes = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, cloudFormData);
+      const secureUrl = cloudRes.data?.secure_url;
+      if (!secureUrl) throw new Error('Cloudinary không trả về secure_url');
+      updateListeningPart(partIndex, 'audioUrl', secureUrl);
+      toast.success(`Đã tải audio Part ${partIndex + 1} lên thành công`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi khi tải audio lên. Vui lòng thử lại.');
+    } finally {
+      setAudioUploadingIdx(null);
+    }
   }
 
   async function openEditModal(test: TestListItem) {
@@ -389,6 +458,8 @@ export function TestManagement() {
       }
 
       setEditingTest(test);
+      setActiveSectionIdx(0);
+      setEditingContent(false);
       setIsModalOpen(true);
     } catch (error) {
       console.error('Error loading test detail:', error);
@@ -479,6 +550,8 @@ export function TestManagement() {
   }
 
   function addReadingPassage() {
+    setActiveSectionIdx(form.readingPassages.length);
+    setEditingContent(false);
     setForm((currentForm) => ({
       ...currentForm,
       readingPassages: [
@@ -489,6 +562,7 @@ export function TestManagement() {
   }
 
   function removeReadingPassage(index: number) {
+    setActiveSectionIdx((prev) => Math.min(prev, Math.max(0, form.readingPassages.length - 2)));
     setForm((currentForm) => ({
       ...currentForm,
       readingPassages: currentForm.readingPassages
@@ -538,6 +612,8 @@ export function TestManagement() {
   }
 
   function addListeningPart() {
+    setActiveSectionIdx(form.listeningParts.length);
+    setEditingContent(false);
     setForm((currentForm) => ({
       ...currentForm,
       listeningParts: [
@@ -548,6 +624,7 @@ export function TestManagement() {
   }
 
   function removeListeningPart(index: number) {
+    setActiveSectionIdx((prev) => Math.min(prev, Math.max(0, form.listeningParts.length - 2)));
     setForm((currentForm) => ({
       ...currentForm,
       listeningParts: currentForm.listeningParts
@@ -696,11 +773,11 @@ export function TestManagement() {
 
           <button
             type="button"
-            onClick={() => setIsAIImageModalOpen(true)}
+            onClick={() => setIsAIPdfModalOpen(true)}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700"
           >
-            <ImageUp className="h-4 w-4" />
-            Tạo từ ảnh (AI)
+            <FileText className="h-4 w-4" />
+            Tạo từ PDF (AI)
           </button>
 
           <button
@@ -800,462 +877,381 @@ export function TestManagement() {
         }}
       />
 
-      <AIImageParseModal
-        isOpen={isAIImageModalOpen}
-        onClose={() => setIsAIImageModalOpen(false)}
-        onApply={applyParsedListeningTest}
-        module="listening"
+      <AdvancedPdfExtractor
+        isOpen={isAIPdfModalOpen}
+        onClose={() => setIsAIPdfModalOpen(false)}
+        onApply={applyParsedTest}
+        defaultTestType={selectedModule === 'listening' ? 'listening' : 'reading'}
       />
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="relative flex h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {editingTest ? 'Chỉnh sửa đề thi' : 'Tạo đề thi mới'}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Quản lý đầy đủ title, description, passage hoặc part, cùng toàn bộ question bên trong.
-                </p>
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+
+            {/* ── TOP BAR ── */}
+            <div className="flex shrink-0 items-center gap-2.5 border-b border-slate-200 bg-white px-4 py-2.5">
+              <div className="flex gap-1 rounded-xl border border-slate-200 p-0.5">
+                {(['reading', 'listening'] as ModuleType[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    disabled={Boolean(editingTest)}
+                    onClick={() => { setForm(createInitialForm(m)); setActiveSectionIdx(0); setEditingContent(false); }}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                      form.module === m ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    } ${editingTest ? 'cursor-not-allowed opacity-60' : ''}`}
+                  >
+                    {m === 'reading' ? 'Reading' : 'Listening'}
+                  </button>
+                ))}
               </div>
+              <input
+                required
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold outline-none transition focus:border-slate-500"
+                placeholder="Tiêu đề đề thi (Cambridge IELTS 18 – Test 1)"
+              />
+              <input
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                className="w-52 shrink-0 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500"
+                placeholder="Mô tả ngắn"
+              />
               <button
                 type="button"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingTest(null);
-                }}
+                onClick={() => { setIsModalOpen(false); setEditingTest(null); }}
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+              >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingTest ? 'Lưu thay đổi' : 'Tạo đề thi'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIsModalOpen(false); setEditingTest(null); }}
                 className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100"
-                aria-label="Đóng modal"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
-                <section className="grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-2 lg:col-span-2">
-                    <label className="text-sm font-semibold text-slate-700">Loại đề</label>
-                    <div className="flex gap-3">
-                      {(['reading', 'listening'] as ModuleType[]).map((module) => (
+            {/* ── SECTION TABS ── */}
+            <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-slate-200 bg-slate-50 px-4 py-2">
+              {(form.module === 'reading' ? form.readingPassages : form.listeningParts).map((section, idx) => (
+                <div key={idx} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveSectionIdx(idx); setEditingContent(false); }}
+                    className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                      activeSectionIdx === idx
+                        ? 'border border-slate-300 bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:bg-slate-100'
+                    }`}
+                  >
+                    {form.module === 'reading' ? `Passage ${idx + 1}` : `Part ${idx + 1}`}
+                    {section.title ? `: ${section.title.slice(0, 16)}${section.title.length > 16 ? '…' : ''}` : ''}
+                  </button>
+                  {(form.module === 'reading' ? form.readingPassages : form.listeningParts).length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => form.module === 'reading' ? removeReadingPassage(idx) : removeListeningPart(idx)}
+                      className="ml-0.5 rounded p-0.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => form.module === 'reading' ? addReadingPassage() : addListeningPart()}
+                className="flex whitespace-nowrap items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {form.module === 'reading' ? 'Thêm Passage' : 'Thêm Part'}
+              </button>
+            </div>
+
+            {/* ── SPLIT VIEW ── */}
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+
+              {/* LEFT PANEL – content */}
+              <div className="flex w-[52%] shrink-0 flex-col border-r border-slate-200">
+                <div className="flex shrink-0 flex-col gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
+                  {form.module === 'reading' && form.readingPassages[activeSectionIdx] && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        required
+                        value={form.readingPassages[activeSectionIdx].title}
+                        onChange={(e) => updateReadingPassage(activeSectionIdx, 'title', e.target.value)}
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold outline-none focus:border-slate-500"
+                        placeholder="Tiêu đề passage"
+                      />
+                      <input
+                        value={form.readingPassages[activeSectionIdx].image}
+                        onChange={(e) => updateReadingPassage(activeSectionIdx, 'image', e.target.value)}
+                        className="w-40 rounded-lg border border-slate-300 px-3 py-1.5 text-xs outline-none focus:border-slate-500"
+                        placeholder="URL ảnh minh họa"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditingContent(!editingContent)}
+                        className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-white"
+                      >
+                        {editingContent ? 'Xem trước' : 'Sửa nội dung'}
+                      </button>
+                    </div>
+                  )}
+                  {form.module === 'listening' && form.listeningParts[activeSectionIdx] && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <input
+                          required
+                          value={form.listeningParts[activeSectionIdx].title}
+                          onChange={(e) => updateListeningPart(activeSectionIdx, 'title', e.target.value)}
+                          className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold outline-none focus:border-slate-500"
+                          placeholder="Tiêu đề part"
+                        />
                         <button
-                          key={module}
                           type="button"
-                          disabled={Boolean(editingTest)}
-                          onClick={() => setForm(createInitialForm(module))}
-                          className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                            form.module === module
-                              ? 'bg-slate-900 text-white'
-                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                          } ${editingTest ? 'cursor-not-allowed opacity-60' : ''}`}
+                          onClick={() => setEditingContent(!editingContent)}
+                          className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-white"
                         >
-                          {module === 'reading' ? 'Reading' : 'Listening'}
+                          {editingContent ? 'Xem trước' : 'Sửa nội dung'}
                         </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Tiêu đề đề thi</label>
-                    <input
-                      required
-                      value={form.title}
-                      onChange={(event) => setForm((currentForm) => ({ ...currentForm, title: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                      placeholder="Ví dụ: Cambridge IELTS 18 - Test 1"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Mô tả</label>
-                    <input
-                      value={form.description}
-                      onChange={(event) => setForm((currentForm) => ({ ...currentForm, description: event.target.value }))}
-                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                      placeholder="Mô tả ngắn cho giáo viên hoặc học viên"
-                    />
-                  </div>
-                </section>
-
-                {form.module === 'reading' ? (
-                  <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-lg font-semibold text-slate-900">Passages</h4>
-                        <p className="text-sm text-slate-500">Mỗi passage chứa nội dung bài đọc và danh sách câu hỏi đi kèm.</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={addReadingPassage}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                      >
-                        Thêm passage
-                      </button>
-                    </div>
-
-                    {form.readingPassages.map((passage, passageIndex) => (
-                      <div key={`passage-${passageIndex}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                        <div className="mb-4 flex items-center justify-between">
-                          <h5 className="text-lg font-semibold text-slate-900">Passage {passageIndex + 1}</h5>
-                          {form.readingPassages.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeReadingPassage(passageIndex)}
-                              className="text-sm font-semibold text-red-600"
-                            >
-                              Xóa passage
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid gap-4 lg:grid-cols-2">
-                          <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Tiêu đề passage</label>
-                            <input
-                              required
-                              value={passage.title}
-                              onChange={(event) => updateReadingPassage(passageIndex, 'title', event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Ảnh minh họa</label>
-                            <input
-                              value={passage.image}
-                              onChange={(event) => updateReadingPassage(passageIndex, 'image', event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                              placeholder="https://..."
-                            />
-                          </div>
-
-                          <div className="space-y-2 lg:col-span-2">
-                            <label className="text-sm font-semibold text-slate-700">Nội dung passage</label>
-                            <textarea
-                              required
-                              rows={8}
-                              value={passage.content}
-                              onChange={(event) => updateReadingPassage(passageIndex, 'content', event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-6 space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h6 className="font-semibold text-slate-900">Questions</h6>
-                            <button
-                              type="button"
-                              onClick={() => addReadingQuestion(passageIndex)}
-                              className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white"
-                            >
-                              Thêm câu hỏi
-                            </button>
-                          </div>
-
-                          {passage.questions.map((question, questionIndex) => (
-                            <div key={`reading-question-${passageIndex}-${questionIndex}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <div className="mb-4 flex items-center justify-between">
-                                <span className="font-semibold text-slate-900">Question {questionIndex + 1}</span>
-                                {passage.questions.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeReadingQuestion(passageIndex, questionIndex)}
-                                    className="text-sm font-semibold text-red-600"
-                                  >
-                                    Xóa câu hỏi
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="grid gap-4 lg:grid-cols-2">
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Loại câu hỏi</label>
-                                  <select
-                                    value={question.type}
-                                    onChange={(event) =>
-                                      updateReadingQuestion(
-                                        passageIndex,
-                                        questionIndex,
-                                        'type',
-                                        event.target.value as ReadingQuestionType
-                                      )
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  >
-                                    {READING_QUESTION_TYPES.map((type) => (
-                                      <option key={type} value={type}>
-                                        {type}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Đáp án đúng</label>
-                                  <input
-                                    required
-                                    value={question.correctAnswer}
-                                    onChange={(event) =>
-                                      updateReadingQuestion(passageIndex, questionIndex, 'correctAnswer', event.target.value)
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  />
-                                </div>
-
-                                <div className="space-y-2 lg:col-span-2">
-                                  <label className="text-sm font-semibold text-slate-700">Nội dung câu hỏi</label>
-                                  <textarea
-                                    required
-                                    rows={3}
-                                    value={question.text}
-                                    onChange={(event) =>
-                                      updateReadingQuestion(passageIndex, questionIndex, 'text', event.target.value)
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Options</label>
-                                  <textarea
-                                    rows={4}
-                                    value={question.options.join('\n')}
-                                    onChange={(event) =>
-                                      updateReadingQuestion(
-                                        passageIndex,
-                                        questionIndex,
-                                        'options',
-                                        event.target.value.split('\n')
-                                      )
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                    placeholder="Mỗi dòng là một lựa chọn"
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Giải thích</label>
-                                  <textarea
-                                    rows={4}
-                                    value={question.explanation}
-                                    onChange={(event) =>
-                                      updateReadingQuestion(passageIndex, questionIndex, 'explanation', event.target.value)
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Music2 className="h-4 w-4 shrink-0 text-amber-500" />
+                        <input
+                          value={form.listeningParts[activeSectionIdx].audioUrl}
+                          onChange={(e) => updateListeningPart(activeSectionIdx, 'audioUrl', e.target.value)}
+                          className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs outline-none focus:border-slate-500"
+                          placeholder="Audio URL hoặc tải file lên..."
+                        />
+                        <input
+                          ref={(el) => { audioInputRefs.current[activeSectionIdx] = el; }}
+                          type="file"
+                          accept="audio/*,video/mp4,video/webm"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadAudioForPart(activeSectionIdx, f);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={audioUploadingIdx === activeSectionIdx}
+                          onClick={() => audioInputRefs.current[activeSectionIdx]?.click()}
+                          className="shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+                        >
+                          {audioUploadingIdx === activeSectionIdx ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Tải lên'}
+                        </button>
                       </div>
-                    ))}
-                  </section>
-                ) : (
-                  <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-lg font-semibold text-slate-900">Listening Parts</h4>
-                        <p className="text-sm text-slate-500">Mỗi part chứa audio, mô tả và nhóm câu hỏi tương ứng.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addListeningPart}
-                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                      >
-                        Thêm part
-                      </button>
-                    </div>
+                      {form.listeningParts[activeSectionIdx].audioUrl && (
+                        <audio
+                          key={form.listeningParts[activeSectionIdx].audioUrl}
+                          controls
+                          className="h-8 w-full"
+                          src={form.listeningParts[activeSectionIdx].audioUrl}
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
 
-                    {form.listeningParts.map((part, partIndex) => (
-                      <div key={`part-${partIndex}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                        <div className="mb-4 flex items-center justify-between">
-                          <h5 className="text-lg font-semibold text-slate-900">Part {partIndex + 1}</h5>
-                          {form.listeningParts.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeListeningPart(partIndex)}
-                              className="text-sm font-semibold text-red-600"
-                            >
-                              Xóa part
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid gap-4 lg:grid-cols-2">
-                          <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Tiêu đề part</label>
-                            <input
-                              required
-                              value={part.title}
-                              onChange={(event) => updateListeningPart(partIndex, 'title', event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Audio URL</label>
-                            <input
-                              required
-                              value={part.audioUrl}
-                              onChange={(event) => updateListeningPart(partIndex, 'audioUrl', event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                              placeholder="/audio/example.mp3 hoặc https://..."
-                            />
-                          </div>
-
-                          <div className="space-y-2 lg:col-span-2">
-                            <label className="text-sm font-semibold text-slate-700">Mô tả part</label>
-                            <textarea
-                              required
-                              rows={5}
-                              value={part.description}
-                              onChange={(event) => updateListeningPart(partIndex, 'description', event.target.value)}
-                              className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-6 space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h6 className="font-semibold text-slate-900">Questions</h6>
-                            <button
-                              type="button"
-                              onClick={() => addListeningQuestion(partIndex)}
-                              className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white"
-                            >
-                              Thêm câu hỏi
-                            </button>
-                          </div>
-
-                          {part.questions.map((question, questionIndex) => (
-                            <div key={`listening-question-${partIndex}-${questionIndex}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <div className="mb-4 flex items-center justify-between">
-                                <span className="font-semibold text-slate-900">Question {questionIndex + 1}</span>
-                                {part.questions.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeListeningQuestion(partIndex, questionIndex)}
-                                    className="text-sm font-semibold text-red-600"
-                                  >
-                                    Xóa câu hỏi
-                                  </button>
-                                )}
-                              </div>
-
-                              <div className="grid gap-4 lg:grid-cols-2">
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Loại câu hỏi</label>
-                                  <select
-                                    value={question.type}
-                                    onChange={(event) =>
-                                      updateListeningQuestion(
-                                        partIndex,
-                                        questionIndex,
-                                        'type',
-                                        event.target.value as ListeningQuestionType
-                                      )
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  >
-                                    {LISTENING_QUESTION_TYPES.map((type) => (
-                                      <option key={type} value={type}>
-                                        {type}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Đáp án đúng</label>
-                                  <input
-                                    required
-                                    value={question.correctAnswer}
-                                    onChange={(event) =>
-                                      updateListeningQuestion(partIndex, questionIndex, 'correctAnswer', event.target.value)
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  />
-                                </div>
-
-                                <div className="space-y-2 lg:col-span-2">
-                                  <label className="text-sm font-semibold text-slate-700">Nội dung câu hỏi</label>
-                                  <textarea
-                                    required
-                                    rows={3}
-                                    value={question.questionText}
-                                    onChange={(event) =>
-                                      updateListeningQuestion(partIndex, questionIndex, 'questionText', event.target.value)
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Options</label>
-                                  <textarea
-                                    rows={4}
-                                    value={question.options.join('\n')}
-                                    onChange={(event) =>
-                                      updateListeningQuestion(
-                                        partIndex,
-                                        questionIndex,
-                                        'options',
-                                        event.target.value.split('\n')
-                                      )
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                    placeholder="Mỗi dòng là một lựa chọn"
-                                  />
-                                </div>
-
-                                <div className="space-y-2">
-                                  <label className="text-sm font-semibold text-slate-700">Image URL</label>
-                                  <input
-                                    value={question.imageUrl}
-                                    onChange={(event) =>
-                                      updateListeningQuestion(partIndex, questionIndex, 'imageUrl', event.target.value)
-                                    }
-                                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-red-500"
-                                    placeholder="https://..."
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </section>
-                )}
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                  {form.module === 'reading' && form.readingPassages[activeSectionIdx] ? (
+                    editingContent ? (
+                      <textarea
+                        required
+                        rows={30}
+                        value={form.readingPassages[activeSectionIdx].content}
+                        onChange={(e) => updateReadingPassage(activeSectionIdx, 'content', e.target.value)}
+                        className="h-full w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                        placeholder="Nội dung passage (HTML hoặc text)"
+                      />
+                    ) : form.readingPassages[activeSectionIdx].content ? (
+                      <div
+                        className="prose prose-sm max-w-none text-slate-800"
+                        dangerouslySetInnerHTML={{ __html: form.readingPassages[activeSectionIdx].content }}
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-400">Nhấn "Sửa nội dung" để nhập nội dung passage.</p>
+                    )
+                  ) : form.module === 'listening' && form.listeningParts[activeSectionIdx] ? (
+                    editingContent ? (
+                      <textarea
+                        rows={20}
+                        value={form.listeningParts[activeSectionIdx].description}
+                        onChange={(e) => updateListeningPart(activeSectionIdx, 'description', e.target.value)}
+                        className="h-full w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                        placeholder="Mô tả / transcript cho part này"
+                      />
+                    ) : form.listeningParts[activeSectionIdx].description ? (
+                      <div
+                        className="prose prose-sm max-w-none text-slate-800"
+                        dangerouslySetInnerHTML={{ __html: form.listeningParts[activeSectionIdx].description }}
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-400">Nhấn "Sửa nội dung" để nhập mô tả / transcript.</p>
+                    )
+                  ) : null}
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingTest(null);
-                  }}
-                  className="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {editingTest ? 'Lưu thay đổi' : 'Tạo đề thi'}
-                </button>
+              {/* RIGHT PANEL – questions */}
+              <div className="flex flex-1 flex-col">
+                <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
+                  <span className="text-sm font-semibold text-slate-700">
+                    Câu hỏi{' '}
+                    <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-xs">
+                      {form.module === 'reading'
+                        ? (form.readingPassages[activeSectionIdx]?.questions.length ?? 0)
+                        : (form.listeningParts[activeSectionIdx]?.questions.length ?? 0)}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      form.module === 'reading'
+                        ? addReadingQuestion(activeSectionIdx)
+                        : addListeningQuestion(activeSectionIdx)
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-white"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Thêm câu hỏi
+                  </button>
+                </div>
+
+                <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-4">
+                  {form.module === 'reading'
+                    ? (form.readingPassages[activeSectionIdx]?.questions ?? []).map((question, qIdx) => (
+                        <div key={`rq-${activeSectionIdx}-${qIdx}`} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-100 text-xs font-bold text-blue-700">
+                              {qIdx + 1}
+                            </span>
+                            <select
+                              value={question.type}
+                              onChange={(e) => updateReadingQuestion(activeSectionIdx, qIdx, 'type', e.target.value as ReadingQuestionType)}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 outline-none"
+                            >
+                              {READING_QUESTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <div className="flex flex-1 items-center gap-1.5">
+                              <span className="shrink-0 text-xs text-slate-400">Đáp án:</span>
+                              <input
+                                required
+                                value={question.correctAnswer}
+                                onChange={(e) => updateReadingQuestion(activeSectionIdx, qIdx, 'correctAnswer', e.target.value)}
+                                className="flex-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 outline-none focus:border-emerald-400"
+                                placeholder="đáp án"
+                              />
+                            </div>
+                            {(form.readingPassages[activeSectionIdx]?.questions.length ?? 0) > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeReadingQuestion(activeSectionIdx, qIdx)}
+                                className="shrink-0 rounded p-0.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <textarea
+                            required
+                            rows={2}
+                            value={question.text}
+                            onChange={(e) => updateReadingQuestion(activeSectionIdx, qIdx, 'text', e.target.value)}
+                            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                            placeholder="Nội dung câu hỏi"
+                          />
+                          {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MATCHING') && (
+                            <textarea
+                              rows={3}
+                              value={question.options.join('\n')}
+                              onChange={(e) => updateReadingQuestion(activeSectionIdx, qIdx, 'options', e.target.value.split('\n'))}
+                              className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400"
+                              placeholder="Options – mỗi dòng một lựa chọn"
+                            />
+                          )}
+                          <textarea
+                            rows={1}
+                            value={question.explanation}
+                            onChange={(e) => updateReadingQuestion(activeSectionIdx, qIdx, 'explanation', e.target.value)}
+                            className="mt-1.5 w-full resize-none rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-400 outline-none focus:border-slate-200"
+                            placeholder="Giải thích (tùy chọn)"
+                          />
+                        </div>
+                      ))
+                    : (form.listeningParts[activeSectionIdx]?.questions ?? []).map((question, qIdx) => (
+                        <div key={`lq-${activeSectionIdx}-${qIdx}`} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-100 text-xs font-bold text-amber-700">
+                              {qIdx + 1}
+                            </span>
+                            <select
+                              value={question.type}
+                              onChange={(e) => updateListeningQuestion(activeSectionIdx, qIdx, 'type', e.target.value as ListeningQuestionType)}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 outline-none"
+                            >
+                              {LISTENING_QUESTION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <div className="flex flex-1 items-center gap-1.5">
+                              <span className="shrink-0 text-xs text-slate-400">Đáp án:</span>
+                              <input
+                                required
+                                value={question.correctAnswer}
+                                onChange={(e) => updateListeningQuestion(activeSectionIdx, qIdx, 'correctAnswer', e.target.value)}
+                                className="flex-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 outline-none focus:border-emerald-400"
+                                placeholder="đáp án"
+                              />
+                            </div>
+                            {(form.listeningParts[activeSectionIdx]?.questions.length ?? 0) > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeListeningQuestion(activeSectionIdx, qIdx)}
+                                className="shrink-0 rounded p-0.5 text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <textarea
+                            required
+                            rows={2}
+                            value={question.questionText}
+                            onChange={(e) => updateListeningQuestion(activeSectionIdx, qIdx, 'questionText', e.target.value)}
+                            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                            placeholder="Nội dung câu hỏi"
+                          />
+                          {(question.type === 'multiple_choice' || question.type === 'matching') && (
+                            <textarea
+                              rows={3}
+                              value={question.options.join('\n')}
+                              onChange={(e) => updateListeningQuestion(activeSectionIdx, qIdx, 'options', e.target.value.split('\n'))}
+                              className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400"
+                              placeholder="Options – mỗi dòng một lựa chọn"
+                            />
+                          )}
+                        </div>
+                      ))
+                  }
+                </div>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       )}
     </div>
   );
 }
+

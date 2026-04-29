@@ -7,17 +7,17 @@ const SystemConfig = require('../models/SystemConfig');
  */
 const getSystemConfig = async (req, res) => {
   try {
-    const config = await SystemConfig.findOne({ key: 'global' });
+    const config = await SystemConfig.findOne({ key: 'global' }).select('+geminiApiKey');
     if (!config) {
       return res.status(200).json({
-        geminiApiKey: '',
+        geminiApiKeySet: false,
         readingPromptTemplate: '',
         listeningPromptTemplate: '',
       });
     }
     res.status(200).json({
       // Never expose the raw key to the client; just tell the UI whether one is set
-      geminiApiKeySet: config.readingPromptTemplate !== undefined,
+      geminiApiKeySet: !!config.geminiApiKey,
       readingPromptTemplate: config.readingPromptTemplate,
       listeningPromptTemplate: config.listeningPromptTemplate,
       updatedAt: config.updatedAt,
@@ -53,7 +53,7 @@ const updateSystemConfig = async (req, res) => {
       { key: 'global' },
       { $set: setFields },
       { upsert: true, new: true, runValidators: true }
-    );
+    ).select('+geminiApiKey');
 
     res.status(200).json({
       message: 'Configuration updated successfully',
