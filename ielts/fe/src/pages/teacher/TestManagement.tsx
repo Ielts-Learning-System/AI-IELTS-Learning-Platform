@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { FileText, Loader2, Music2, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, Loader2, Music2, Pencil, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import MiniRichEditor from '../../components/MiniRichEditor';
 import { TestModal } from './TestModal';
 import { AdvancedPdfExtractor, type PdfParsedTest } from './AdvancedPdfExtractor';
 import toast from 'react-hot-toast';
@@ -297,6 +298,8 @@ export function TestManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [audioUploadingIdx, setAudioUploadingIdx] = useState<number | null>(null);
   const audioInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [imageUploadingIdx, setImageUploadingIdx] = useState<number | null>(null);
+  const imageInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [activeSectionIdx, setActiveSectionIdx] = useState(0);
   const [editingContent, setEditingContent] = useState(false);
   const [editingTest, setEditingTest] = useState<TestListItem | null>(null);
@@ -445,6 +448,38 @@ export function TestManagement() {
     }
   }
 
+  async function uploadImageForPassage(passageIndex: number, file: File) {
+    setImageUploadingIdx(passageIndex);
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const token = localStorage.getItem('accessToken');
+      const sigRes = await axios.get(`${API_BASE}/media/generate-signature`, {
+        params: { folderName: 'ielts_platform/reading' },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const sd = sigRes.data?.data ?? sigRes.data;
+      const { signature, timestamp, cloud_name: cloudName, api_key: apiKey, folder } = sd;
+      if (!signature || !timestamp || !cloudName || !apiKey || !folder)
+        throw new Error('Không nhận được thông tin chữ ký Cloudinary hợp lệ');
+      const cloudFormData = new FormData();
+      cloudFormData.append('file', file);
+      cloudFormData.append('api_key', apiKey);
+      cloudFormData.append('timestamp', String(timestamp));
+      cloudFormData.append('signature', signature);
+      cloudFormData.append('folder', folder);
+      const cloudRes = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, cloudFormData);
+      const secureUrl = cloudRes.data?.secure_url;
+      if (!secureUrl) throw new Error('Cloudinary không trả về secure_url');
+      updateReadingPassage(passageIndex, 'image', secureUrl);
+      toast.success(`Đã tải ảnh Passage ${passageIndex + 1} lên thành công`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi khi tải ảnh lên. Vui lòng thử lại.');
+    } finally {
+      setImageUploadingIdx(null);
+    }
+  }
+
   async function openEditModal(test: TestListItem) {
     try {
       setIsSubmitting(true);
@@ -550,6 +585,10 @@ export function TestManagement() {
   }
 
   function addReadingPassage() {
+    if (form.readingPassages.length >= 3) {
+      toast.error('Reading chỉ tối đa 3 Passage');
+      return;
+    }
     setActiveSectionIdx(form.readingPassages.length);
     setEditingContent(false);
     setForm((currentForm) => ({
@@ -575,6 +614,11 @@ export function TestManagement() {
   }
 
   function addReadingQuestion(passageIndex: number) {
+    const totalQ = form.readingPassages.reduce((s, p) => s + p.questions.length, 0);
+    if (totalQ >= 40) {
+      toast.error('Reading chỉ tối đa 40 câu hỏi');
+      return;
+    }
     setForm((currentForm) => ({
       ...currentForm,
       readingPassages: currentForm.readingPassages.map((passage, currentPassageIndex) => {
@@ -612,6 +656,10 @@ export function TestManagement() {
   }
 
   function addListeningPart() {
+    if (form.listeningParts.length >= 4) {
+      toast.error('Listening chỉ tối đa 4 Part');
+      return;
+    }
     setActiveSectionIdx(form.listeningParts.length);
     setEditingContent(false);
     setForm((currentForm) => ({
@@ -637,6 +685,10 @@ export function TestManagement() {
   }
 
   function addListeningQuestion(partIndex: number) {
+    if ((form.listeningParts[partIndex]?.questions.length ?? 0) >= 10) {
+      toast.error('Mỗi Part chỉ tối đa 10 câu hỏi');
+      return;
+    }
     setForm((currentForm) => ({
       ...currentForm,
       listeningParts: currentForm.listeningParts.map((part, currentPartIndex) => {
@@ -969,14 +1021,30 @@ export function TestManagement() {
                   )}
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={() => form.module === 'reading' ? addReadingPassage() : addListeningPart()}
-                className="flex whitespace-nowrap items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-50"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {form.module === 'reading' ? 'Thêm Passage' : 'Thêm Part'}
-              </button>
+              {/* Limit: reading max 3 passages, listening max 4 parts */}
+              {(() => {
+                const canAdd = form.module === 'reading'
+                  ? form.readingPassages.length < 3
+                  : form.listeningParts.length < 4;
+                const limit = form.module === 'reading' ? 3 : 4;
+                const current = form.module === 'reading' ? form.readingPassages.length : form.listeningParts.length;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => form.module === 'reading' ? addReadingPassage() : addListeningPart()}
+                    disabled={!canAdd}
+                    title={!canAdd ? `Tối đa ${limit} ${form.module === 'reading' ? 'Passage' : 'Part'}` : undefined}
+                    className={`flex whitespace-nowrap items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                      canAdd
+                        ? 'text-indigo-600 hover:bg-indigo-50'
+                        : 'cursor-not-allowed text-slate-400'
+                    }`}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {form.module === 'reading' ? `Thêm Passage (${current}/3)` : `Thêm Part (${current}/4)`}
+                  </button>
+                );
+              })()}
             </div>
 
             {/* ── SPLIT VIEW ── */}
@@ -986,28 +1054,67 @@ export function TestManagement() {
               <div className="flex w-[52%] shrink-0 flex-col border-r border-slate-200">
                 <div className="flex shrink-0 flex-col gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
                   {form.module === 'reading' && form.readingPassages[activeSectionIdx] && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        required
-                        value={form.readingPassages[activeSectionIdx].title}
-                        onChange={(e) => updateReadingPassage(activeSectionIdx, 'title', e.target.value)}
-                        className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold outline-none focus:border-slate-500"
-                        placeholder="Tiêu đề passage"
-                      />
-                      <input
-                        value={form.readingPassages[activeSectionIdx].image}
-                        onChange={(e) => updateReadingPassage(activeSectionIdx, 'image', e.target.value)}
-                        className="w-40 rounded-lg border border-slate-300 px-3 py-1.5 text-xs outline-none focus:border-slate-500"
-                        placeholder="URL ảnh minh họa"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditingContent(!editingContent)}
-                        className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-white"
-                      >
-                        {editingContent ? 'Xem trước' : 'Sửa nội dung'}
-                      </button>
-                    </div>
+                    <>
+                      <div className="flex items-center gap-2">
+                        <input
+                          required
+                          value={form.readingPassages[activeSectionIdx].title}
+                          onChange={(e) => updateReadingPassage(activeSectionIdx, 'title', e.target.value)}
+                          className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold outline-none focus:border-slate-500"
+                          placeholder="Tiêu đề passage"
+                        />
+                        {/* Hidden image file input */}
+                        <input
+                          ref={(el) => { imageInputRefs.current[activeSectionIdx] = el; }}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadImageForPassage(activeSectionIdx, f);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={imageUploadingIdx === activeSectionIdx}
+                          onClick={() => imageInputRefs.current[activeSectionIdx]?.click()}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          {imageUploadingIdx === activeSectionIdx
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <Upload className="h-3.5 w-3.5" />}
+                          Tải ảnh
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingContent(!editingContent)}
+                          className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-white"
+                        >
+                          {editingContent ? 'Xem trước' : 'Sửa nội dung'}
+                        </button>
+                      </div>
+                      {/* Image preview */}
+                      {form.readingPassages[activeSectionIdx].image && (
+                        <div className="relative flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2">
+                          <ImageIcon className="h-4 w-4 shrink-0 text-blue-400" />
+                          <img
+                            src={form.readingPassages[activeSectionIdx].image}
+                            alt="passage preview"
+                            className="h-14 w-auto rounded object-cover"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-xs text-slate-500">
+                            {form.readingPassages[activeSectionIdx].image}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => updateReadingPassage(activeSectionIdx, 'image', '')}
+                            className="shrink-0 rounded p-0.5 text-slate-400 hover:text-red-500"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                   {form.module === 'listening' && form.listeningParts[activeSectionIdx] && (
                     <>
@@ -1069,13 +1176,11 @@ export function TestManagement() {
                 <div className="min-h-0 flex-1 overflow-y-auto p-4">
                   {form.module === 'reading' && form.readingPassages[activeSectionIdx] ? (
                     editingContent ? (
-                      <textarea
-                        required
-                        rows={30}
+                      <MiniRichEditor
                         value={form.readingPassages[activeSectionIdx].content}
-                        onChange={(e) => updateReadingPassage(activeSectionIdx, 'content', e.target.value)}
-                        className="h-full w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
-                        placeholder="Nội dung passage (HTML hoặc text)"
+                        onChange={(html) => updateReadingPassage(activeSectionIdx, 'content', html)}
+                        placeholder="Nội dung passage..."
+                        minHeight={500}
                       />
                     ) : form.readingPassages[activeSectionIdx].content ? (
                       <div
@@ -1087,12 +1192,11 @@ export function TestManagement() {
                     )
                   ) : form.module === 'listening' && form.listeningParts[activeSectionIdx] ? (
                     editingContent ? (
-                      <textarea
-                        rows={20}
+                      <MiniRichEditor
                         value={form.listeningParts[activeSectionIdx].description}
-                        onChange={(e) => updateListeningPart(activeSectionIdx, 'description', e.target.value)}
-                        className="h-full w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-400"
-                        placeholder="Mô tả / transcript cho part này"
+                        onChange={(html) => updateListeningPart(activeSectionIdx, 'description', html)}
+                        placeholder="Mô tả / transcript cho part này..."
+                        minHeight={400}
                       />
                     ) : form.listeningParts[activeSectionIdx].description ? (
                       <div
@@ -1110,25 +1214,58 @@ export function TestManagement() {
               <div className="flex flex-1 flex-col">
                 <div className="flex shrink-0 items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2.5">
                   <span className="text-sm font-semibold text-slate-700">
-                    Câu hỏi{' '}
-                    <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-xs">
-                      {form.module === 'reading'
-                        ? (form.readingPassages[activeSectionIdx]?.questions.length ?? 0)
-                        : (form.listeningParts[activeSectionIdx]?.questions.length ?? 0)}
-                    </span>
+                    {form.module === 'reading' ? (
+                      <>
+                        Câu hỏi{' '}
+                        <span className="rounded-md bg-slate-200 px-1.5 py-0.5 text-xs">
+                          {(form.readingPassages[activeSectionIdx]?.questions.length ?? 0)}
+                        </span>
+                        {' '}• Tổng:
+                        <span className={`ml-1 rounded-md px-1.5 py-0.5 text-xs font-bold ${
+                          form.readingPassages.reduce((s, p) => s + p.questions.length, 0) >= 40
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {form.readingPassages.reduce((s, p) => s + p.questions.length, 0)}/40
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        Câu hỏi{' '}
+                        <span className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${
+                          (form.listeningParts[activeSectionIdx]?.questions.length ?? 0) >= 10
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {(form.listeningParts[activeSectionIdx]?.questions.length ?? 0)}/10
+                        </span>
+                      </>
+                    )}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      form.module === 'reading'
-                        ? addReadingQuestion(activeSectionIdx)
-                        : addListeningQuestion(activeSectionIdx)
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-white"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Thêm câu hỏi
-                  </button>
+                  {(() => {
+                    const canAdd = form.module === 'reading'
+                      ? form.readingPassages.reduce((s, p) => s + p.questions.length, 0) < 40
+                      : (form.listeningParts[activeSectionIdx]?.questions.length ?? 0) < 10;
+                    return (
+                      <button
+                        type="button"
+                        disabled={!canAdd}
+                        onClick={() =>
+                          form.module === 'reading'
+                            ? addReadingQuestion(activeSectionIdx)
+                            : addListeningQuestion(activeSectionIdx)
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                          canAdd
+                            ? 'border-slate-300 text-slate-700 hover:bg-white'
+                            : 'cursor-not-allowed border-slate-200 text-slate-400'
+                        }`}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Thêm câu hỏi
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto p-4">
@@ -1166,13 +1303,11 @@ export function TestManagement() {
                               </button>
                             )}
                           </div>
-                          <textarea
-                            required
-                            rows={2}
+                          <MiniRichEditor
                             value={question.text}
-                            onChange={(e) => updateReadingQuestion(activeSectionIdx, qIdx, 'text', e.target.value)}
-                            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                            onChange={(html) => updateReadingQuestion(activeSectionIdx, qIdx, 'text', html)}
                             placeholder="Nội dung câu hỏi"
+                            minHeight={60}
                           />
                           {(question.type === 'MULTIPLE_CHOICE' || question.type === 'MATCHING') && (
                             <textarea
@@ -1225,13 +1360,11 @@ export function TestManagement() {
                               </button>
                             )}
                           </div>
-                          <textarea
-                            required
-                            rows={2}
+                          <MiniRichEditor
                             value={question.questionText}
-                            onChange={(e) => updateListeningQuestion(activeSectionIdx, qIdx, 'questionText', e.target.value)}
-                            className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+                            onChange={(html) => updateListeningQuestion(activeSectionIdx, qIdx, 'questionText', html)}
                             placeholder="Nội dung câu hỏi"
+                            minHeight={60}
                           />
                           {(question.type === 'multiple_choice' || question.type === 'matching') && (
                             <textarea

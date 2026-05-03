@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import MiniRichEditor from '../../components/MiniRichEditor';
 import toast, { Toaster } from 'react-hot-toast';
 import { Edit, FileText, LoaderCircle, Mic, Plus, Search, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -485,12 +486,11 @@ export default function SpeakingTestManagement() {
 
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-800">Part 2: Cue Card Prompt</label>
-                <textarea
-                  rows={4}
+                <MiniRichEditor
                   value={formState.part2}
-                  onChange={(event) => setFormState((current) => ({ ...current, part2: event.target.value }))}
+                  onChange={(html) => setFormState((current) => ({ ...current, part2: html }))}
                   placeholder="Describe a technology that has changed your life..."
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                  minHeight={120}
                 />
               </div>
 
