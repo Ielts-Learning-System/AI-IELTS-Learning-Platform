@@ -39,6 +39,16 @@ const AILogSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    keyTeam: {
+      type: String,
+      default: 'default',
+      trim: true,
+    },
+    keyFingerprint: {
+      type: String,
+      default: '',
+      trim: true,
+    },
   },
   { timestamps: true }
 );
@@ -46,5 +56,6 @@ const AILogSchema = new mongoose.Schema(
 // Index for efficient dashboard queries (recent logs, per-service aggregation)
 AILogSchema.index({ createdAt: -1 });
 AILogSchema.index({ service: 1, createdAt: -1 });
+AILogSchema.index({ keyFingerprint: 1, createdAt: -1 });
 
 module.exports = mongoose.model('AILog', AILogSchema);

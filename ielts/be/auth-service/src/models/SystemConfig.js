@@ -17,6 +17,25 @@ const SystemConfigSchema = new mongoose.Schema(
       default: '',
       select: false, // never returned unless explicitly projected
     },
+    keyFingerprint: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    keyTeam: {
+      type: String,
+      default: 'default',
+      trim: true,
+    },
+    keyQuotaStatus: {
+      type: String,
+      enum: ['available', 'exhausted', 'unknown'],
+      default: 'unknown',
+    },
+    keyQuotaMessage: {
+      type: String,
+      default: '',
+    },
     // Per-feature system prompts (image-based legacy endpoints)
     readingPromptTemplate: {
       type: String,

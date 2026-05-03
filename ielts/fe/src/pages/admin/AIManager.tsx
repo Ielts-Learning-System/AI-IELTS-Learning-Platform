@@ -3,6 +3,7 @@ import {
   Bot,
   Eye,
   EyeOff,
+  Info,
   KeyRound,
   Loader2,
   RotateCcw,
@@ -17,6 +18,7 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../lib/api/client';
@@ -27,6 +29,11 @@ import { apiClient } from '../../lib/api/client';
 
 interface AIConfig {
   geminiApiKeySet: boolean;
+  keyTeam?: string;
+  keyFingerprint?: string;
+  quotaOptions?: Array<{ team: string; monthlyTokenQuota: number }>;
+  keyQuotaStatus?: 'available' | 'exhausted' | 'unknown';
+  keyQuotaMessage?: string;
   readingPromptTemplate: string;
   listeningPromptTemplate: string;
   writingExtractPrompt: string;
@@ -35,19 +42,20 @@ interface AIConfig {
   speakingGradingPrompt: string;
   monthlyTokenQuota: number;
   monthlyTokensUsed: number;
+  availableTokens?: number;
   quotaResetMonth: string;
   updatedAt?: string;
 }
 
 interface FormState {
   geminiApiKey: string;
+  keyTeam: string;
   readingPromptTemplate: string;
   listeningPromptTemplate: string;
   writingExtractPrompt: string;
   speakingExtractPrompt: string;
   writingGradingPrompt: string;
   speakingGradingPrompt: string;
-  monthlyTokenQuota: number;
 }
 
 interface AILog {
@@ -58,6 +66,8 @@ interface AILog {
   outputTokens: number;
   totalTokens: number;
   estimatedCost: number;
+  keyTeam?: string;
+  keyFingerprint?: string;
   createdAt: string;
 }
 
@@ -240,13 +250,13 @@ export function AIManager() {
   const [config, setConfig] = useState<AIConfig | null>(null);
   const [form, setForm] = useState<FormState>({
     geminiApiKey: '',
+    keyTeam: 'default',
     readingPromptTemplate: '',
     listeningPromptTemplate: '',
     writingExtractPrompt: '',
     speakingExtractPrompt: '',
     writingGradingPrompt: '',
     speakingGradingPrompt: '',
-    monthlyTokenQuota: 1_000_000,
   });
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -255,6 +265,19 @@ export function AIManager() {
   const [activeTab, setActiveTab] = useState<TabId>('quota');
   const [logs, setLogs] = useState<AILog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [showCostPopup, setShowCostPopup] = useState(false);
+
+  const loadLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const { data } = await apiClient.get<{ logs: AILog[] }>('/admin/ai-logs?limit=200');
+      setLogs(data.logs || []);
+    } catch {
+      toast.error('Không thể tải logs AI');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
 
   // ── Load config ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -264,13 +287,13 @@ export function AIManager() {
         setConfig(data);
         setForm({
           geminiApiKey: '',
+          keyTeam: data.keyTeam || 'default',
           readingPromptTemplate: data.readingPromptTemplate || DEFAULT_READING_PROMPT,
           listeningPromptTemplate: data.listeningPromptTemplate || DEFAULT_LISTENING_PROMPT,
           writingExtractPrompt: data.writingExtractPrompt || DEFAULT_WRITING_EXTRACT_PROMPT,
           speakingExtractPrompt: data.speakingExtractPrompt || DEFAULT_SPEAKING_EXTRACT_PROMPT,
           writingGradingPrompt: data.writingGradingPrompt || DEFAULT_WRITING_GRADING_PROMPT,
           speakingGradingPrompt: data.speakingGradingPrompt || DEFAULT_SPEAKING_GRADING_PROMPT,
-          monthlyTokenQuota: data.monthlyTokenQuota || 1_000_000,
         });
       } catch {
         toast.error('Không thể tải cấu hình AI');
@@ -284,17 +307,6 @@ export function AIManager() {
   // ── Load logs when tab changes to 'logs' ─────────────────────────────────
   useEffect(() => {
     if (activeTab !== 'logs') return;
-    const loadLogs = async () => {
-      setLogsLoading(true);
-      try {
-        const { data } = await apiClient.get<{ logs: AILog[] }>('/admin/ai-logs?limit=100');
-        setLogs(data.logs || []);
-      } catch {
-        toast.error('Không thể tải logs AI');
-      } finally {
-        setLogsLoading(false);
-      }
-    };
     loadLogs();
   }, [activeTab]);
 
@@ -302,9 +314,8 @@ export function AIManager() {
   const handleSaveKey = async () => {
     setSavingKey(true);
     try {
-      const payload: Record<string, unknown> = {
-        monthlyTokenQuota: form.monthlyTokenQuota,
-      };
+      const payload: Record<string, unknown> = {};
+      payload.keyTeam = form.keyTeam;
       if (form.geminiApiKey.trim()) {
         payload.geminiApiKey = form.geminiApiKey.trim();
       }
@@ -344,9 +355,39 @@ export function AIManager() {
     );
   }
 
-  const usedPct = config
-    ? Math.min(100, Math.round(((config.monthlyTokensUsed ?? 0) / (config.monthlyTokenQuota || 1_000_000)) * 100))
+  const quotaTotal = config?.monthlyTokenQuota ?? 0;
+  const usedTokens = config?.monthlyTokensUsed ?? 0;
+  const quotaOptions = config?.quotaOptions ?? [];
+  const usedPct = quotaTotal > 0
+    ? Math.min(100, Math.round((usedTokens / quotaTotal) * 100))
     : 0;
+  const isExhausted = config?.keyQuotaStatus === 'exhausted';
+
+  const keyCostSummary = Object.values(
+    logs.reduce((acc, log) => {
+      const fingerprint = (log.keyFingerprint || '').trim();
+      const team = (log.keyTeam || 'unknown').trim();
+      const key = fingerprint || `team:${team}`;
+      if (!acc[key]) {
+        acc[key] = {
+          key,
+          fingerprint,
+          team,
+          calls: 0,
+          tokens: 0,
+          cost: 0,
+          lastUsedAt: '',
+        };
+      }
+      acc[key].calls += 1;
+      acc[key].tokens += Number(log.totalTokens || 0);
+      acc[key].cost += Number(log.estimatedCost || 0);
+      if (!acc[key].lastUsedAt || new Date(log.createdAt).getTime() > new Date(acc[key].lastUsedAt).getTime()) {
+        acc[key].lastUsedAt = log.createdAt;
+      }
+      return acc;
+    }, {} as Record<string, { key: string; fingerprint: string; team: string; calls: number; tokens: number; cost: number; lastUsedAt: string }>)
+  ).sort((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'quota', label: 'Quota & API Key', icon: <BarChart3 className="h-4 w-4" /> },
@@ -390,10 +431,29 @@ export function AIManager() {
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="h-4 w-4 text-emerald-500" />
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Quota còn lại</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Trạng thái key</span>
+            <button
+              type="button"
+              onClick={async () => {
+                setShowCostPopup(true);
+                if (logs.length === 0) {
+                  await loadLogs();
+                }
+              }}
+              className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-slate-500 hover:bg-slate-100"
+              title="Xem chi phí token theo key"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <p className="text-xl font-bold text-slate-800">{usedPct}%</p>
-          <p className="text-xs text-slate-400">đã sử dụng</p>
+          <p className={`text-base font-bold ${isExhausted ? 'text-red-700' : 'text-emerald-700'}`}>
+            {isExhausted ? 'Key hết quota' : 'Key khả dụng'}
+          </p>
+          <p className={`text-xs ${isExhausted ? 'text-red-600' : 'text-slate-400'}`}>
+            {isExhausted
+              ? 'Gemini trả lỗi, hệ thống đã chuyển trạng thái exhausted để cảnh báo đổi key.'
+              : 'Đang hoạt động bình thường.'}
+          </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
@@ -414,6 +474,58 @@ export function AIManager() {
           <p className="text-xs text-slate-400">reset mỗi tháng</p>
         </div>
       </div>
+
+      {showCostPopup && (
+        <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/20 p-4" onClick={() => setShowCostPopup(false)}>
+          <div
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-sm font-bold text-slate-800">Chi phí token theo key</h4>
+              <button
+                type="button"
+                onClick={() => setShowCostPopup(false)}
+                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {logsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+              </div>
+            ) : keyCostSummary.length === 0 ? (
+              <p className="py-6 text-center text-xs text-slate-500">Chưa có request nào để tổng hợp.</p>
+            ) : (
+              <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                {keyCostSummary.map((item) => {
+                  const isCurrent = !!config?.keyFingerprint && item.fingerprint === config.keyFingerprint;
+                  const label = item.fingerprint || `team:${item.team}`;
+                  return (
+                    <div key={item.key} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-semibold text-slate-700">{label}</p>
+                        {isCurrent ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Đang dùng</span>
+                        ) : (
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Đã dùng</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-slate-600">
+                        <span>{item.calls} request</span>
+                        <span>{item.tokens.toLocaleString()} tokens</span>
+                        <span className="font-semibold text-emerald-700">{formatCost(item.cost)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
@@ -439,6 +551,15 @@ export function AIManager() {
         {/* ─ Quota & API Key ─ */}
         {activeTab === 'quota' && (
           <div className="space-y-6">
+            {config?.keyQuotaStatus === 'exhausted' && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <p className="font-semibold">Gemini API key đã hết quota. Vui lòng thay key mới.</p>
+                {config.keyQuotaMessage ? (
+                  <p className="mt-1 text-xs text-red-600/90 break-words">{config.keyQuotaMessage}</p>
+                ) : null}
+              </div>
+            )}
+
             <div>
               <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2 mb-4">
                 <BarChart3 className="h-5 w-5 text-red-600" /> Quota sử dụng hàng tháng
@@ -462,22 +583,6 @@ export function AIManager() {
                   Reset tự động đầu mỗi tháng.
                 </p>
               </div>
-
-              {/* Monthly quota setting */}
-              <div className="mt-5">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Monthly Token Quota
-                </label>
-                <input
-                  type="number"
-                  value={form.monthlyTokenQuota}
-                  onChange={(e) => setForm((f) => ({ ...f, monthlyTokenQuota: Number(e.target.value) }))}
-                  min={100_000}
-                  step={100_000}
-                  className="w-48 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-                <p className="text-xs text-slate-400 mt-1">Ví dụ: 1000000 = 1 triệu tokens/tháng</p>
-              </div>
             </div>
 
             {/* API Key section */}
@@ -485,6 +590,28 @@ export function AIManager() {
               <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2 mb-4">
                 <KeyRound className="h-5 w-5 text-red-600" /> Gemini API Key
               </h3>
+
+                <div className="mb-3">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Gói key/team</label>
+                  <select
+                    value={form.keyTeam}
+                    onChange={(e) => setForm((f) => ({ ...f, keyTeam: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    {quotaOptions.length === 0 ? (
+                      <option value={form.keyTeam}>{form.keyTeam}</option>
+                    ) : (
+                      quotaOptions.map((item) => (
+                        <option key={item.team} value={item.team}>
+                          {item.team} - {item.monthlyTokenQuota.toLocaleString()} tokens/thang
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Baseline quota duoc dong bo tu bien moi truong van hanh theo team da chon.
+                  </p>
+                </div>
 
               <div className="relative mb-3">
                 <input
@@ -520,7 +647,7 @@ export function AIManager() {
                            text-white font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm"
               >
                 {savingKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {savingKey ? 'Đang lưu...' : 'Lưu API Key & Quota'}
+                {savingKey ? 'Đang lưu...' : 'Lưu API Key'}
               </button>
             </div>
           </div>

@@ -10,6 +10,9 @@ import re
 import time
 import asyncio
 import logging
+import base64
+import hashlib
+import io
 from contextlib import asynccontextmanager
 
 import httpx
@@ -68,6 +71,138 @@ def _strip_markdown_fences(text: str) -> str:
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
     return text.strip()
+
+
+def _is_quota_exhausted_error(err: Exception | str) -> bool:
+    """Best-effort detection for Gemini quota exhaustion responses."""
+    raw = str(err).upper()
+    return (
+        "RESOURCE_EXHAUSTED" in raw
+        or "QUOTA" in raw
+        or "429" in raw
+        or "RATE LIMIT" in raw
+    )
+
+
+async def _mark_quota_exhausted(message: str) -> None:
+    """
+    Notify auth-service that current key is exhausted.
+    This is best-effort and should never break extraction responses.
+    """
+    url = f"{AUTH_SERVICE_INTERNAL_URL}/api/internal/system-config/quota-exhausted"
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            await client.post(
+                url,
+                headers={"x-internal-secret": INTERNAL_SECRET},
+                json={"message": message[:400]},
+            )
+        except Exception:
+            logger.warning("Failed to notify auth-service about exhausted quota", exc_info=True)
+
+
+def _guess_image_mime(data: bytes) -> str | None:
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def _extract_pdf_image_data_urls(pdf_bytes: bytes, max_images: int = 2) -> list[str]:
+    """
+    Extract image blobs directly from PDF so writing prompts can keep original charts/diagrams.
+    Returns data URLs ordered by image size (largest first).
+    """
+    try:
+        from pypdf import PdfReader
+    except Exception:
+        logger.warning("pypdf is not available; skipping PDF image extraction")
+        return []
+
+    candidates: list[tuple[int, str]] = []
+    seen: set[str] = set()
+
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        for page in reader.pages[:8]:
+            images = getattr(page, "images", []) or []
+            for image in images:
+                data = getattr(image, "data", None)
+                if not data or len(data) < 8_000:
+                    continue
+
+                mime = _guess_image_mime(data)
+                if not mime:
+                    continue
+
+                digest = hashlib.sha1(data).hexdigest()
+                if digest in seen:
+                    continue
+                seen.add(digest)
+
+                # Keep payload bounded to avoid huge DB records.
+                if len(data) > 2_500_000:
+                    continue
+
+                b64 = base64.b64encode(data).decode("ascii")
+                candidates.append((len(data), f"data:{mime};base64,{b64}"))
+    except Exception:
+        logger.warning("Failed to extract embedded images from PDF", exc_info=True)
+        return []
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return [url for _, url in candidates[:max_images]]
+
+
+def _inject_writing_images(result: dict, image_urls: list[str]) -> dict:
+    """Inject extracted PDF images into writing Task 1 HTML when no <img> is present."""
+    if not image_urls:
+        return result
+
+    tasks = result.get("tasks")
+    if not isinstance(tasks, list):
+        return result
+
+    for idx, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            continue
+
+        content_html = str(task.get("contentHtml") or "")
+        if not content_html or "<img" in content_html.lower():
+            continue
+
+        task_number = int(task.get("taskNumber") or 0)
+        # Prioritize attaching visuals to Task 1 (chart/map/process), then fallback by index.
+        if task_number == 1:
+            picked = image_urls[0]
+        elif idx < len(image_urls):
+            picked = image_urls[idx]
+        else:
+            continue
+
+        image_block = (
+            '<figure class="source-image" style="margin:12px 0;">'
+            f'<img src="{picked}" alt="Extracted visual from source PDF" '
+            'style="max-width:100%;height:auto;border:1px solid #e2e8f0;border-radius:10px;" />'
+            '</figure>'
+        )
+
+        placeholder_pattern = re.compile(r'<div class="chart-placeholder">.*?</div>', re.IGNORECASE | re.DOTALL)
+        if placeholder_pattern.search(content_html):
+            content_html = placeholder_pattern.sub(f"{image_block}\\g<0>", content_html, count=1)
+        else:
+            # Keep original text fully intact; only prepend the image block.
+            content_html = f"{image_block}{content_html}"
+
+        task["contentHtml"] = content_html
+
+    result["tasks"] = tasks
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -495,6 +630,12 @@ async def _call_gemini_with_pdf(
         except Exception as exc:
             last_exc = exc
             err_str = str(exc)
+            if _is_quota_exhausted_error(exc):
+                await _mark_quota_exhausted(err_str)
+                raise HTTPException(
+                    status_code=429,
+                    detail="Gemini API key đã hết quota. Vui lòng thay key mới trong Admin -> AI Manager.",
+                )
             if "503" in err_str or "UNAVAILABLE" in err_str:
                 wait = (attempt + 1) * 8
                 logger.warning(
@@ -982,6 +1123,12 @@ async def _call_gemini_extract(
         except Exception as exc:
             last_exc = exc
             err_str = str(exc)
+            if _is_quota_exhausted_error(exc):
+                await _mark_quota_exhausted(err_str)
+                raise HTTPException(
+                    status_code=429,
+                    detail="Gemini API key đã hết quota. Vui lòng thay key mới trong Admin -> AI Manager.",
+                )
             if "503" in err_str or "UNAVAILABLE" in err_str:
                 wait = (attempt + 1) * 10
                 logger.warning(
@@ -1151,6 +1298,10 @@ async def extract_test(
         key_bytes=key_bytes,
         key_mime=key_mime,
     )
+
+    if testType == "writing":
+      image_urls = _extract_pdf_image_data_urls(test_bytes)
+      result = _inject_writing_images(result, image_urls)
 
     if testType in ("reading", "listening"):
         logger.info(

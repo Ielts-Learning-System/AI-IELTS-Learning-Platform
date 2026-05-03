@@ -5,6 +5,7 @@ const {
   getSystemConfig,
   updateSystemConfig,
   getInternalConfig,
+  markQuotaExhausted,
   createAILog,
   getAILogs,
 } = require('../controllers/systemConfig.controller');
@@ -21,5 +22,6 @@ router.get('/api/admin/ai-logs', verifyToken, isAdmin, getAILogs);
 
 // Internal route – called by ai-service inside Docker network only
 router.get('/api/internal/system-config', getInternalConfig);
+router.post('/api/internal/system-config/quota-exhausted', markQuotaExhausted);
 
 module.exports = router;
