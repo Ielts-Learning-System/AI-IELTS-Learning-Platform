@@ -14,6 +14,8 @@ import { TransactionManagement } from './pages/admin/TransactionManagement';
 import { BillingPlansManagement } from './pages/admin/BillingPlansManagement';
 import { BillingSubscriptionsManagement } from './pages/admin/BillingSubscriptionsManagement';
 import { AIManager } from './pages/admin/AIManager';
+import { ResourceManagement } from './pages/admin/ResourceManagement';
+import { AnalyticsReport } from './pages/admin/AnalyticsReport';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TestManagement } from './pages/teacher/TestManagement';
 import GradingDashboard from './pages/teacher/GradingDashboard';
@@ -167,8 +169,8 @@ export default function App() {
             <Route path="billing/plans" element={<BillingPlansManagement />} />
             <Route path="billing/subscriptions" element={<BillingSubscriptionsManagement />} />
             <Route path="ai" element={<AIManager />} />
-            <Route path="resources" element={<AdminDashboard />} />
-            <Route path="reports" element={<AdminDashboard />} />
+            <Route path="resources" element={<ResourceManagement />} />
+            <Route path="reports" element={<AnalyticsReport />} />
           </Route>
         </Route>
 
