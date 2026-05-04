@@ -13,6 +13,7 @@ import logging
 import base64
 import hashlib
 import io
+import tempfile
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -1009,7 +1010,7 @@ EXTRACT_FILE_SIZE_LIMIT = 50 * 1024 * 1024   # 50 MB  – test PDF
 EXTRACT_KEY_SIZE_LIMIT  = 20 * 1024 * 1024   # 20 MB  – answer key
 
 # Two-stage OCR pipeline config
-OCR_ENABLED         = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
+OCR_ENABLED         = os.getenv("OCR_ENABLED", "false").lower() in ("1", "true", "yes")
 OCR_DPI             = int(os.getenv("OCR_DPI", "200"))
 OCR_CONF_THRESHOLD  = float(os.getenv("OCR_CONF_THRESHOLD", "0.55"))
 GEMINI_CHAR_LIMIT   = int(os.getenv("GEMINI_CHAR_LIMIT", "60000"))
@@ -1350,14 +1351,8 @@ async def _call_gemini_extract(
     Send one (or two) files to Gemini for advanced extraction.
     Uses EXTRACT_MODEL (default gemini-2.5-flash) with v1beta API.
     Includes automatic key-pool rotation on quota exhaustion.
-
-    Returns (parsed_result, usage_metadata).
+    Uses Google GenAI File API if file is larger than 15MB to avoid 413.
     """
-    contents: list = [types.Part.from_bytes(data=test_bytes, mime_type=test_mime)]
-    if key_bytes and key_mime:
-        contents.append(types.Part.from_bytes(data=key_bytes, mime_type=key_mime))
-    contents.append(system_prompt)
-
     key_info = await _fetch_active_key()
     rotated = False
     usage: dict = {}
@@ -1365,18 +1360,58 @@ async def _call_gemini_extract(
     for attempt in range(4):
         api_key = key_info["keyString"]
         key_id = key_info["keyId"]
-        # v1beta for extended model access
         client_obj = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
 
         def _generate():
-            return client_obj.models.generate_content(
-                model=EXTRACT_MODEL,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    max_output_tokens=32768,
-                ),
-            )
+            uploaded_files = []
+            contents = []
+            temp_paths = []
+            
+            try:
+                # 1. Handle Test PDF
+                if len(test_bytes) > 15 * 1024 * 1024:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
+                        f.write(test_bytes)
+                        temp_paths.append(f.name)
+                    up_test = client_obj.files.upload(file=temp_paths[0], config={'mime_type': test_mime})
+                    uploaded_files.append(up_test)
+                    contents.append(up_test)
+                else:
+                    contents.append(types.Part.from_bytes(data=test_bytes, mime_type=test_mime))
+                
+                # 2. Handle Answer Key PDF (if any)
+                if key_bytes and key_mime:
+                    if len(key_bytes) > 15 * 1024 * 1024:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as f:
+                            f.write(key_bytes)
+                            temp_paths.append(f.name)
+                        up_key = client_obj.files.upload(file=temp_paths[-1], config={'mime_type': key_mime})
+                        uploaded_files.append(up_key)
+                        contents.append(up_key)
+                    else:
+                        contents.append(types.Part.from_bytes(data=key_bytes, mime_type=key_mime))
+                
+                contents.append(system_prompt)
+
+                return client_obj.models.generate_content(
+                    model=EXTRACT_MODEL,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=32768,
+                    ),
+                )
+            finally:
+                for up_f in uploaded_files:
+                    try:
+                        client_obj.files.delete(name=up_f.name)
+                    except Exception:
+                        pass
+                for p in temp_paths:
+                    try:
+                        os.unlink(p)
+                    except Exception:
+                        pass
 
         try:
             response = await asyncio.to_thread(_generate)

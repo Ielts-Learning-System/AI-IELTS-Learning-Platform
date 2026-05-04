@@ -242,9 +242,6 @@ export async function orchestrateExamFromPdf(payload: {
   if (payload.publish) formData.append('publish', 'true');
 
   const { data } = await apiClient.post('/exams/teacher/exams/orchestrate-pdf', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
     timeout: 5 * 60 * 1000,
   });
 

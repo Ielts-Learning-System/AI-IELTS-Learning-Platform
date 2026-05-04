@@ -4,7 +4,7 @@ const morgan = require('morgan');
 const paymentRoutes = require('./src/routes/payment.routes');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
 app.use(cors());
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));

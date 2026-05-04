@@ -16,7 +16,7 @@ const app = express();
 app.use(cors());
 app.use(morgan('dev'));
 
-// LƯU Ý: Đã loại bỏ app.use(express.json()) và app.use(express.urlencoded())
+// LƯU Ý: Đã loại bỏ app.use(express.json({ limit: '100mb' })) và app.use(express.urlencoded())
 // để tránh lỗi mất body khi proxy chuyển tiếp request POST/PUT.
 
 /**

@@ -6,7 +6,7 @@ const speakingRoutes = require('./src/routes/speaking.routes');
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }

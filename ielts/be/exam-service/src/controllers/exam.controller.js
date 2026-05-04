@@ -421,11 +421,12 @@ function extractSkillPayloads(aiResponseData) {
 async function createSkillResources({ token, reading, listening, writing, speaking }) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
+  // Auto-publish all skill resources so students can see them immediately
   const [readingRes, listeningRes, writingRes, speakingRes] = await Promise.all([
-    readingClient.post('/', reading, { headers }),
-    listeningClient.post('/', listening, { headers }),
-    writingClient.post('/', writing, { headers }),
-    speakingClient.post('/tests', speaking, { headers }),
+    readingClient.post('/', { ...reading, isPublished: true }, { headers }),
+    listeningClient.post('/', { ...listening, isPublished: true }, { headers }),
+    writingClient.post('/', { ...writing, isPublished: true }, { headers }),
+    speakingClient.post('/tests', { ...speaking, isPublished: true }, { headers }),
   ]);
 
   const readingId = readingRes.data?.data?._id || readingRes.data?._id;

@@ -10,7 +10,7 @@ app.use(cors());
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
 
 // Health Check
 app.get('/health', (req, res) => {

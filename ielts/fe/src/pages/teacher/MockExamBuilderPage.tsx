@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MockExamBuilderPage
  * ─────────────────────────────────────────────────────────────────────────────
  * Teacher tool for creating and managing Mock IELTS Exams.
@@ -698,6 +698,7 @@ function MockExamWizard({
   const [fullExamPdf, setFullExamPdf] = useState<File | null>(null);
   const [answerKeyPdf, setAnswerKeyPdf] = useState<File | null>(null);
   const [extractProgress, setExtractProgress] = useState('Đang upload và gửi đến AI...');
+  const [extractPercent, setExtractPercent] = useState<number>(0);
   const [preview, setPreview] = useState<MockExamPreviewState | null>(null);
   const [activeSkillTab, setActiveSkillTab] = useState<SkillType>('reading');
   const [publishing, setPublishing] = useState(false);
@@ -710,6 +711,7 @@ function MockExamWizard({
     setPreview(null);
     setActiveSkillTab('reading');
     setExtractProgress('Đang upload và gửi đến AI...');
+    setExtractPercent(0);
   }, []);
 
   const handleExtract = async () => {
@@ -728,11 +730,31 @@ function MockExamWizard({
       fd.append('durationMinutes', String(form.durationMinutes));
       fd.append('globalLimitHours', String(form.globalLimitHours));
 
-      setExtractProgress('AI đang phân tích Reading & Listening (khoảng 2–4 phút)...');
+      const jobId = crypto.randomUUID();
+      fd.append('jobId', jobId);
+
+      setExtractPercent(5);
+      setExtractProgress('AI đang khởi tạo...');
+
+      const token = localStorage.getItem('token') || localStorage.getItem('accessToken') || sessionStorage.getItem('token') || '';
+      const baseURL = apiClient.defaults.baseURL || 'http://localhost:3000/api';
+      const eventSource = new EventSource(`${baseURL}/exams/teacher/exams/orchestrate-progress/${jobId}?token=${token}`);
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.progress) setExtractPercent(data.progress);
+          if (data.message) setExtractProgress(data.message);
+        } catch (e) {}
+      };
+
       const { data: raw } = await apiClient.post('/exams/teacher/exams/orchestrate-pdf', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 6 * 60 * 1000,
+        timeout: 6 * 60 * 1000, // 6 mins
       });
+
+      eventSource.close();
+      setExtractPercent(100);
 
       const result = raw.data ?? raw;
       const exam: ExamItem = result.exam ?? result;
@@ -913,9 +935,21 @@ function MockExamWizard({
               <div className="absolute inset-0 rounded-full border-4 border-t-slate-800 animate-spin" />
               <Zap className="absolute inset-0 m-auto h-8 w-8 text-slate-700" />
             </div>
-            <div className="text-center">
+            <div className="text-center w-full max-w-md">
               <p className="text-xl font-bold text-slate-900">AI đang phân tích đề thi…</p>
-              <p className="mt-1 text-sm text-slate-500">{extractProgress}</p>
+              
+              {/* Progress Bar */}
+              <div className="mt-6 mb-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div 
+                  className="h-full rounded-full bg-slate-800 transition-all duration-500 ease-out" 
+                  style={{ width: `${extractPercent}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs font-semibold text-slate-500">
+                <span>{extractPercent}%</span>
+                <span>{extractProgress}</span>
+              </div>
+
               <p className="mt-4 text-xs text-slate-400">Vui lòng không đóng trang. Quá trình có thể mất 2–5 phút.</p>
             </div>
             <div className="flex gap-4">
