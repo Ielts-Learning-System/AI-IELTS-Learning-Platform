@@ -164,6 +164,7 @@ export function ListeningExamPage() {
         <div className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
           <audio
             controls
+            preload="none"
             src={currentPart.audioUrl}
             key={currentPart.audioUrl}
             className="w-full"

@@ -152,6 +152,48 @@ const handlers = {
   },
 
   /**
+   * exam.completed — Full mock test submitted/expired
+   */
+  'exam.completed': async (data) => {
+    const status = data.metadata?.status || 'SUBMITTED';
+    const isExpired = String(status).toUpperCase() === 'EXPIRED';
+
+    await dispatch({
+      userId: data.userId,
+      type: 'exam_completed',
+      category: 'grading',
+      title: isExpired ? 'Mock Test Auto-Submitted ⏱️' : 'Mock Test Submitted ✅',
+      message: isExpired
+        ? 'Your full mock test reached the global time limit and was auto-submitted.'
+        : 'Your full mock test has been submitted successfully. Writing/Speaking grading is in progress.',
+      entityType: data.entityType || 'ExamAttempt',
+      entityId: data.entityId,
+      metadata: data.metadata,
+    });
+  },
+
+  /**
+   * exam.graded — Full mock test graded
+   */
+  'exam.graded': async (data) => {
+    const overall = data.metadata?.overall;
+
+    await dispatch({
+      userId: data.userId,
+      type: 'exam_graded',
+      category: 'grading',
+      title: 'Your Mock Test Has Been Graded! 🎯',
+      message:
+        overall != null
+          ? `Your full mock test has been graded — Overall Band ${overall}.`
+          : 'Your full mock test has been graded. View detailed band scores now.',
+      entityType: data.entityType || 'ExamAttempt',
+      entityId: data.entityId,
+      metadata: data.metadata,
+    });
+  },
+
+  /**
    * billing.subscription.cancelled — Subscription cancelled with admin message
    * Uses the EXACT title and message provided by the admin
    */

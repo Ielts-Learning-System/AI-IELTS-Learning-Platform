@@ -40,6 +40,7 @@
       - PAYMENT_SERVICE_URL=http://payment-service:3009
       - NOTIFICATION_SERVICE_URL=http://notification-service:3011
       - AI_SERVICE_URL=http://ai-service:3012
+      - EXAM_SERVICE_URL=http://exam-service:3013
     depends_on:
       - redis
       - auth-service
@@ -53,6 +54,7 @@
       - payment-service # Đảm bảo payment-service chạy trước api-gateway
       - notification-service
       - ai-service
+      - exam-service
     restart: unless-stopped
 
   auth-service:
@@ -159,6 +161,22 @@
       - AUTH_SERVICE_INTERNAL_URL=http://auth-service:3001
     depends_on:
       - auth-service
+    restart: unless-stopped
+
+  exam-service:
+    build: ./exam-service
+    container_name: ielts_exam
+    ports:
+      - "3013:3013"
+    env_file:
+      - ./exam-service/.env
+    depends_on:
+      - rabbitmq
+      - reading-service
+      - listening-service
+      - writing-service
+      - speaking-service
+      - ai-service
     restart: unless-stopped
 
   # --- SYNC DAEMON — bi-directional DB sync (service DBs ↔ ielts_backup_db) ---

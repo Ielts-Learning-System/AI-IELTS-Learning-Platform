@@ -59,6 +59,7 @@ app.use('/api/payment', noCacheHeaders);
 app.use('/api/notification', noCacheHeaders);
 app.use('/api/users', noCacheHeaders);
 app.use('/api/ai', noCacheHeaders);
+app.use('/api/exams', noCacheHeaders);
 
 /**
  * =============================
@@ -302,6 +303,21 @@ app.use(
     // extract-test with gemini-1.5-pro can take up to 4 minutes on dense PDFs
     proxyTimeout: 270000,
     timeout: 270000,
+  })
+);
+
+/**
+ * Exam Service (Full Mock Tests)
+ * URL: http://localhost:3000/api/exams/...
+ */
+app.use(
+  '/api/exams',
+  createProxyMiddleware({
+    target: process.env.EXAM_SERVICE_URL || 'http://127.0.0.1:3013',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/exams': '',
+    },
   })
 );
 

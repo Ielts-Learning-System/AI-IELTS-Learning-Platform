@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IELTS Learning Platform — System Architecture
+  Layout: Strict Top-to-Bottom, 6 horizontal layers, no overlapping
+  ┌────────────────────────────────────────────────────────────────┐
+  │  Layer 0  y=10–110      CLIENT TIER                           │
+  │  Layer 1  y=140–250     API GATEWAY + REDIS                   │
+  │  Layer 2  y=280–390     CORE SERVICES (6 boxes)               │
+  │  Layer 3  y=430–540     SKILL SERVICES (4) + EXAM (1)         │
+  │  Layer 4  y=580–690     AI SERVICE + RABBITMQ + GEMINI        │
+  │  Layer 5  y=730–850     DATA LAYER (10 MongoDB DBs)           │
+  │  Legend   y=10–360      x=1680 (outside main flow)            │
+  └────────────────────────────────────────────────────────────────┘
+  Canvas: 1900 x 1200
+-->
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1200" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LAYER 0 — CLIENT TIER   y:10→110
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="bg_client" value="🖥️  CLIENT TIER"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DBEAFE;strokeColor=#93C5FD;fontColor=#1E40AF;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="570" y="10" width="380" height="100" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="fe" value="&lt;b&gt;⚛️ React SPA&lt;/b&gt;&lt;br&gt;Admin · Teacher · Student&lt;br&gt;Vite · TypeScript · Tailwind CSS · Zustand"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;fontColor=#ffffff;fontSize=11;"
+      vertex="1" parent="1">
+      <mxGeometry x="590" y="28" width="340" height="70" as="geometry"/>
+    </mxCell>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LAYER 1 — API GATEWAY + REDIS   y:140→250
+         GW: x=350 w=290   Redis: x=760 w=220
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="bg_gw" value="🔀  API GATEWAY LAYER"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF3C7;strokeColor=#FCD34D;fontColor=#92400E;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="310" y="140" width="720" height="110" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="gw" value="&lt;b&gt;API Gateway&lt;/b&gt;&lt;br&gt;Node.js / Express · Port 3000&lt;br&gt;http-proxy-middleware · JWT verify"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#B45309;fontColor=#000000;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="330" y="160" width="270" height="72" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="redis" value="&lt;b&gt;Redis&lt;/b&gt;&lt;br&gt;JWT Token Cache · Rate-limit&lt;br&gt;Port 6379"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EF4444;strokeColor=#B91C1C;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="730" y="160" width="210" height="72" as="geometry"/>
+    </mxCell>
+
+    <!-- GW ↔ Redis bidirectional -->
+    <mxCell id="e_gw_redis" value="JWT Cache"
+      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#B91C1C;strokeWidth=2;fontSize=9;fontStyle=1;endArrow=block;startArrow=block;endFill=1;startFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+      edge="1" source="gw" target="redis" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- FE → GW -->
+    <mxCell id="e_fe_gw" value="HTTPS · REST · WebSocket"
+      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#1E40AF;strokeWidth=2.5;fontStyle=1;fontSize=9;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;"
+      edge="1" source="fe" target="gw" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LAYER 2 — CORE SERVICES   y:280→390
+         6 boxes, width=215, gap=18
+         x positions: 10, 243, 476, 709, 942, 1175
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="bg_core" value="⚙️  CORE SERVICES"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D1FAE5;strokeColor=#6EE7B7;fontColor=#065F46;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="10" y="280" width="1558" height="110" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="auth" value="&lt;b&gt;auth-service&lt;/b&gt;&lt;br&gt;Port 3001&lt;br&gt;JWT · bcrypt · RBAC"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="20" y="300" width="215" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="billing" value="&lt;b&gt;billing-service&lt;/b&gt;&lt;br&gt;Port 3005&lt;br&gt;VIP Plans · Packages"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="253" y="300" width="215" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="payment" value="&lt;b&gt;payment-service&lt;/b&gt;&lt;br&gt;Port 3009&lt;br&gt;VietQR · Admin Verify"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="486" y="300" width="215" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="notif" value="&lt;b&gt;notification-service&lt;/b&gt;&lt;br&gt;Port 3011&lt;br&gt;RabbitMQ Consumer · Socket.io"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="719" y="300" width="215" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="lesson" value="&lt;b&gt;lesson-service&lt;/b&gt;&lt;br&gt;Port 3007&lt;br&gt;Lesson Content · CRUD"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="952" y="300" width="215" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="media" value="&lt;b&gt;cloud-media-service&lt;/b&gt;&lt;br&gt;Port 3010&lt;br&gt;Audio · Image Upload"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="1185" y="300" width="215" height="68" as="geometry"/>
+    </mxCell>
+
+    <!-- GW → Core Services (straight down) -->
+    <mxCell id="e_gw_auth"    value="/api/auth"         style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#047857;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="auth"    parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_billing" value="/api/billing"      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#047857;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="billing" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_payment" value="/api/payment"      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#047857;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="payment" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_notif"   value="/api/notification" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#047857;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="notif"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_lesson"  value="/api/lessons"      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#047857;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="lesson"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_media"   value="/api/media"        style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#047857;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="media"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LAYER 3 — SKILL SERVICES + EXAM   y:430→540
+         Skill: 4 boxes width=220, gap=20 → x: 10, 250, 490, 730
+         Exam: x=1050 w=300 (separate bg)
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="bg_skill" value="📚  SKILL SERVICES"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#BBFCD8;strokeColor=#4ADE80;fontColor=#14532D;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="10" y="430" width="990" height="110" as="geometry"/>
+    </mxCell>
+    <mxCell id="bg_exam" value="🎯  ORCHESTRATION"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE9FE;strokeColor=#C4B5FD;fontColor=#4C1D95;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="1020" y="430" width="548" height="110" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="reading" value="&lt;b&gt;reading-service&lt;/b&gt;&lt;br&gt;Port 3002&lt;br&gt;Auto-grade · Passages"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#22C55E;strokeColor=#15803D;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="20" y="450" width="220" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="listening" value="&lt;b&gt;listening-service&lt;/b&gt;&lt;br&gt;Port 3003&lt;br&gt;Auto-grade · Audio Segments"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#22C55E;strokeColor=#15803D;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="258" y="450" width="220" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="writing" value="&lt;b&gt;writing-service&lt;/b&gt;&lt;br&gt;Port 3004&lt;br&gt;AI-grade · Image Upload"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#22C55E;strokeColor=#15803D;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="496" y="450" width="220" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="speaking" value="&lt;b&gt;speaking-service&lt;/b&gt;&lt;br&gt;Port 3008&lt;br&gt;AI-grade · Audio Upload"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#22C55E;strokeColor=#15803D;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="734" y="450" width="220" height="68" as="geometry"/>
+    </mxCell>
+    <mxCell id="exam" value="&lt;b&gt;exam-service&lt;/b&gt;&lt;br&gt;Port 3013 · Mock-Test Orchestrator&lt;br&gt;Stateless · No Content Storage"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6366F1;strokeColor=#4338CA;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="1070" y="448" width="280" height="72" as="geometry"/>
+    </mxCell>
+
+    <!-- GW → Skill + Exam -->
+    <mxCell id="e_gw_reading"   value="/api/reading"   style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#15803D;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="reading"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_listening" value="/api/listening" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#15803D;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="listening" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_writing"   value="/api/writing"   style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#15803D;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="writing"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_speaking"  value="/api/speaking"  style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#15803D;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="speaking"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_gw_exam"      value="/api/exams"     style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#4338CA;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="exam"      parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- EXAM → Skill Services (dashed delegation, exits right side of exam → into bottom of skills) -->
+    <mxCell id="e_exam_read"   value="delegate" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6366F1;strokeWidth=1.5;fontSize=8;dashed=1;endArrow=open;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="exam" target="reading"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_exam_listen" value="delegate" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6366F1;strokeWidth=1.5;fontSize=8;dashed=1;endArrow=open;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="exam" target="listening" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_exam_write"  value="delegate" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6366F1;strokeWidth=1.5;fontSize=8;dashed=1;endArrow=open;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="exam" target="writing"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_exam_speak"  value="delegate" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6366F1;strokeWidth=1.5;fontSize=8;dashed=1;endArrow=open;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="exam" target="speaking"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LAYER 4 — AI + MESSAGING + EXTERNAL   y:580→690
+         ai-service:  x=80  w=300
+         rabbitmq:    x=580 w=280
+         gemini:      x=1100 w=300 (ellipse = external)
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="bg_ai" value="🤖  AI &amp; MESSAGING LAYER"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E8FF;strokeColor=#D8B4FE;fontColor=#4C1D95;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="10" y="580" width="1558" height="110" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="ai_svc" value="&lt;b&gt;ai-service&lt;/b&gt;&lt;br&gt;Port 3012 · Python / FastAPI / Uvicorn&lt;br&gt;pypdf · google-genai SDK · Pydantic 2"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="80" y="600" width="300" height="68" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="rabbitmq" value="&lt;b&gt;🐰 RabbitMQ 3&lt;/b&gt;&lt;br&gt;AMQP Port 5672 · Mgmt UI 15672&lt;br&gt;Async Domain Event Bus"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#BE185D;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="580" y="600" width="280" height="68" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="gemini" value="&lt;b&gt;☁️ Google Gemini API&lt;/b&gt;&lt;br&gt;Multimodal LLM · PDF Extraction&lt;br&gt;IELTS Band Auto-Grading (External)"
+      style="ellipse;whiteSpace=wrap;html=1;fillColor=#0EA5E9;strokeColor=#0369A1;fontColor=#ffffff;fontSize=10;"
+      vertex="1" parent="1">
+      <mxGeometry x="1130" y="595" width="310" height="78" as="geometry"/>
+    </mxCell>
+
+    <!-- GW → ai-service -->
+    <mxCell id="e_gw_ai" value="/api/ai" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#6D28D9;strokeWidth=1.5;fontSize=8;" edge="1" source="gw" target="ai_svc" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- writing + speaking → ai-service (grade request) -->
+    <mxCell id="e_write_ai" value="grade request"
+      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#8B5CF6;strokeWidth=2;fontSize=8;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;"
+      edge="1" source="writing" target="ai_svc" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_speak_ai" value="grade request"
+      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#8B5CF6;strokeWidth=2;fontSize=8;fontStyle=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;"
+      edge="1" source="speaking" target="ai_svc" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- ai-service → gemini (external) -->
+    <mxCell id="e_ai_gemini" value="Gemini API HTTPS"
+      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#0369A1;strokeWidth=2.5;fontSize=9;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;"
+      edge="1" source="ai_svc" target="gemini" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- Skill Services → RabbitMQ (async publish, dashed) -->
+    <mxCell id="e_read_mq"   value="submission.graded" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#EC4899;strokeWidth=1.5;fontSize=8;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.1;entryY=0;entryDx=0;entryDy=0;" edge="1" source="reading"   target="rabbitmq" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_listen_mq" value="submission.graded" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#EC4899;strokeWidth=1.5;fontSize=8;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" source="listening"  target="rabbitmq" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_write_mq"  value="submission.graded" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#EC4899;strokeWidth=1.5;fontSize=8;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="writing"    target="rabbitmq" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_speak_mq"  value="submission.graded" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#EC4899;strokeWidth=1.5;fontSize=8;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" edge="1" source="speaking"    target="rabbitmq" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- Core Services → RabbitMQ (async publish, dashed) -->
+    <mxCell id="e_bill_mq"   value="payment.created"  style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#EC4899;strokeWidth=1.5;fontSize=8;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="billing"  target="rabbitmq" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_pay_mq"    value="payment.verified" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#EC4899;strokeWidth=1.5;fontSize=8;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="payment"  target="rabbitmq" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- RabbitMQ → notification-service (consume → push) -->
+    <mxCell id="e_mq_notif" value="Consumes → Socket.io push"
+      style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#BE185D;strokeWidth=2.5;fontSize=9;fontStyle=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;"
+      edge="1" source="rabbitmq" target="notif" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LAYER 5 — DATA LAYER (10 MongoDB DBs)   y:730→860
+         Each DB: width=136, gap=20
+         Total = 10×136 + 9×20 = 1360+180 = 1540
+         start x=14 → fits in 1568px band
+         x positions: 14, 170, 326, 482, 638, 794, 950, 1106, 1262, 1418
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="bg_data" value="🗄️  DATA LAYER — Database-per-Service Pattern (MongoDB)"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEDD5;strokeColor=#FED7AA;fontColor=#7C2D12;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="10" y="730" width="1558" height="130" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="db_auth"   value="&lt;b&gt;auth_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="14"   y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_read"   value="&lt;b&gt;reading_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="170"  y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_listen" value="&lt;b&gt;listening_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="326"  y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_write"  value="&lt;b&gt;writing_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="482"  y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_speak"  value="&lt;b&gt;speaking_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="638"  y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_bill"   value="&lt;b&gt;billing_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="794"  y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_pay"    value="&lt;b&gt;payment_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="950"  y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_notif"  value="&lt;b&gt;notif_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="1106" y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_lesson" value="&lt;b&gt;lesson_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="1262" y="754" width="136" height="88" as="geometry"/></mxCell>
+    <mxCell id="db_media"  value="&lt;b&gt;media_db&lt;/b&gt;&lt;br&gt;MongoDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;html=1;fillColor=#FB923C;strokeColor=#C2410C;fontColor=#ffffff;fontSize=9;" vertex="1" parent="1"><mxGeometry x="1418" y="754" width="136" height="88" as="geometry"/></mxCell>
+
+    <!-- Service → DB edges (straight vertical: exit bottom, enter top) -->
+    <mxCell id="e_auth_db"   value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="auth"      target="db_auth"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_read_db"   value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="reading"    target="db_read"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_listen_db" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="listening"  target="db_listen" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_write_db"  value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="writing"    target="db_write"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_speak_db"  value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="speaking"   target="db_speak"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_bill_db"   value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="billing"    target="db_bill"   parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_pay_db"    value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="payment"    target="db_pay"    parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_notif_db"  value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="notif"      target="db_notif"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_lesson_db" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="lesson"      target="db_lesson" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e_media_db"  value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#C2410C;strokeWidth=1.5;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="media"      target="db_media"  parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         LEGEND — x:1620 y:10 (outside main canvas flow)
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <mxCell id="lg_bg" value="Legend"
+      style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F9FAFB;strokeColor=#D1D5DB;fontColor=#374151;fontStyle=1;fontSize=13;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;"
+      vertex="1" parent="1">
+      <mxGeometry x="1620" y="10" width="240" height="390" as="geometry"/>
+    </mxCell>
+    <mxCell id="lg_fe"    value="React SPA (Frontend)"        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3B82F6;strokeColor=#1E40AF;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="44"  width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_gw"    value="API Gateway (Node.js)"       style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F59E0B;strokeColor=#B45309;fontColor=#000000;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="82"  width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_redis" value="Redis Cache"                 style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EF4444;strokeColor=#B91C1C;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="120" width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_core"  value="Core Node.js Service"        style="rounded=1;whiteSpace=wrap;html=1;fillColor=#10B981;strokeColor=#047857;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="158" width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_skill" value="Skill Node.js Service"       style="rounded=1;whiteSpace=wrap;html=1;fillColor=#22C55E;strokeColor=#15803D;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="196" width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_exam"  value="Exam Orchestrator"           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6366F1;strokeColor=#4338CA;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="234" width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_ai"    value="AI Service (Python/FastAPI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#8B5CF6;strokeColor=#6D28D9;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="272" width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_mq"    value="RabbitMQ Event Bus"          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EC4899;strokeColor=#BE185D;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="310" width="210" height="28" as="geometry"/></mxCell>
+    <mxCell id="lg_ext"   value="External API (Gemini)"       style="ellipse;whiteSpace=wrap;html=1;fillColor=#0EA5E9;strokeColor=#0369A1;fontColor=#ffffff;fontSize=10;" vertex="1" parent="1"><mxGeometry x="1630" y="346" width="210" height="46" as="geometry"/></mxCell>
+
+  </root>
+</mxGraphModel>

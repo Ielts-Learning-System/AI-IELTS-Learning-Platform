@@ -47,6 +47,9 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentPending from './pages/PaymentPending';
 import WritingPdfExtractor from './pages/teacher/WritingPdfExtractor';
 import SpeakingPdfExtractor from './pages/teacher/SpeakingPdfExtractor';
+import MockExamDashboard from './pages/mock/MockExamDashboard';
+import MockExamExecutionPage from './pages/mock/MockExamExecutionPage';
+import MockExamBuilderPage from './pages/teacher/MockExamBuilderPage';
 
 /**
  * NotFound (404) page component
@@ -87,6 +90,8 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route index element={<DashboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="mock-tests" element={<MockExamDashboard />} />
+            <Route path="mock-tests/:examId/attempt/:attemptId" element={<MockExamExecutionPage />} />
           </Route>
         </Route>
 
@@ -178,6 +183,7 @@ export default function App() {
             <Route path="writing/:id" element={<DetailGradingDashboard />} />
             <Route path="writing-management" element={<WritingTestManagement />} />
             <Route path="speaking-management" element={<SpeakingTestManagement />} />
+            <Route path="mock-exams" element={<MockExamBuilderPage />} />
             <Route path="writing-pdf" element={<WritingPdfExtractor />} />
             <Route path="speaking-pdf" element={<SpeakingPdfExtractor />} />
             <Route path="speaking" element={<SpeakingGrading />} />

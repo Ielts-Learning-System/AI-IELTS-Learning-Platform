@@ -25,6 +25,7 @@ import {
   Crown,
   X,
   Zap,
+  ScrollText,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useUserStore } from '../../store/useUserStore';
@@ -72,6 +73,7 @@ const navItems: NavItem[] = [
   { name: 'Reading', path: '/reading', icon: BookOpen, skill: 'reading' },
   { name: 'Writing', path: '/writing', icon: PenTool, skill: 'writing' },
   { name: 'Speaking', path: '/speaking', icon: Mic, skill: 'speaking' },
+  { name: 'Thi thử', path: '/dashboard/mock-tests', icon: ScrollText },
   // Lessons — chỉ PRO (không có skill riêng, dùng isPro)
   { name: 'Lessons', path: '/lessons', icon: Film },
 ];
@@ -329,6 +331,12 @@ export function Sidebar() {
   const handleNavigation = (item: NavItem, subItem?: SubItem) => {
     const targetPath = subItem?.path ?? item.path;
     const featureName = subItem?.name ?? item.name;
+
+    const lockRaw = localStorage.getItem('activeMockSkillLock');
+    if (lockRaw && !targetPath.startsWith('/dashboard/mock-tests')) {
+      window.alert('Bạn đang trong một kỹ năng thi thử đang chạy. Hãy nộp kỹ năng trước khi rời trang.');
+      return;
+    }
 
     // Check authentication for ANY restricted feature
     if (!isAuthenticated && (item.skill || item.name === 'Lessons')) {
