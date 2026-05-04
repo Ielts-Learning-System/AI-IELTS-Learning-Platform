@@ -49,13 +49,26 @@ import {
   fetchMonitoringAttempts,
   fetchTeacherAttemptDetail,
   fetchTeacherExams,
-  gradeTeacherAttempt,
   publishTeacherExam,
   type ExamItem,
   type MonitoringAttempt,
   type SkillType,
   type TeacherAttemptDetail,
 } from '../../api/exam.api';
+import { MockExamGradingModal } from './MockExamGradingModal';
+
+// Wrapper to avoid lazy-import issues — renders into a React Portal-like pattern
+function MockExamGradingModalWrapper({
+  attempt,
+  onClose,
+  onGraded,
+}: {
+  attempt: TeacherAttemptDetail;
+  onClose: () => void;
+  onGraded: () => void;
+}) {
+  return <MockExamGradingModal attempt={attempt} onClose={onClose} onGraded={onGraded} />;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain types
@@ -1072,8 +1085,7 @@ function MonitoringSection() {
   const [attempts, setAttempts] = useState<MonitoringAttempt[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<TeacherAttemptDetail | null>(null);
-  const [grading, setGrading] = useState(false);
-  const [gradeBands, setGradeBands] = useState<Record<string, string>>({});
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -1086,31 +1098,20 @@ function MonitoringSection() {
 
   const loadDetail = async (attemptId: string) => {
     try {
+      setDetailLoading(true);
       const detail = await fetchTeacherAttemptDetail(attemptId);
       setSelected(detail);
-      setGradeBands({});
     } catch {
       toast.error('Không tải được chi tiết bài thi.');
+    } finally {
+      setDetailLoading(false);
     }
   };
 
-  const submitGrade = async () => {
-    if (!selected) return;
-    setGrading(true);
-    try {
-      const payload: Record<string, number> = {};
-      if (gradeBands.writing)   payload.writingBand   = Number(gradeBands.writing);
-      if (gradeBands.speaking)  payload.speakingBand  = Number(gradeBands.speaking);
-      if (gradeBands.reading)   payload.readingBand   = Number(gradeBands.reading);
-      if (gradeBands.listening) payload.listeningBand = Number(gradeBands.listening);
-      await gradeTeacherAttempt(selected._id, payload);
-      toast.success('Đã chấm điểm thành công!');
-      setSelected(null);
-    } catch {
-      toast.error('Không thể chấm điểm.');
-    } finally {
-      setGrading(false);
-    }
+  const refreshList = () => {
+    fetchMonitoringAttempts()
+      .then(setAttempts)
+      .catch(() => {});
   };
 
   const STATUS_LABEL: Record<string, string> = {
@@ -1121,94 +1122,83 @@ function MonitoringSection() {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition"
-      >
-        <span className="font-semibold text-slate-800">Giám sát bài thi (Monitoring)</span>
-        {open ? <ChevronUp className="h-5 w-5 text-slate-500" /> : <ChevronDown className="h-5 w-5 text-slate-500" />}
-      </button>
+    <>
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-slate-50 transition"
+        >
+          <span className="font-semibold text-slate-800">Giám sát bài thi (Monitoring)</span>
+          {open ? <ChevronUp className="h-5 w-5 text-slate-500" /> : <ChevronDown className="h-5 w-5 text-slate-500" />}
+        </button>
 
-      {open && (
-        <div className="border-t border-slate-100 px-6 pb-6 pt-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-20">
-              <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-            </div>
-          ) : attempts.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-400">Không có bài thi nào.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-100 text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-xs uppercase font-semibold tracking-wide text-slate-500">
-                    <th className="px-4 py-2.5 text-left">Học viên</th>
-                    <th className="px-4 py-2.5 text-left">Exam ID</th>
-                    <th className="px-4 py-2.5 text-left">Tiến độ</th>
-                    <th className="px-4 py-2.5 text-left">Trạng thái</th>
-                    <th className="px-4 py-2.5 text-right">Xem / Chấm</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {attempts.map((a) => (
-                    <tr key={a._id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-2.5 text-slate-700 font-mono text-xs">{a.userId.slice(-8)}</td>
-                      <td className="px-4 py-2.5 text-slate-500 font-mono text-xs">{a.examId.slice(-8)}</td>
-                      <td className="px-4 py-2.5 text-slate-600">{a.doneCount}/{a.totalSkills} kỹ năng</td>
-                      <td className="px-4 py-2.5">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                          {STATUS_LABEL[a.status] ?? a.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <button onClick={() => loadDetail(a._id)} className="text-xs font-semibold text-blue-600 hover:underline">
-                          Chi tiết
-                        </button>
-                      </td>
+        {open && (
+          <div className="border-t border-slate-100 px-6 pb-6 pt-4">
+            {loading ? (
+              <div className="flex items-center justify-center h-20">
+                <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+              </div>
+            ) : attempts.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-400">Không có bài thi nào.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-100 text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-xs uppercase font-semibold tracking-wide text-slate-500">
+                      <th className="px-4 py-2.5 text-left">Học viên</th>
+                      <th className="px-4 py-2.5 text-left">Exam ID</th>
+                      <th className="px-4 py-2.5 text-left">Tiến độ</th>
+                      <th className="px-4 py-2.5 text-left">Trạng thái</th>
+                      <th className="px-4 py-2.5 text-left">Band tổng</th>
+                      <th className="px-4 py-2.5 text-right">Xem / Chấm</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {attempts.map((a) => (
+                      <tr key={a._id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-2.5 text-slate-700 font-mono text-xs">{a.userId.slice(-8)}</td>
+                        <td className="px-4 py-2.5 text-slate-500 font-mono text-xs">{a.examId.slice(-8)}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{a.doneCount}/{a.totalSkills} kỹ năng</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            a.status === 'GRADED' ? 'bg-emerald-100 text-emerald-700'
+                            : a.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700'
+                            : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {STATUS_LABEL[a.status] ?? a.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-600 font-mono text-xs">
+                          {a.activeSkill ? `${a.activeSkill.skillType} đang làm` : '—'}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <button
+                            onClick={() => void loadDetail(a._id)}
+                            disabled={detailLoading}
+                            className="text-xs font-semibold text-blue-600 hover:underline disabled:opacity-50"
+                          >
+                            {detailLoading ? 'Đang tải...' : 'Chi tiết / Chấm'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-          {selected && (
-            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <div className="flex items-start justify-between mb-4">
-                <p className="font-semibold text-slate-800">Chi tiết bài thi — {selected._id.slice(-8)}</p>
-                <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-5">
-                {(['writing', 'speaking', 'reading', 'listening'] as SkillType[]).map((sk) => (
-                  <div key={sk}>
-                    <label className="mb-1 block text-xs capitalize text-slate-500">{sk} band</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min={0}
-                      max={9}
-                      value={gradeBands[sk] ?? ''}
-                      onChange={(e) => setGradeBands((b) => ({ ...b, [sk]: e.target.value }))}
-                      placeholder={selected.overallBandScores?.[sk] != null ? String(selected.overallBandScores[sk]) : '—'}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-                    />
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={submitGrade}
-                disabled={grading}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60 transition"
-              >
-                {grading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Lưu điểm
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Full-screen grading modal */}
+      {selected && (
+        <MockExamGradingModalWrapper
+          attempt={selected}
+          onClose={() => setSelected(null)}
+          onGraded={refreshList}
+        />
       )}
-    </div>
+    </>
   );
 }
 

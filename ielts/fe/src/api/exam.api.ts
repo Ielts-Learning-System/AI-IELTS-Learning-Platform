@@ -99,9 +99,11 @@ export interface TeacherAttemptDetail {
   skills: Array<{
     _id: string;
     skillType: SkillType;
+    skillRefId: string;
     status: 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED' | 'GRADED';
     gradedBand?: number;
     unansweredCount?: number;
+    answerSnapshot?: Record<string, unknown>;
     gradingMetadata?: {
       externalSubmissionId?: string;
       externalResult?: Record<string, unknown>;

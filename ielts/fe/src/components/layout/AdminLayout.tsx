@@ -22,7 +22,7 @@ const adminMenuItems = [
   { name: 'Gói cước', path: '/admin/billing/plans', icon: BadgeDollarSign },
   { name: 'Subscriptions', path: '/admin/billing/subscriptions', icon: BellRing },
   { name: 'AI Manager', path: '/admin/ai', icon: BotMessageSquare },
-  { name: 'Quản lý tài nguyên', path: '/admin/resources', icon: FileText },
+  //{ name: 'Quản lý tài nguyên', path: '/admin/resources', icon: FileText },
   { name: 'Báo cáo', path: '/admin/reports', icon: BarChart3 },
 ];
 
