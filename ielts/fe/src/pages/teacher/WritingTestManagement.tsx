@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MiniRichEditor from '../../components/MiniRichEditor';
+import ExcelImportWizard from './ExcelImportWizard';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import {
@@ -136,6 +137,7 @@ export default function WritingTestManagement() {
   const [sampleForm, setSampleForm] = useState<SampleFormState>(defaultSampleFormState);
   const [isSavingSample, setIsSavingSample] = useState(false);
 
+  const [isExcelWizardOpen, setIsExcelWizardOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [assigningTest, setAssigningTest] = useState<WritingTestItem | null>(null);
   const [students, setStudents] = useState<UserOption[]>([]);
@@ -566,6 +568,14 @@ export default function WritingTestManagement() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsExcelWizardOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 font-semibold text-emerald-700 transition hover:bg-emerald-100"
+            >
+              <Upload className="h-4 w-4" />
+              Import Excel
+            </button>
             <Link
               to="/teacher/writing-pdf"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700"
@@ -1399,6 +1409,17 @@ export default function WritingTestManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {isExcelWizardOpen && (
+        <ExcelImportWizard
+          scope="writing"
+          onClose={() => setIsExcelWizardOpen(false)}
+          onImported={() => {
+            setIsExcelWizardOpen(false);
+            window.location.reload();
+          }}
+        />
       )}
     </section>
   );

@@ -27,8 +27,7 @@ const PartSchema = new mongoose.Schema({
   partNumber: {
     type: Number,
     required: true,
-    min: 1,
-    max: 4
+    min: 1
   },
   title: {
     type: String,
@@ -40,7 +39,7 @@ const PartSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    default: ''
   },
   questions: [QuestionSchema]
 });
@@ -52,7 +51,7 @@ const ListeningTestSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    default: ''
   },
   parts: [PartSchema]
 }, {

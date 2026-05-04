@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const listeningController = require('../controllers/listening.controller');
+const importJsonController = require('../controllers/importJson.controller');
 const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
 
 // ====== Routes ======
@@ -22,6 +23,9 @@ router.get('/:id', listeningController.getTestById);
 
 // POST / - Tạo đề thi mới (Admin/Teacher)
 router.post('/', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.createTest);
+
+// POST /import-json - Import đề thi từ JSON đã parse từ Excel (Admin/Teacher only)
+router.post('/import-json', verifyToken, authorizeRoles('admin', 'teacher'), importJsonController.importJson);
 
 // PUT /:id - Sửa đề thi (Admin/Teacher)
 router.put('/:id', verifyToken, authorizeRoles('admin', 'teacher'), listeningController.updateTest);

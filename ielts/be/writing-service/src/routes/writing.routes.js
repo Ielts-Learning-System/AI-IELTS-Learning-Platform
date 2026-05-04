@@ -14,6 +14,7 @@ const {
   deleteSample,
 } = require('../controllers/writing.controller');
 const { verifyToken, isTeacher } = require('../middlewares/auth.middleware');
+const { importJson } = require('../controllers/importJson.controller');
 
 // WritingItem routes (public list page)
 router.get('/items', getItems);
@@ -27,6 +28,9 @@ router.get('/:id', getTestById);
 
 // POST / — create new writing prompt (no sample info here)
 router.post('/', verifyToken, isTeacher, createTest);
+
+// POST /import-json — Import đề thi từ JSON đã parse từ Excel
+router.post('/import-json', verifyToken, isTeacher, importJson);
 
 // PUT /:id — update writing prompt fields
 router.put('/:id', verifyToken, isTeacher, updateTest);

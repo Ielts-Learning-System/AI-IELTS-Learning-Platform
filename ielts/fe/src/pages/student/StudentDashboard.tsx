@@ -38,6 +38,21 @@ const formatDate = (value?: string) => {
   return date.toLocaleString('vi-VN');
 };
 
+/**
+ * Normalize a plan code or raw plan name (from DB or JWT) to a Vietnamese display label.
+ * Handles: "PRO", "IELTS_PRO_6M", "Gói Pro", "plus", "PLUS_3M", etc.
+ */
+const normalizePlanName = (raw: string): string => {
+  if (!raw || raw === 'N/A') return 'N/A';
+  const upper = raw.toUpperCase();
+  if (upper === 'FREE' || upper.includes('FREE') || upper.includes('MIEN_PHI')) return 'Gói Miễn Phí';
+  if (upper.includes('PRO')) return 'Gói Pro';
+  if (upper.includes('PLUS')) return 'Gói Plus';
+  if (upper.includes('BASIC')) return 'Gói Basic';
+  // Return the raw value if no known pattern matched (e.g. a custom plan name from DB)
+  return raw;
+};
+
 export default function StudentDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [planName, setPlanName] = useState('N/A');
@@ -157,7 +172,7 @@ export default function StudentDashboard() {
           .slice(0, 6);
 
         setDisplayName(profile?.name || 'Học viên');
-        setPlanName(subscriptionPlanName);
+        setPlanName(normalizePlanName(String(subscriptionPlanName)));
         setTotalTests(
           readingAttempts.length +
             listeningAttempts.length +

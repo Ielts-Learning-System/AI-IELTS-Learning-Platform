@@ -51,7 +51,7 @@ function buildCompletedKeys(attempts: PassageAttemptSummary[]): Set<string> {
   attempts.forEach((a) => {
     if (a.passageNumber != null) {
       const tid =
-        typeof a.testId === 'object'
+        a.testId !== null && typeof a.testId === 'object'
           ? (a.testId as { _id: string })._id
           : String(a.testId);
       keys.add(`${tid}-${a.passageNumber}`);

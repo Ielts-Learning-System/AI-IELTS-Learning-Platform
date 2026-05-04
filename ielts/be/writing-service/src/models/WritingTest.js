@@ -29,7 +29,7 @@ const WritingTestSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    default: ''
   },
   tasks: [TaskSchema]
 }, {

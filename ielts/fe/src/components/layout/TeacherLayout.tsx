@@ -17,7 +17,7 @@ const teacherMenuItems = [
   { name: 'Quản lý Writing', path: '/teacher/writing-management', icon: FilePenLine },
   { name: 'Quản lý Speaking', path: '/teacher/speaking-management', icon: Mic },
   { name: 'Quản lý Dictation', path: '/teacher/dictation', icon: AudioLines },
-  { name: 'Mock Test Builder', path: '/teacher/mock-exams', icon: ScrollText },
+  { name: 'Quản lý Thi thử', path: '/teacher/mock-exams', icon: ScrollText },
   { name: 'Chấm Writing', path: '/teacher/writing', icon: PenTool },
   { name: 'Chấm Speaking', path: '/teacher/speaking', icon: Mic },
   { name: 'KQ Auto-Graded', path: '/teacher/auto-graded-results', icon: ChartColumnBig },
