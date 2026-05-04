@@ -69,9 +69,10 @@ export default function StudentDashboard() {
       setIsLoading(true);
 
       try {
-        const [profileRes, subscriptionRes, readingRes, listeningRes, writingRes, speakingRes] = await Promise.allSettled([
+        const [profileRes, subscriptionRes, skillsRes, readingRes, listeningRes, writingRes, speakingRes] = await Promise.allSettled([
           apiClient.get('/auth/profile'),
           apiClient.get('/billing/my-subscription'),
+          apiClient.get('/billing/my-skills'),
           apiClient.get('/reading/my-attempts'),
           apiClient.get('/listening/my-attempts'),
           apiClient.get('/writing/submissions/my-submissions'),
@@ -82,6 +83,8 @@ export default function StudentDashboard() {
 
         const profile = profileRes.status === 'fulfilled' ? profileRes.value.data?.data : null;
         const subscriptionPayload = subscriptionRes.status === 'fulfilled' ? subscriptionRes.value.data : null;
+        // my-skills reads from JWT — always up-to-date after login/token refresh
+        const skillsPayload = skillsRes.status === 'fulfilled' ? skillsRes.value.data?.data : null;
 
         const readingAttempts =
           readingRes.status === 'fulfilled' ? toArray<any>(readingRes.value.data?.data) : [];
@@ -93,8 +96,12 @@ export default function StudentDashboard() {
           speakingRes.status === 'fulfilled' ? toArray<any>(speakingRes.value.data?.data) : [];
 
         const subscriptionPlanName =
+          // 1. my-skills reads directly from JWT — canonical source of truth
+          skillsPayload?.planName ||
+          // 2. fallback to billing subscription record planId name
           subscriptionPayload?.data?.planId?.name ||
           subscriptionPayload?.planFallback?.name ||
+          // 3. last resort: auth profile
           profile?.subscriptionPlan ||
           profile?.plan ||
           'N/A';
@@ -169,7 +176,7 @@ export default function StudentDashboard() {
           })),
         ]
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 6);
+          .slice(0, 3);
 
         setDisplayName(profile?.name || 'Học viên');
         setPlanName(normalizePlanName(String(subscriptionPlanName)));

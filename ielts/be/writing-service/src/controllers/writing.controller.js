@@ -1,6 +1,6 @@
 const Writing = require('../models/Writing');
 
-// Get all writings with optional filters (?isSample, ?type)
+// Get all writings with optional filters (?isSample, ?type, ?page, ?limit)
 exports.getItems = async (req, res) => {
   try {
     const filter = {};
@@ -12,8 +12,23 @@ exports.getItems = async (req, res) => {
       filter.type = req.query.type;
     }
 
-    const items = await Writing.find(filter).sort({ createdAt: -1 });
-    res.json(items);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 6));
+    const skip = (page - 1) * limit;
+
+    const [items, totalItems] = await Promise.all([
+      Writing.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Writing.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: items,
+      currentPage: page,
+      totalPages,
+      totalItems,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

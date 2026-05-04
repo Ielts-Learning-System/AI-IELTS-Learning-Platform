@@ -19,6 +19,7 @@ import {
   type ListeningTest,
   type PartAttemptSummary,
 } from '../api/listening.api';
+import { Pagination } from '../components/Pagination';
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export default function ListeningListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [partFilter, setPartFilter] = useState<number | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ── Fetch tests + my attempts in parallel ────────────────────────
   useEffect(() => {
@@ -168,6 +170,18 @@ export default function ListeningListPage() {
       return true;
     });
   }, [flatParts, searchTerm, partFilter, statusFilter, completedKeys]);
+
+  // ── Pagination ────────────────────────────────────────────────────
+  const PAGE_LIMIT = 6;
+  const totalPages = Math.max(1, Math.ceil(filteredParts.length / PAGE_LIMIT));
+
+  // Reset to page 1 when filters change
+  useMemo(() => { setCurrentPage(1); }, [searchTerm, partFilter, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pagedParts = useMemo(
+    () => filteredParts.slice((currentPage - 1) * PAGE_LIMIT, currentPage * PAGE_LIMIT),
+    [filteredParts, currentPage],
+  );
 
   // ── Summary counts (for filter badges) ───────────────────────────
   const doneParts = flatParts.filter((fp) => completedKeys.has(fp.key)).length;
@@ -271,8 +285,9 @@ export default function ListeningListPage() {
             </p>
           </div>
         ) : (
-          <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredParts.map((fp) => {
+          <>
+            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {pagedParts.map((fp) => {
               const isDone = completedKeys.has(fp.key);
 
               return (
@@ -362,6 +377,12 @@ export default function ListeningListPage() {
               );
             })}
           </section>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
     </div>

@@ -17,6 +17,9 @@ interface SpeakingListResponse {
   success: boolean;
   message?: string;
   data: SpeakingTestListItem[];
+  currentPage?: number;
+  totalPages?: number;
+  totalItems?: number;
 }
 
 interface SpeakingDetailResponse {
@@ -25,18 +28,33 @@ interface SpeakingDetailResponse {
   data: SpeakingTestDetail;
 }
 
+export interface SpeakingPagedResult {
+  data: SpeakingTestListItem[];
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+}
+
 export async function fetchSpeakingTests(
   signal?: AbortSignal,
-): Promise<SpeakingTestListItem[]> {
-  const { data: res } = await apiClient.get<SpeakingListResponse>('/speaking', {
-    signal,
-  });
+  page = 1,
+  limit = 6,
+): Promise<SpeakingPagedResult> {
+  const { data: res } = await apiClient.get<SpeakingListResponse>(
+    `/speaking?page=${page}&limit=${limit}`,
+    { signal },
+  );
 
   if (!res.success) {
     throw new Error(res.message ?? 'Khong the tai danh sach de Speaking.');
   }
 
-  return res.data ?? [];
+  return {
+    data: res.data ?? [],
+    currentPage: res.currentPage ?? page,
+    totalPages: res.totalPages ?? 1,
+    totalItems: res.totalItems ?? (res.data?.length ?? 0),
+  };
 }
 
 export async function fetchSpeakingTestById(

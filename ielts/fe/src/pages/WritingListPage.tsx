@@ -35,21 +35,92 @@ interface WritingItem {
 type Tab = 'practice' | 'samples';
 type Filter = 'All' | 'Task 1' | 'Task 2';
 
+// ── Pagination Component ──────────────────────────────────────────
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  const pages: (number | '...')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (currentPage > 3) pages.push('...');
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      pages.push(i);
+    }
+    if (currentPage < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1.5">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        ← Trước
+      </button>
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`ellipsis-${i}`} className="px-2 text-slate-400">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p as number)}
+            className={`h-9 w-9 rounded-xl text-sm font-semibold transition-colors ${
+              currentPage === p
+                ? 'bg-red-600 text-white shadow-sm shadow-red-200'
+                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Tiếp →
+      </button>
+    </div>
+  );
+}
+
 export default function WritingListPage() {
   const [items, setItems] = useState<WritingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('practice');
   const [filter, setFilter] = useState<Filter>('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, filter]);
 
   useEffect(() => {
     const controller = new AbortController();
     (async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get<WritingItem[]>('http://localhost:3000/api/writing/items', {
-          signal: controller.signal,
-        });
-        setItems(res.data);
+        const params = new URLSearchParams({ page: String(currentPage), limit: '6' });
+        if (filter !== 'All') params.set('type', filter);
+        const res = await axios.get<{ data: WritingItem[]; totalPages: number; currentPage: number; totalItems: number }>(
+          `http://localhost:3000/api/writing/items?${params}`,
+          { signal: controller.signal },
+        );
+        setItems(res.data.data);
+        setTotalPages(res.data.totalPages);
       } catch (err) {
         if (!axios.isCancel(err)) {
           console.error('Failed to fetch writing items:', err);
@@ -59,7 +130,7 @@ export default function WritingListPage() {
       }
     })();
     return () => controller.abort();
-  }, []);
+  }, [currentPage, filter]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'practice', label: 'Luyện tập' },
@@ -69,60 +140,66 @@ export default function WritingListPage() {
   const filters: Filter[] = ['All', 'Task 1', 'Task 2'];
 
   /* ---------- derived / filtered data ---------- */
+  // Backend already filters by type and paginates; split practice vs sample client-side
   const practiceItems = useMemo(
-    () => items.filter((i) => (filter === 'All' || i.type === filter)),
-    [items, filter],
+    () => items.filter((i) => activeTab === 'practice' ? true : false),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items],
   );
 
   // A "sample" card = any writing that has at least one sampleInfo entry
   const sampleItems = useMemo(
-    () => items.filter((i) => i.sampleInfos?.length > 0 && (filter === 'All' || i.type === filter)),
-    [items, filter],
+    () => items.filter((i) => i.sampleInfos?.length > 0),
+    [items],
   );
 
-  const visibleItems = activeTab === 'practice' ? practiceItems : sampleItems;
+  const visibleItems = activeTab === 'practice' ? items : sampleItems;
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       {/* ---- Header ---- */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900">IELTS Writing Hub</h1>
-        <p className="mt-1 text-slate-500">Luyện viết và tham khảo bài mẫu chất lượng cao</p>
-      </div>
+      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+          IELTS Writing Hub
+        </h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
+          Luyện viết và tham khảo bài mẫu chất lượng cao
+        </p>
 
-      {/* ---- Tabs ---- */}
-      <div className="flex gap-6 border-b border-slate-200">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`pb-3 text-sm font-semibold transition-colors ${
-              activeTab === tab.key
-                ? 'border-b-2 border-red-600 text-red-600'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        {/* Tabs */}
+        <div className="mt-6 flex gap-6 border-b border-slate-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`pb-3 text-sm font-semibold transition-colors ${
+                activeTab === tab.key
+                  ? 'border-b-2 border-red-600 text-red-600'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      {/* ---- Filter pills ---- */}
-      <div className="flex items-center gap-3">
-        {filters.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              filter === f
-                ? 'bg-red-100 text-red-700 font-bold'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {f === 'All' ? 'Tất cả' : f}
-          </button>
-        ))}
-      </div>
+        {/* Filter pills */}
+        <div className="mt-4 flex items-center gap-3">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                filter === f
+                  ? 'bg-red-100 text-red-700 font-bold'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {f === 'All' ? 'Tất cả' : f}
+            </button>
+          ))}
+        </div>
+      </header>
 
       {/* ---- Loading skeleton ---- */}
       {isLoading && (
@@ -149,15 +226,22 @@ export default function WritingListPage() {
 
       {/* ---- Grid ---- */}
       {!isLoading && visibleItems.length > 0 && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {visibleItems.map((item) =>
-            item.isSample ? (
-              <SampleCard key={item._id} item={item} />
-            ) : (
-              <PracticeCard key={item._id} item={item} />
-            ),
-          )}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {visibleItems.map((item) =>
+              item.isSample ? (
+                <SampleCard key={item._id} item={item} />
+              ) : (
+                <PracticeCard key={item._id} item={item} />
+              ),
+            )}
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* ---- Empty state ---- */}

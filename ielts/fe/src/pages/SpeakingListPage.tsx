@@ -16,6 +16,7 @@ import {
   type SpeakingTestListItem,
 } from '../api/speaking.api';
 import { apiClient } from '../lib/api/client';
+import { Pagination } from '../components/Pagination';
 
 interface SubmissionStatus {
   /** Most recent submission id for this test */
@@ -76,8 +77,14 @@ export default function SpeakingListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   /** Map of testId → most recent submission status */
   const [submissionMap, setSubmissionMap] = useState<Record<string, SubmissionStatus>>({});
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -86,8 +93,9 @@ export default function SpeakingListPage() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchSpeakingTests(controller.signal);
-        setTests(data);
+        const result = await fetchSpeakingTests(controller.signal, currentPage, 6);
+        setTests(result.data);
+        setTotalPages(result.totalPages);
       } catch (err) {
         const message = getErrorMessage(err);
         if (message) setError(message);
@@ -120,7 +128,7 @@ export default function SpeakingListPage() {
     loadSubmissions();
 
     return () => controller.abort();
-  }, []);
+  }, [currentPage]);
 
   const filteredTests = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -130,30 +138,22 @@ export default function SpeakingListPage() {
   }, [tests, searchTerm]);
 
   return (
-    <div
-      className="min-h-screen bg-slate-50 px-4 py-8 md:px-8 lg:px-12"
-      style={{ fontFamily: '"Segoe UI", Tahoma, sans-serif' }}
-    >
+    <div className="min-h-screen bg-slate-50 px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-7xl space-y-8">
-        <header className="overflow-hidden rounded-[32px] border border-red-100 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-red-600">
-                <Mic className="h-3.5 w-3.5" />
-                Speaking Library
-              </div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-                Chọn một đề Speaking để bắt đầu luyện tập
-              </h1>
-              <p className="text-sm leading-7 text-slate-600 md:text-base">
-                Duyệt kho đề Speaking theo chủ đề, mở từng bài để xem đầy đủ Part 1, Part 2 và Part 3,
-                rồi luyện nói theo đúng cấu trúc IELTS.
-              </p>
-            </div>
+        <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+            IELTS Speaking Practice
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
+            Duyệt kho đề Speaking theo chủ đề, mở từng bài để xem đầy đủ Part 1, Part 2 và Part 3,
+            rồi luyện nói theo đúng cấu trúc IELTS.
+          </p>
 
-            <div className="relative w-full max-w-md">
+          {/* Search */}
+          <div className="mt-6">
+            <div className="relative max-w-xl">
               <Search
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 size={18}
               />
               <input
@@ -161,7 +161,7 @@ export default function SpeakingListPage() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Tìm đề theo tiêu đề..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3 text-slate-700 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
               />
             </div>
           </div>
@@ -190,8 +190,9 @@ export default function SpeakingListPage() {
             </p>
           </div>
         ) : (
-          <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTests.map((test, index) => (
+          <>
+            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredTests.map((test, index) => (
               <article
                 key={test._id}
                 className="group flex flex-col rounded-[28px] border border-red-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_50px_rgba(239,68,68,0.15)]"
@@ -259,6 +260,12 @@ export default function SpeakingListPage() {
               </article>
             ))}
           </section>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
     </div>

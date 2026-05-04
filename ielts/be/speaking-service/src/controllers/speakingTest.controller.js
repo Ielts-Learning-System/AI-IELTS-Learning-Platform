@@ -10,13 +10,27 @@ const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
  */
 exports.getAllSpeakingTests = async (req, res) => {
   try {
-    const tests = await SpeakingTest.find({}, '_id title createdAt')
-      .sort({ createdAt: -1 })
-      .lean();
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 6));
+    const skip = (page - 1) * limit;
+
+    const [tests, totalItems] = await Promise.all([
+      SpeakingTest.find({}, '_id title createdAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      SpeakingTest.countDocuments({}),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     return res.json({
       success: true,
       data: tests,
+      currentPage: page,
+      totalPages,
+      totalItems,
     });
   } catch (error) {
     return res.status(500).json({

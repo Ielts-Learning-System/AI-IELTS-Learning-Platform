@@ -377,8 +377,8 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="flex h-[calc(100vh-4rem)] w-64 flex-col border-r border-red-100 bg-white">
-        <div className="flex-1 overflow-y-auto py-6 px-4">
+      <aside className="sticky top-0 flex h-screen w-64 flex-col border-r border-red-100 bg-white">
+        <div className="flex-1 overflow-y-auto py-6 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="space-y-1">
             <p className="mb-4 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
               Luyện tập

@@ -19,6 +19,7 @@ import {
   type ReadingTest,
   type PassageAttemptSummary,
 } from '../api/reading.api';
+import { Pagination } from '../components/Pagination';
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export default function ReadingListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [passageFilter, setPassageFilter] = useState<number | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ── Fetch tests + my attempts in parallel ────────────────────────
   useEffect(() => {
@@ -173,6 +175,18 @@ export default function ReadingListPage() {
     });
   }, [flatPassages, searchTerm, passageFilter, statusFilter, completedKeys]);
 
+  // ── Pagination ────────────────────────────────────────────────────
+  const PAGE_LIMIT = 6;
+  const totalPages = Math.max(1, Math.ceil(filteredPassages.length / PAGE_LIMIT));
+
+  // Reset to page 1 when filters change
+  useMemo(() => { setCurrentPage(1); }, [searchTerm, passageFilter, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pagedPassages = useMemo(
+    () => filteredPassages.slice((currentPage - 1) * PAGE_LIMIT, currentPage * PAGE_LIMIT),
+    [filteredPassages, currentPage],
+  );
+
   // ── Summary counts for filter badges ─────────────────────────────
   const doneCount = flatPassages.filter((fp) => completedKeys.has(fp.key)).length;
   const newCount = flatPassages.length - doneCount;
@@ -180,32 +194,24 @@ export default function ReadingListPage() {
   // ── Render ───────────────────────────────────────────────────────
 
   return (
-    <div
-      className="min-h-screen bg-slate-50 px-4 py-8 md:px-8 lg:px-12"
-      style={{ fontFamily: '"Segoe UI", Tahoma, sans-serif' }}
-    >
+    <div className="min-h-screen bg-slate-50 px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-7xl space-y-8">
 
         {/* ── Header ─────────────────────────────────────────── */}
-        <header className="overflow-hidden rounded-[32px] border border-red-100 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-red-600">
-                <BookOpenText className="h-3.5 w-3.5" />
-                Reading Library
-              </div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-                Chọn một Passage Reading để bắt đầu luyện tập
-              </h1>
-              <p className="text-sm leading-7 text-slate-600 md:text-base">
-                Luyện từng Passage riêng biệt để tập trung vào từng loại văn bản và theo
-                dõi tiến bộ chi tiết hơn.
-              </p>
-            </div>
+        <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
+            IELTS Reading Practice
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
+            Luyện từng Passage riêng biệt để tập trung vào từng loại văn bản và theo dõi
+            tiến bộ chi tiết hơn.
+          </p>
 
-            <div className="relative w-full max-w-md">
+          {/* Search */}
+          <div className="mt-6">
+            <div className="relative max-w-xl">
               <Search
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 size={18}
               />
               <input
@@ -213,14 +219,14 @@ export default function ReadingListPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Tìm theo tên đề thi..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3 text-slate-700 outline-none transition focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
               />
             </div>
           </div>
 
           {/* Filter bar */}
           {!loading && !error && flatPassages.length > 0 && (
-            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               {/* Passage filter */}
               <select
                 value={String(passageFilter)}
@@ -229,7 +235,7 @@ export default function ReadingListPage() {
                     e.target.value === 'all' ? 'all' : Number(e.target.value),
                   )
                 }
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
               >
                 <option value="all">Tất cả Passages</option>
                 <option value="1">Passage 1</option>
@@ -241,7 +247,7 @@ export default function ReadingListPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
               >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="done">Đã hoàn thành ({doneCount})</option>
@@ -284,8 +290,9 @@ export default function ReadingListPage() {
             </p>
           </div>
         ) : (
-          <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredPassages.map((fp, index) => {
+          <>
+            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {pagedPassages.map((fp, index) => {
               const isDone = completedKeys.has(fp.key);
 
               return (
@@ -379,6 +386,12 @@ export default function ReadingListPage() {
               );
             })}
           </section>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
     </div>
