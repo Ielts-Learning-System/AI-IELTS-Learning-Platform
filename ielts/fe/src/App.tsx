@@ -50,7 +50,7 @@ import SpeakingPdfExtractor from './pages/teacher/SpeakingPdfExtractor';
 import MockExamDashboard from './pages/mock/MockExamDashboard';
 import MockExamExecutionPage from './pages/mock/MockExamExecutionPage';
 import MockExamBuilderPage from './pages/teacher/MockExamBuilderPage';
-
+import DictationManagement from './pages/teacher/DictationManagement';
 /**
  * NotFound (404) page component
  */
@@ -190,6 +190,7 @@ export default function App() {
             <Route path="speaking/:id" element={<SpeakingGradingDetail />} />
             <Route path="auto-graded-results" element={<ReadingListeningProgress />} />
             <Route path="students" element={<TeacherDashboard />} />
+            <Route path="dictation" element={<DictationManagement />} />
           </Route>
         </Route>
 

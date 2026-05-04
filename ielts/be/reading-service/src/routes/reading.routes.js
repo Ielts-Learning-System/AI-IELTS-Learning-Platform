@@ -29,8 +29,11 @@ router.put('/:id', verifyToken, authorizeRoles('admin', 'teacher'), readingContr
 // DELETE /:id - Xóa đề thi (Owner/Admin only)
 router.delete('/:id', verifyToken, authorizeRoles('admin', 'teacher'), readingController.deleteTest);
 
-// POST /:id/submit - Student nộp bài và hệ thống tự chấm
+// POST /:id/submit - Student nộp toàn bộ bài (legacy / full test)
 router.post('/:id/submit', verifyToken, authorizeRoles('student'), readingController.submitTest);
+
+// POST /:id/submit-passage - Student nộp một Passage cụ thể
+router.post('/:id/submit-passage', verifyToken, authorizeRoles('student'), readingController.submitPassage);
 
 // POST /generate-ai - Generate test from AI based on parameters (Admin/Teacher only)
 router.post('/generate-ai', verifyToken, authorizeRoles('admin', 'teacher'), readingController.generateTestFromAI);

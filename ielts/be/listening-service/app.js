@@ -3,6 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const listeningRoutes = require('./src/routes/listening.routes');
+const dictationRoutes = require('./src/routes/dictation.routes');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/dictation', dictationRoutes);
 app.use('/', listeningRoutes);
 
 module.exports = app;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Split from 'react-split';
 import { CheckCircle } from 'lucide-react';
@@ -30,6 +30,10 @@ interface TestData {
 export function ListeningExamPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  // ?part=N means student is practising a single part (from the flattened list page)
+  const partParam = searchParams.get('part') ? Number(searchParams.get('part')) : null;
+
   const [testData, setTestData] = useState<TestData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -72,10 +76,27 @@ export function ListeningExamPage() {
     );
   }
 
-  const currentPart = testData.parts[currentPartIndex];
+  // When ?part=N is set, expose only that single part to the student
+  const visibleParts: Part[] = partParam
+    ? testData.parts.filter((p) => p.partNumber === partParam)
+    : testData.parts;
 
-  // Calculate starting index for continuous numbering (1-40)
-  const startingIndex = testData.parts.slice(0, currentPartIndex).reduce((acc, part) => acc + part.questions.length, 0);
+  // Guard: part requested but not found in this test
+  if (partParam && visibleParts.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <p className="text-lg text-red-600">Part {partParam} không tồn tại trong đề thi này.</p>
+      </div>
+    );
+  }
+
+  const currentPart = visibleParts[currentPartIndex];
+
+  // Calculate starting index for continuous numbering
+  // When a single part is shown, numbering starts from 1
+  const startingIndex = partParam
+    ? 0
+    : testData.parts.slice(0, currentPartIndex).reduce((acc, part) => acc + part.questions.length, 0);
 
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -90,32 +111,35 @@ export function ListeningExamPage() {
       return;
     }
 
-    const allQuestions = testData.parts.flatMap((part) => part.questions);
-    const studentAnswers = allQuestions.map((question) => String(answers[question._id] || ''));
     const timeSpent = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
 
     try {
       setIsSubmitting(true);
-      const response = await axios.post(
-        `http://localhost:3000/api/listening/${id}/submit`,
-        {
-          studentAnswers,
-          timeSpent,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      let response;
+
+      if (partParam) {
+        // ── Single-part submission ──────────────────────────────
+        const partQuestions = visibleParts[0]?.questions ?? [];
+        const studentAnswers = partQuestions.map((q) => String(answers[q._id] || ''));
+        response = await axios.post(
+          `http://localhost:3000/api/listening/${id}/submit-part`,
+          { studentAnswers, timeSpent, partNumber: partParam },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      } else {
+        // ── Full-test submission (legacy / all-parts view) ──────
+        const allQuestions = testData.parts.flatMap((part) => part.questions);
+        const studentAnswers = allQuestions.map((q) => String(answers[q._id] || ''));
+        response = await axios.post(
+          `http://localhost:3000/api/listening/${id}/submit`,
+          { studentAnswers, timeSpent },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      }
 
       const attempt = response.data?.data;
-      const payload = {
-        attempt,
-        module: 'Listening' as const,
-      };
+      const payload = { attempt, module: 'Listening' as const };
       sessionStorage.setItem('latestAttemptResult', JSON.stringify(payload));
-
       navigate('/results', { state: payload });
     } catch (error: any) {
       console.error('❌ Error submitting listening test:', error);
@@ -131,8 +155,22 @@ export function ListeningExamPage() {
       {/* Header */}
       <div className="h-16 border-b border-slate-200 bg-white shadow-sm flex items-center justify-between px-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{testData.title}</h1>
-          <p className="text-sm text-slate-500">{testData.description}</p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {testData.title}
+            {partParam && (
+              <span className="ml-2 text-red-600">— Part {partParam}</span>
+            )}
+          </h1>
+          {partParam ? (
+            <button
+              onClick={() => navigate(-1)}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              ← Quay lại danh sách
+            </button>
+          ) : (
+            <p className="text-sm text-slate-500">{testData.description}</p>
+          )}
         </div>
         <button
           onClick={handleSubmit}
@@ -146,21 +184,24 @@ export function ListeningExamPage() {
 
       {/* Control bar */}
       <div className="sticky top-16 bg-white z-10 border-b border-slate-200 flex items-center gap-4 px-8 py-3">
-        <div className="flex gap-2 shrink-0">
-          {testData.parts.map((p, idx) => (
-            <button
-              key={p.partNumber}
-              onClick={() => setCurrentPartIndex(idx)}
-              className={`px-5 py-2 text-sm rounded-lg transition-colors ${
-                currentPartIndex === idx
-                  ? 'bg-red-600 text-white font-bold shadow-sm'
-                  : 'bg-slate-100 text-slate-600 font-medium hover:bg-red-50 hover:text-red-700'
-              }`}
-            >
-              Part {p.partNumber}
-            </button>
-          ))}
-        </div>
+        {/* Hide part tabs when practising a single part */}
+        {!partParam && (
+          <div className="flex gap-2 shrink-0">
+            {visibleParts.map((p, idx) => (
+              <button
+                key={p.partNumber}
+                onClick={() => setCurrentPartIndex(idx)}
+                className={`px-5 py-2 text-sm rounded-lg transition-colors ${
+                  currentPartIndex === idx
+                    ? 'bg-red-600 text-white font-bold shadow-sm'
+                    : 'bg-slate-100 text-slate-600 font-medium hover:bg-red-50 hover:text-red-700'
+                }`}
+              >
+                Part {p.partNumber}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
           <audio
             controls

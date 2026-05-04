@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Split from 'react-split';
 import toast, { Toaster } from 'react-hot-toast';
@@ -15,6 +15,7 @@ interface Question {
 
 interface Passage {
   _id: string;
+  passageNumber?: number;
   title: string;
   content: string;
   questions: Question[];
@@ -30,12 +31,17 @@ interface TestData {
 export function ReadingExamPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  // ?passage=N means student is practising a single passage (from the flattened list page)
+  const passageParam = searchParams.get('passage') ? Number(searchParams.get('passage')) : null;
+
   const [testData, setTestData] = useState<TestData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startTime] = useState(() => Date.now());
 
+  // All questions flattened — used for legacy full-test submit
   const allQuestions = useMemo(
     () => testData?.passages.flatMap((item) => item.questions) || [],
     [testData],
@@ -75,7 +81,21 @@ export function ReadingExamPage() {
     );
   }
 
-  const passage = testData.passages[0];
+  // When ?passage=N is set, isolate that specific passage
+  const activePassage: Passage | undefined = passageParam
+    ? testData.passages.find((p) => p.passageNumber === passageParam)
+    : testData.passages[0];
+
+  // Guard: passage requested but not found
+  if (!activePassage) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <p className="text-lg text-red-600">
+          Passage {passageParam} không tồn tại trong đề thi này.
+        </p>
+      </div>
+    );
+  }
 
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers((prev) => ({
@@ -93,32 +113,35 @@ export function ReadingExamPage() {
       return;
     }
 
-    const studentAnswers = allQuestions.map((question) => String(answers[question._id] || ''));
     const timeSpent = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
 
     try {
       setIsSubmitting(true);
-      const response = await axios.post(
-        `http://localhost:3000/api/reading/${id}/submit`,
-        {
-          studentAnswers,
-          timeSpent,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      let response;
+
+      if (passageParam && activePassage) {
+        // ── Single-passage submission ────────────────────────
+        const studentAnswers = activePassage.questions.map(
+          (q) => String(answers[q._id] || ''),
+        );
+        response = await axios.post(
+          `http://localhost:3000/api/reading/${id}/submit-passage`,
+          { studentAnswers, timeSpent, passageNumber: passageParam },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      } else {
+        // ── Full-test submission (legacy / no ?passage param) ──
+        const studentAnswers = allQuestions.map((q) => String(answers[q._id] || ''));
+        response = await axios.post(
+          `http://localhost:3000/api/reading/${id}/submit`,
+          { studentAnswers, timeSpent },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+      }
 
       const attempt = response.data?.data;
-
-      const payload = {
-        attempt,
-        module: 'Reading' as const,
-      };
+      const payload = { attempt, module: 'Reading' as const };
       sessionStorage.setItem('latestAttemptResult', JSON.stringify(payload));
-
       navigate('/results', { state: payload });
     } catch (error: any) {
       console.error('❌ Error submitting reading test:', error);
@@ -134,8 +157,22 @@ export function ReadingExamPage() {
       {/* Header */}
       <div className="h-16 border-b border-slate-200 bg-white shadow-sm flex items-center justify-between px-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{testData.title}</h1>
-          <p className="text-sm text-slate-500">{testData.description}</p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {testData.title}
+            {passageParam && (
+              <span className="ml-2 text-indigo-600">— Passage {passageParam}</span>
+            )}
+          </h1>
+          {passageParam ? (
+            <button
+              onClick={() => navigate(-1)}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              ← Quay lại danh sách
+            </button>
+          ) : (
+            <p className="text-sm text-slate-500">{testData.description}</p>
+          )}
         </div>
         <button
           onClick={handleSubmit}
@@ -162,16 +199,16 @@ export function ReadingExamPage() {
         <div className="overflow-y-auto bg-white">
           <div
             className="prose prose-lg prose-red max-w-none text-justify p-6"
-            dangerouslySetInnerHTML={{ __html: passage.content }}
+            dangerouslySetInnerHTML={{ __html: activePassage.content }}
           />
         </div>
 
         {/* Right Pane: Questions */}
         <div className="overflow-y-auto bg-slate-50 p-6">
           <div className="max-w-2xl mx-auto space-y-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">{passage.title}</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-6">{activePassage.title}</h2>
 
-            {passage.questions.map((question, index) => (
+            {activePassage.questions.map((question, index) => (
               <div
                 key={question._id}
                 className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow"

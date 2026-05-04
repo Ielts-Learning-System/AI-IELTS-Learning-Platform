@@ -3,21 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CalendarDays,
+  CheckCircle2,
   ChevronRight,
+  Circle,
   Headphones,
   HelpCircle,
-  Layers,
+  RotateCcw,
   Search,
 } from 'lucide-react';
-import { fetchListeningTests, type ListeningTest } from '../api/listening.api';
 import axios from 'axios';
+import {
+  fetchListeningTests,
+  fetchMyListeningAttempts,
+  type FlattenedPart,
+  type ListeningTest,
+  type PartAttemptSummary,
+} from '../api/listening.api';
+
+// ── Helpers ────────────────────────────────────────────────────────
 
 function formatDate(dateString?: string): string {
   if (!dateString) return 'Ngày chưa cập nhật';
-
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return 'Ngày không hợp lệ';
-
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
     month: 'short',
@@ -25,57 +33,54 @@ function formatDate(dateString?: string): string {
   }).format(date);
 }
 
-function getPartCount(test: ListeningTest): number {
-  if (typeof test.partCount === 'number') return test.partCount;
-  return Array.isArray(test.parts) ? test.parts.length : 0;
-}
-
-function getQuestionCount(test: ListeningTest): number {
-  if (typeof test.totalQuestionCount === 'number') return test.totalQuestionCount;
-
-  if (Array.isArray(test.parts)) {
-    return test.parts.reduce(
-      (sum, part) =>
-        sum + (Array.isArray(part.questions) ? part.questions.length : 0),
-      0,
-    );
-  }
-
-  return 0;
-}
-
 function getErrorMessage(err: unknown): string {
   if (axios.isCancel(err)) return '';
   if (axios.isAxiosError(err)) {
     if (err.response) {
       const data = err.response.data as { message?: string } | undefined;
-      return (
-        data?.message ??
-        `Không thể tải danh sách đề thi (${err.response.status}).`
-      );
+      return data?.message ?? `Không thể tải danh sách đề thi (${err.response.status}).`;
     }
     return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
   }
-  return err instanceof Error
-    ? err.message
-    : 'Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.';
+  return err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu.';
 }
+
+/** Build the `${testId}-${partNumber}` Set from the user's attempt history */
+function buildCompletedKeys(attempts: PartAttemptSummary[]): Set<string> {
+  const keys = new Set<string>();
+  attempts.forEach((a) => {
+    if (a.partNumber != null) {
+      const tid =
+        typeof a.testId === 'object'
+          ? (a.testId as { _id: string })._id
+          : String(a.testId);
+      keys.add(`${tid}-${a.partNumber}`);
+    }
+  });
+  return keys;
+}
+
+// ── Types ──────────────────────────────────────────────────────────
+
+type StatusFilter = 'all' | 'done' | 'new';
+
+// ── Skeleton ───────────────────────────────────────────────────────
 
 function LoadingSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
-          key={`listening-skeleton-${index}`}
+          key={`sk-${i}`}
           className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
         >
           <div className="mb-4 flex gap-2">
             <div className="h-6 w-24 rounded-full bg-slate-200" />
+            <div className="h-6 w-20 rounded-full bg-slate-100" />
           </div>
           <div className="mb-2 h-5 w-3/4 rounded bg-slate-200" />
-          <div className="mb-2 h-4 w-full rounded bg-slate-100" />
-          <div className="mb-5 h-4 w-5/6 rounded bg-slate-100" />
-          <div className="mb-4 h-4 w-2/3 rounded bg-slate-100" />
+          <div className="mb-5 h-4 w-full rounded bg-slate-100" />
+          <div className="mb-4 h-4 w-1/2 rounded bg-slate-100" />
           <div className="h-10 w-full rounded-lg bg-red-100" />
         </div>
       ))}
@@ -83,22 +88,48 @@ function LoadingSkeleton() {
   );
 }
 
+// ── Main Component ─────────────────────────────────────────────────
+
 export default function ListeningListPage() {
   const navigate = useNavigate();
-  const [tests, setTests] = useState<ListeningTest[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>('');
 
+  // ── Data state ───────────────────────────────────────────────────
+  const [tests, setTests] = useState<ListeningTest[]>([]);
+  const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Filter state ─────────────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState('');
+  const [partFilter, setPartFilter] = useState<number | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  // ── Fetch tests + my attempts in parallel ────────────────────────
   useEffect(() => {
     const controller = new AbortController();
 
-    const loadTests = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchListeningTests(controller.signal);
-        setTests(data);
+
+        const [testsResult, attemptsResult] = await Promise.allSettled([
+          fetchListeningTests(controller.signal),
+          fetchMyListeningAttempts(controller.signal),
+        ]);
+
+        if (testsResult.status === 'rejected') {
+          const msg = getErrorMessage(testsResult.reason);
+          if (msg) setError(msg);
+          return;
+        }
+
+        setTests(testsResult.value);
+
+        if (attemptsResult.status === 'fulfilled') {
+          setCompletedKeys(buildCompletedKeys(attemptsResult.value));
+        }
+        // If attempts fetch fails (not logged in etc.), just leave completedKeys empty
       } catch (err) {
         const msg = getErrorMessage(err);
         if (msg) setError(msg);
@@ -107,34 +138,59 @@ export default function ListeningListPage() {
       }
     };
 
-    loadTests();
-
+    load();
     return () => controller.abort();
   }, []);
 
-  const filteredTests = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    if (!normalizedSearch) return tests;
+  // ── Flatten tests → individual part cards ────────────────────────
+  const flatParts = useMemo<FlattenedPart[]>(() => {
+    return tests.flatMap((test) =>
+      (test.parts ?? []).map((part) => ({
+        key: `${test._id}-${part.partNumber ?? 0}`,
+        testId: test._id,
+        testTitle: test.title ?? 'Untitled Listening Test',
+        testCreatedAt: test.createdAt,
+        partNumber: part.partNumber ?? 0,
+        partTitle: part.title,
+        questionCount: part.questionCount ?? (part.questions?.length ?? 0),
+      })),
+    );
+  }, [tests]);
 
-    return tests.filter((test) => {
-      const title = (test.title ?? '').toLowerCase();
-      return title.includes(normalizedSearch);
+  // ── Apply search + part + status filters ─────────────────────────
+  const filteredParts = useMemo<FlattenedPart[]>(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return flatParts.filter((fp) => {
+      if (q && !fp.testTitle.toLowerCase().includes(q)) return false;
+      if (partFilter !== 'all' && fp.partNumber !== partFilter) return false;
+      const done = completedKeys.has(fp.key);
+      if (statusFilter === 'done' && !done) return false;
+      if (statusFilter === 'new' && done) return false;
+      return true;
     });
-  }, [tests, searchTerm]);
+  }, [flatParts, searchTerm, partFilter, statusFilter, completedKeys]);
+
+  // ── Summary counts (for filter badges) ───────────────────────────
+  const doneParts = flatParts.filter((fp) => completedKeys.has(fp.key)).length;
+  const newParts = flatParts.length - doneParts;
+
+  // ── Render ───────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-7xl space-y-8">
-        {/* Header */}
+
+        {/* ── Header ─────────────────────────────────────────── */}
         <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
             IELTS Listening Practice
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
-            Rèn luyện kỹ năng nghe mỗi ngày để nắm bắt thông tin nhanh hơn, cải
-            thiện phản xạ và chinh phục band điểm mục tiêu.
+            Rèn luyện từng Part riêng biệt để bắt kịp tiến độ học tập và theo dõi
+            kết quả chi tiết hơn.
           </p>
 
+          {/* Search */}
           <div className="mt-6">
             <div className="relative max-w-xl">
               <Search
@@ -144,15 +200,53 @@ export default function ListeningListPage() {
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Tìm đề theo tiêu đề..."
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm theo tên đề thi..."
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
               />
             </div>
           </div>
+
+          {/* Filter bar */}
+          {!loading && !error && flatParts.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {/* Part filter */}
+              <select
+                value={String(partFilter)}
+                onChange={(e) =>
+                  setPartFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))
+                }
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+              >
+                <option value="all">Tất cả Parts</option>
+                <option value="1">Part 1</option>
+                <option value="2">Part 2</option>
+                <option value="3">Part 3</option>
+                <option value="4">Part 4</option>
+              </select>
+
+              {/* Status filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="done">Đã hoàn thành ({doneParts})</option>
+                <option value="new">Chưa làm ({newParts})</option>
+              </select>
+
+              {/* Result count */}
+              {(partFilter !== 'all' || statusFilter !== 'all' || searchTerm) && (
+                <span className="text-sm text-slate-500">
+                  {filteredParts.length} kết quả
+                </span>
+              )}
+            </div>
+          )}
         </header>
 
-        {/* Content */}
+        {/* ── Content ────────────────────────────────────────── */}
         {loading ? (
           <LoadingSkeleton />
         ) : error ? (
@@ -160,83 +254,110 @@ export default function ListeningListPage() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 text-red-500" size={20} />
               <div>
-                <h2 className="text-lg font-semibold">
-                  Không thể tải danh sách đề thi
-                </h2>
+                <h2 className="text-lg font-semibold">Không thể tải danh sách đề thi</h2>
                 <p className="mt-1 text-sm">{error}</p>
               </div>
             </div>
           </div>
-        ) : filteredTests.length === 0 ? (
+        ) : filteredParts.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-red-600">
               <Headphones size={36} />
             </div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Chưa có đề phù hợp
-            </h2>
+            <h2 className="text-xl font-semibold text-slate-900">Chưa có đề phù hợp</h2>
             <p className="mt-2 text-slate-600">
-              Hãy thử từ khóa khác để khám phá thêm bài luyện Listening.
+              {flatParts.length === 0
+                ? 'Chưa có đề thi nào được thêm vào hệ thống.'
+                : 'Hãy thử bỏ bộ lọc hoặc đổi từ khóa.'}
             </p>
           </div>
         ) : (
           <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTests.map((test) => {
-              const partCount = getPartCount(test);
-              const questionCount = getQuestionCount(test);
-              const title = test.title ?? 'Untitled Listening Test';
+            {filteredParts.map((fp) => {
+              const isDone = completedKeys.has(fp.key);
 
               return (
                 <article
-                  key={test._id}
-                  onClick={() => navigate(`/listening/ielts/${test._id}`)}
+                  key={fp.key}
+                  onClick={() =>
+                    navigate(`/listening/ielts/${fp.testId}?part=${fp.partNumber}`)
+                  }
                   className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
                 >
-                  {/* Badge */}
-                  <div className="mb-4 flex flex-wrap gap-2">
+                  {/* Badges row */}
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
                       <Headphones size={12} />
                       Listening
                     </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      Part {fp.partNumber}
+                    </span>
+                    {/* Status badge */}
+                    {isDone ? (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                        <CheckCircle2 size={11} />
+                        Đã hoàn thành
+                      </span>
+                    ) : (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                        <Circle size={11} />
+                        Chưa làm
+                      </span>
+                    )}
                   </div>
 
                   {/* Title */}
                   <h3 className="line-clamp-2 text-lg font-bold text-slate-900">
-                    {title}
+                    {fp.testTitle}{' '}
+                    <span className="text-red-600">— Part {fp.partNumber}</span>
                   </h3>
 
-                  {/* Description */}
-                  <p className="mt-2 line-clamp-2 min-h-10 text-sm text-slate-600">
-                    {test.description ||
-                      'Bài luyện tập mô phỏng đề IELTS Listening với nhiều dạng câu hỏi thực chiến.'}
-                  </p>
+                  {/* Part subtitle */}
+                  {fp.partTitle && (
+                    <p className="mt-1 line-clamp-1 text-sm text-slate-500 italic">
+                      {fp.partTitle}
+                    </p>
+                  )}
 
                   {/* Meta */}
                   <div className="mt-4 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
-                      <Layers size={16} className="text-red-500" />
-                      <span>{partCount} Parts</span>
-                      <span className="text-slate-300">•</span>
                       <HelpCircle size={16} className="text-red-500" />
-                      <span>{questionCount} Questions</span>
+                      <span>{fp.questionCount} Questions</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays size={16} className="text-red-500" />
-                      <span>{formatDate(test.createdAt)}</span>
-                    </div>
+                    {fp.testCreatedAt && (
+                      <div className="flex items-center gap-2">
+                        <CalendarDays size={16} className="text-red-500" />
+                        <span>{formatDate(fp.testCreatedAt)}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* CTA */}
                   <button
                     type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/listening/ielts/${test._id}`);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/listening/ielts/${fp.testId}?part=${fp.partNumber}`);
                     }}
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                    className={`mt-6 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
+                      isDone
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-red-600 hover:bg-red-700'
+                    }`}
                   >
-                    Bắt đầu làm bài
-                    <ChevronRight size={16} />
+                    {isDone ? (
+                      <>
+                        <RotateCcw size={15} />
+                        Làm lại
+                      </>
+                    ) : (
+                      <>
+                        Bắt đầu làm bài
+                        <ChevronRight size={16} />
+                      </>
+                    )}
                   </button>
                 </article>
               );

@@ -35,6 +35,18 @@ exports.getAllTests = async (req, res) => {
                 },
               },
             },
+            // Per-part summary for the student list page (no correctAnswers / audioUrl)
+            parts: {
+              $map: {
+                input: { $ifNull: ['$parts', []] },
+                as: 'p',
+                in: {
+                  partNumber: '$$p.partNumber',
+                  title: '$$p.title',
+                  questionCount: { $size: { $ifNull: ['$$p.questions', []] } },
+                },
+              },
+            },
           },
         },
       ]),
@@ -189,6 +201,69 @@ exports.submitTest = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Lỗi khi chấm điểm bài Listening',
+      error: error.message,
+    });
+  }
+};
+
+// Submit answers for a SINGLE part
+exports.submitPart = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { studentAnswers, timeSpent, partNumber } = req.body;
+
+    if (!Array.isArray(studentAnswers)) {
+      return res.status(400).json({ success: false, message: 'studentAnswers phải là một mảng' });
+    }
+
+    const pn = Number(partNumber);
+    if (!Number.isInteger(pn) || pn < 1 || pn > 4) {
+      return res.status(400).json({ success: false, message: 'partNumber phải là số nguyên từ 1 đến 4' });
+    }
+
+    const test = await ListeningTest.findById(id);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found' });
+    }
+
+    const part = test.parts.find((p) => p.partNumber === pn);
+    if (!part) {
+      return res.status(404).json({ success: false, message: `Part ${pn} không tồn tại trong đề thi này` });
+    }
+
+    const correctAnswers = part.questions.map((q) => q.correctAnswer);
+    let rawScore = 0;
+    const details = correctAnswers.map((correctAnswer, index) => {
+      const studentAnswer = String(studentAnswers[index] || '');
+      const isCorrect = normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
+      if (isCorrect) rawScore++;
+      return {
+        questionIndex: index + 1,
+        studentAnswer,
+        correctAnswer: String(correctAnswer || ''),
+        isCorrect,
+      };
+    });
+
+    const bandScore = convertRawToBand(rawScore, 'listening');
+
+    const attempt = await ListeningAttempt.create({
+      testId: test._id,
+      studentId: req.user.id,
+      partNumber: pn,
+      studentAnswers: studentAnswers.map((a) => String(a || '')),
+      rawScore,
+      bandScore,
+      timeSpent: Number.isFinite(Number(timeSpent)) ? Math.max(0, Number(timeSpent)) : 0,
+      details,
+    });
+
+    const populatedAttempt = await ListeningAttempt.findById(attempt._id).populate('testId', 'title');
+    res.status(201).json({ success: true, data: populatedAttempt });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi chấm điểm Part Listening',
       error: error.message,
     });
   }

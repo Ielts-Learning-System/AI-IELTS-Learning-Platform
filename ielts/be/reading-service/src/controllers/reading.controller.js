@@ -62,6 +62,18 @@ exports.getAllTests = async (req, res) => {
                 },
               },
             },
+            // Per-passage summary for the student list page (no content / correctAnswers)
+            passages: {
+              $map: {
+                input: { $ifNull: ['$passages', []] },
+                as: 'p',
+                in: {
+                  passageNumber: '$$p.passageNumber',
+                  title: '$$p.title',
+                  questionCount: { $size: { $ifNull: ['$$p.questions', []] } },
+                },
+              },
+            },
           },
         },
       ]),
@@ -233,7 +245,71 @@ exports.submitTest = async (req, res) => {
   }
 };
 
-// ====== 4.1. Get Auto-Graded Attempts ======
+// ====== 4.1. Submit a SINGLE Passage ======
+exports.submitPassage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { studentAnswers, timeSpent, passageNumber } = req.body;
+
+    if (!Array.isArray(studentAnswers)) {
+      return res.status(400).json({ success: false, message: 'studentAnswers phải là một mảng' });
+    }
+
+    const pn = Number(passageNumber);
+    if (!Number.isInteger(pn) || pn < 1 || pn > 3) {
+      return res.status(400).json({ success: false, message: 'passageNumber phải là số nguyên từ 1 đến 3' });
+    }
+
+    const test = await ReadingTest.findById(id);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Đề thi không tìm thấy' });
+    }
+
+    const passage = test.passages.find((p) => p.passageNumber === pn);
+    if (!passage) {
+      return res.status(404).json({ success: false, message: `Passage ${pn} không tồn tại trong đề thi này` });
+    }
+
+    const correctAnswers = passage.questions.map((q) => q.correctAnswer);
+    let rawScore = 0;
+    const details = correctAnswers.map((correctAnswer, index) => {
+      const studentAnswer = String(studentAnswers[index] || '');
+      const isCorrect = normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
+      if (isCorrect) rawScore++;
+      return {
+        questionIndex: index + 1,
+        studentAnswer,
+        correctAnswer: String(correctAnswer || ''),
+        isCorrect,
+      };
+    });
+
+    const bandScore = convertRawToBand(rawScore, 'reading');
+
+    const attempt = await ReadingAttempt.create({
+      testId: test._id,
+      studentId: req.user.id,
+      passageNumber: pn,
+      studentAnswers: studentAnswers.map((a) => String(a || '')),
+      rawScore,
+      bandScore,
+      timeSpent: Number.isFinite(Number(timeSpent)) ? Math.max(0, Number(timeSpent)) : 0,
+      details,
+    });
+
+    const populatedAttempt = await ReadingAttempt.findById(attempt._id).populate('testId', 'title');
+    res.status(201).json({ success: true, data: populatedAttempt });
+  } catch (error) {
+    console.error('❌ Submit Passage Error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi chấm điểm Passage Reading',
+      error: error.message,
+    });
+  }
+};
+
+// ====== 4.2. Get Auto-Graded Attempts ======
 exports.getAttempts = async (req, res) => {
   try {
     const attempts = await ReadingAttempt.find({})

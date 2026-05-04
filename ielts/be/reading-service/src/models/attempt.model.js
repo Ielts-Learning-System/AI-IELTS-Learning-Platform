@@ -28,6 +28,8 @@ const AttemptSchema = new mongoose.Schema(
     rawScore: { type: Number, required: true, min: 0 },
     bandScore: { type: Number, required: true, min: 0, max: 9 },
     timeSpent: { type: Number, default: 0, min: 0 },
+    // null = full-test submission (legacy); 1-3 = single-passage submission
+    passageNumber: { type: Number, default: null },
     details: { type: [AttemptDetailSchema], default: [] },
   },
   { timestamps: true }

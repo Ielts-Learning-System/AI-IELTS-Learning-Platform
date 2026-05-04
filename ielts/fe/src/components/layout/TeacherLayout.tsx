@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { BookOpenCheck, PenTool, Mic, Users, LayoutDashboard, LogOut, Film, ChartColumnBig, FilePenLine, ScrollText } from 'lucide-react';
+import { BookOpenCheck, PenTool, Mic, Users, LayoutDashboard, LogOut, Film, ChartColumnBig, FilePenLine, ScrollText, AudioLines } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -16,6 +16,7 @@ const teacherMenuItems = [
   },
   { name: 'Quản lý Writing', path: '/teacher/writing-management', icon: FilePenLine },
   { name: 'Quản lý Speaking', path: '/teacher/speaking-management', icon: Mic },
+  { name: 'Quản lý Dictation', path: '/teacher/dictation', icon: AudioLines },
   { name: 'Mock Test Builder', path: '/teacher/mock-exams', icon: ScrollText },
   { name: 'Chấm Writing', path: '/teacher/writing', icon: PenTool },
   { name: 'Chấm Speaking', path: '/teacher/speaking', icon: Mic },

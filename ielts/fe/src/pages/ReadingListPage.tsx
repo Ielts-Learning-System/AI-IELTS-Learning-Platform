@@ -4,51 +4,33 @@ import {
   AlertTriangle,
   BookOpenText,
   CalendarDays,
+  CheckCircle2,
   ChevronRight,
+  Circle,
+  HelpCircle,
+  RotateCcw,
   Search,
-  SlidersHorizontal,
 } from 'lucide-react';
-import { fetchReadingTests, type ReadingTest } from '../api/reading.api';
 import axios from 'axios';
+import {
+  fetchReadingTests,
+  fetchMyReadingAttempts,
+  type FlattenedPassage,
+  type ReadingTest,
+  type PassageAttemptSummary,
+} from '../api/reading.api';
+
+// ── Helpers ────────────────────────────────────────────────────────
 
 function formatDate(dateString?: string): string {
   if (!dateString) return 'Ngày chưa cập nhật';
-
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return 'Ngày không hợp lệ';
-
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   }).format(date);
-}
-
-function getDifficultyLabel(test: ReadingTest): string {
-  if (test.difficulty) return test.difficulty;
-  if (test.bandScore !== undefined && test.bandScore !== null) {
-    return `Band ${test.bandScore}`;
-  }
-  return 'Mixed';
-}
-
-function getPassageCount(test: ReadingTest): number {
-  if (typeof test.passageCount === 'number') return test.passageCount;
-  return Array.isArray(test.passages) ? test.passages.length : 0;
-}
-
-function getQuestionCount(test: ReadingTest): number {
-  if (typeof test.totalQuestionCount === 'number') return test.totalQuestionCount;
-  if (typeof test.totalQuestions === 'number') return test.totalQuestions;
-  if (typeof test.questionCount === 'number') return test.questionCount;
-
-  if (Array.isArray(test.passages)) {
-    return test.passages.reduce((sum, passage) => {
-      return sum + (Array.isArray(passage.questions) ? passage.questions.length : 0);
-    }, 0);
-  }
-
-  return 0;
 }
 
 function getErrorMessage(err: unknown): string {
@@ -60,51 +42,93 @@ function getErrorMessage(err: unknown): string {
     }
     return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
   }
-  return err instanceof Error
-    ? err.message
-    : 'Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại.';
+  return err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu.';
 }
+
+/** Build `${testId}-${passageNumber}` completion Set from attempt history */
+function buildCompletedKeys(attempts: PassageAttemptSummary[]): Set<string> {
+  const keys = new Set<string>();
+  attempts.forEach((a) => {
+    if (a.passageNumber != null) {
+      const tid =
+        typeof a.testId === 'object'
+          ? (a.testId as { _id: string })._id
+          : String(a.testId);
+      keys.add(`${tid}-${a.passageNumber}`);
+    }
+  });
+  return keys;
+}
+
+// ── Types ──────────────────────────────────────────────────────────
+
+type StatusFilter = 'all' | 'done' | 'new';
+
+// ── Skeleton ───────────────────────────────────────────────────────
 
 function LoadingSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
+      {Array.from({ length: 9 }).map((_, i) => (
         <div
-          key={`reading-skeleton-${index}`}
+          key={`sk-${i}`}
           className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
         >
           <div className="mb-4 flex gap-2">
             <div className="h-6 w-20 rounded-full bg-slate-200" />
-            <div className="h-6 w-24 rounded-full bg-slate-200" />
+            <div className="h-6 w-24 rounded-full bg-slate-100" />
           </div>
           <div className="mb-2 h-5 w-3/4 rounded bg-slate-200" />
-          <div className="mb-2 h-4 w-full rounded bg-slate-100" />
-          <div className="mb-5 h-4 w-5/6 rounded bg-slate-100" />
-          <div className="mb-4 h-4 w-2/3 rounded bg-slate-100" />
-          <div className="h-10 w-full rounded-lg bg-red-100" />
+          <div className="mb-5 h-4 w-full rounded bg-slate-100" />
+          <div className="mb-4 h-4 w-1/2 rounded bg-slate-100" />
+          <div className="h-10 w-full rounded-lg bg-indigo-100" />
         </div>
       ))}
     </div>
   );
 }
 
+// ── Main Component ─────────────────────────────────────────────────
+
 export default function ReadingListPage() {
   const navigate = useNavigate();
-  const [tests, setTests] = useState<ReadingTest[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
 
+  // ── Data state ───────────────────────────────────────────────────
+  const [tests, setTests] = useState<ReadingTest[]>([]);
+  const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Filter state ─────────────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState('');
+  const [passageFilter, setPassageFilter] = useState<number | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  // ── Fetch tests + my attempts in parallel ────────────────────────
   useEffect(() => {
     const controller = new AbortController();
 
-    const loadTests = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchReadingTests(controller.signal);
-        setTests(data);
+
+        const [testsResult, attemptsResult] = await Promise.allSettled([
+          fetchReadingTests(controller.signal),
+          fetchMyReadingAttempts(controller.signal),
+        ]);
+
+        if (testsResult.status === 'rejected') {
+          const msg = getErrorMessage(testsResult.reason);
+          if (msg) setError(msg);
+          return;
+        }
+
+        setTests(testsResult.value);
+
+        if (attemptsResult.status === 'fulfilled') {
+          setCompletedKeys(buildCompletedKeys(attemptsResult.value));
+        }
       } catch (err) {
         const msg = getErrorMessage(err);
         if (msg) setError(msg);
@@ -113,45 +137,61 @@ export default function ReadingListPage() {
       }
     };
 
-    loadTests();
-
+    load();
     return () => controller.abort();
   }, []);
 
-  const difficultyOptions = useMemo(() => {
-    const values = tests.map((test) => getDifficultyLabel(test));
-    const unique = Array.from(new Set(values));
-    return unique.sort((a, b) => a.localeCompare(b));
+  // ── Flatten tests → individual passage cards ─────────────────────
+  const flatPassages = useMemo<FlattenedPassage[]>(() => {
+    return tests.flatMap((test) =>
+      (test.passages ?? []).map((passage) => ({
+        key: `${test._id}-${passage.passageNumber ?? 0}`,
+        testId: test._id,
+        testTitle: test.title ?? test.name ?? 'Untitled Reading Test',
+        testCreatedAt: test.createdAt,
+        passageNumber: passage.passageNumber ?? 0,
+        passageTitle: passage.title,
+        questionCount: passage.questionCount ?? (passage.questions?.length ?? 0),
+      })),
+    );
   }, [tests]);
 
-  const filteredTests = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    return tests.filter((test) => {
-      const title = (test.title ?? test.name ?? '').toLowerCase();
-      const matchesSearch = !normalizedSearch || title.includes(normalizedSearch);
-      const difficultyLabel = getDifficultyLabel(test);
-      const matchesDifficulty =
-        filterDifficulty === 'all' || difficultyLabel === filterDifficulty;
-
-      return matchesSearch && matchesDifficulty;
+  // ── Apply search + passage + status filters ───────────────────────
+  const filteredPassages = useMemo<FlattenedPassage[]>(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return flatPassages.filter((fp) => {
+      if (q && !fp.testTitle.toLowerCase().includes(q)) return false;
+      if (passageFilter !== 'all' && fp.passageNumber !== passageFilter) return false;
+      const done = completedKeys.has(fp.key);
+      if (statusFilter === 'done' && !done) return false;
+      if (statusFilter === 'new' && done) return false;
+      return true;
     });
-  }, [tests, searchTerm, filterDifficulty]);
+  }, [flatPassages, searchTerm, passageFilter, statusFilter, completedKeys]);
+
+  // ── Summary counts for filter badges ─────────────────────────────
+  const doneCount = flatPassages.filter((fp) => completedKeys.has(fp.key)).length;
+  const newCount = flatPassages.length - doneCount;
+
+  // ── Render ───────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 md:px-8 lg:px-12">
       <div className="mx-auto max-w-7xl space-y-8">
+
+        {/* ── Header ─────────────────────────────────────────── */}
         <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">
             IELTS Reading Practice
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
-            Luyện tập đều đặn mỗi ngày để tăng tốc độ đọc hiểu, cải thiện chiến lược
-            làm bài và bứt phá band điểm mục tiêu.
+            Luyện từng Passage riêng biệt để tập trung vào từng loại văn bản và theo
+            dõi tiến bộ chi tiết hơn.
           </p>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="relative md:col-span-2">
+          {/* Search */}
+          <div className="mt-6">
+            <div className="relative max-w-xl">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                 size={18}
@@ -159,33 +199,54 @@ export default function ReadingListPage() {
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Tìm đề theo tiêu đề..."
-                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm theo tên đề thi..."
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
-            </div>
-
-            <div className="relative">
-              <SlidersHorizontal
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
-              <select
-                value={filterDifficulty}
-                onChange={(event) => setFilterDifficulty(event.target.value)}
-                className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-slate-700 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
-              >
-                <option value="all">Tất cả độ khó</option>
-                {difficultyOptions.map((difficulty) => (
-                  <option key={difficulty} value={difficulty}>
-                    {difficulty}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
+
+          {/* Filter bar */}
+          {!loading && !error && flatPassages.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {/* Passage filter */}
+              <select
+                value={String(passageFilter)}
+                onChange={(e) =>
+                  setPassageFilter(
+                    e.target.value === 'all' ? 'all' : Number(e.target.value),
+                  )
+                }
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="all">Tất cả Passages</option>
+                <option value="1">Passage 1</option>
+                <option value="2">Passage 2</option>
+                <option value="3">Passage 3</option>
+              </select>
+
+              {/* Status filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="done">Đã hoàn thành ({doneCount})</option>
+                <option value="new">Chưa làm ({newCount})</option>
+              </select>
+
+              {/* Result count */}
+              {(passageFilter !== 'all' || statusFilter !== 'all' || searchTerm) && (
+                <span className="text-sm text-slate-500">
+                  {filteredPassages.length} kết quả
+                </span>
+              )}
+            </div>
+          )}
         </header>
 
+        {/* ── Content ────────────────────────────────────────── */}
         {loading ? (
           <LoadingSkeleton />
         ) : error ? (
@@ -198,68 +259,105 @@ export default function ReadingListPage() {
               </div>
             </div>
           </div>
-        ) : filteredTests.length === 0 ? (
+        ) : filteredPassages.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-red-600">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
               <BookOpenText size={36} />
             </div>
             <h2 className="text-xl font-semibold text-slate-900">Chưa có đề phù hợp</h2>
             <p className="mt-2 text-slate-600">
-              Hãy thử từ khóa khác hoặc đổi bộ lọc để khám phá thêm bài luyện Reading.
+              {flatPassages.length === 0
+                ? 'Chưa có đề thi nào được công bố.'
+                : 'Hãy thử bỏ bộ lọc hoặc đổi từ khóa.'}
             </p>
           </div>
         ) : (
           <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTests.map((test) => {
-              const passageCount = getPassageCount(test);
-              const questionCount = getQuestionCount(test);
-              const title = test.title ?? test.name ?? 'Untitled Reading Test';
-              const difficultyLabel = getDifficultyLabel(test);
+            {filteredPassages.map((fp) => {
+              const isDone = completedKeys.has(fp.key);
 
               return (
                 <article
-                  key={test._id}
-                  onClick={() => navigate(`/reading/${test._id}`)}
+                  key={fp.key}
+                  onClick={() =>
+                    navigate(`/reading/${fp.testId}?passage=${fp.passageNumber}`)
+                  }
                   className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <span className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                  {/* Badge row */}
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                      <BookOpenText size={12} />
                       Reading
                     </span>
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                      {difficultyLabel}
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      Passage {fp.passageNumber}
                     </span>
+                    {/* Status badge */}
+                    {isDone ? (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                        <CheckCircle2 size={11} />
+                        Đã hoàn thành
+                      </span>
+                    ) : (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                        <Circle size={11} />
+                        Chưa làm
+                      </span>
+                    )}
                   </div>
 
-                  <h3 className="line-clamp-2 text-lg font-bold text-slate-900">{title}</h3>
-                  <p className="mt-2 line-clamp-2 min-h-10 text-sm text-slate-600">
-                    {test.description ||
-                      'Bài luyện tập mô phỏng đề IELTS Reading với nhiều dạng câu hỏi thực chiến.'}
-                  </p>
+                  {/* Title */}
+                  <h3 className="line-clamp-2 text-lg font-bold text-slate-900">
+                    {fp.testTitle}{' '}
+                    <span className="text-indigo-600">— Passage {fp.passageNumber}</span>
+                  </h3>
 
+                  {/* Passage subtitle */}
+                  {fp.passageTitle && (
+                    <p className="mt-1 line-clamp-1 text-sm text-slate-500 italic">
+                      {fp.passageTitle}
+                    </p>
+                  )}
+
+                  {/* Meta */}
                   <div className="mt-4 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
-                      <BookOpenText size={16} className="text-red-500" />
-                      <span>
-                        {passageCount} Passages • {questionCount} Questions
-                      </span>
+                      <HelpCircle size={16} className="text-indigo-500" />
+                      <span>{fp.questionCount} Questions</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays size={16} className="text-red-500" />
-                      <span>{formatDate(test.createdAt)}</span>
-                    </div>
+                    {fp.testCreatedAt && (
+                      <div className="flex items-center gap-2">
+                        <CalendarDays size={16} className="text-indigo-500" />
+                        <span>{formatDate(fp.testCreatedAt)}</span>
+                      </div>
+                    )}
                   </div>
 
+                  {/* CTA */}
                   <button
                     type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/reading/${test._id}`);
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/reading/${fp.testId}?passage=${fp.passageNumber}`);
                     }}
-                    className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+                    className={`mt-6 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
+                      isDone
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    }`}
                   >
-                    Bắt đầu làm bài
-                    <ChevronRight size={16} />
+                    {isDone ? (
+                      <>
+                        <RotateCcw size={15} />
+                        Làm lại
+                      </>
+                    ) : (
+                      <>
+                        Bắt đầu làm bài
+                        <ChevronRight size={16} />
+                      </>
+                    )}
                   </button>
                 </article>
               );
