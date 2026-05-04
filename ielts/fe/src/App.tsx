@@ -6,6 +6,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { NavOnlyLayout } from './layouts/NavOnlyLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { TeacherLayout } from './components/layout/TeacherLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -94,7 +95,6 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="mock-tests" element={<MockExamDashboard />} />
-            <Route path="mock-tests/:examId/attempt/:attemptId" element={<MockExamExecutionPage />} />
           </Route>
         </Route>
 
@@ -157,6 +157,13 @@ export default function App() {
         <Route path="/settings" element={<DashboardLayout />}>
           <Route element={<ProtectedRoute />}>
             <Route index element={<SettingPage />} />
+          </Route>
+        </Route>
+
+        {/* Full-screen mock exam execution — no sidebar, only navbar */}
+        <Route path="/dashboard/mock-tests/:examId/attempt/:attemptId" element={<NavOnlyLayout />}>
+          <Route element={<ProtectedRoute />}>
+            <Route index element={<MockExamExecutionPage />} />
           </Route>
         </Route>
 

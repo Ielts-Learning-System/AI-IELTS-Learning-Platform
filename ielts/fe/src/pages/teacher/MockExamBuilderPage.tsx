@@ -295,7 +295,7 @@ function MockExamTable({
     return (
       <div className="flex flex-col items-center justify-center h-44 text-slate-400 gap-2">
         <FileText className="h-10 w-10 opacity-40" />
-        <p className="text-sm">Chưa có đề thi thử nào. Nhấn [+ Tạo đề thi thử] để bắt đầu.</p>
+        <p className="text-sm">Chưa có đề thi thử nào. Hãy dùng nút [Tạo thủ công] để bắt đầu.</p>
       </div>
     );
   }
@@ -749,7 +749,6 @@ function MockExamWizard({
       };
 
       const { data: raw } = await apiClient.post('/exams/teacher/exams/orchestrate-pdf', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 6 * 60 * 1000, // 6 mins
       });
 
@@ -1214,13 +1213,644 @@ function MonitoringSection() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ManualExamWizard – pick existing skill tests and assemble a new mock exam
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface SkillListItem {
+  _id: string;
+  title: string;
+}
+
+const SKILL_API_URLS: Record<SkillType, string> = {
+  reading:   '/reading',
+  listening: '/listening',
+  writing:   '/writing/items',
+  speaking:  '/speaking/tests',
+};
+
+function ManualExamWizard({
+  open,
+  onClose,
+  onSuccess,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const skillOrder: SkillType[] = ['reading', 'listening', 'writing', 'speaking'];
+
+  const [form, setForm] = useState<WizardForm>({
+    title: '',
+    description: '',
+    durationMinutes: 165,
+    globalLimitHours: 24,
+    publish: false,
+  });
+  const [activeTab, setActiveTab] = useState<SkillType>('reading');
+  const [skillLists, setSkillLists] = useState<Record<SkillType, SkillListItem[]>>({
+    reading: [], listening: [], writing: [], speaking: [],
+  });
+  const [skillListLoading, setSkillListLoading] = useState<Record<SkillType, boolean>>({
+    reading: false, listening: false, writing: false, speaking: false,
+  });
+  const [selected, setSelected] = useState<Record<SkillType, string>>({
+    reading: '', listening: '', writing: '', speaking: '',
+  });
+  const [selectedWritingIds, setSelectedWritingIds] = useState<string[]>([]);
+  const [writingDetailCache, setWritingDetailCache] = useState<Record<string, WritingSkillData>>({});
+  const [search, setSearch] = useState<Record<SkillType, string>>({
+    reading: '', listening: '', writing: '', speaking: '',
+  });
+  const [selectedDetails, setSelectedDetails] = useState<{
+    reading: RLSkillData | null;
+    listening: RLSkillData | null;
+    writing: WritingSkillData | null;
+    speaking: SpeakingSkillData | null;
+  }>({
+    reading: null,
+    listening: null,
+    writing: null,
+    speaking: null,
+  });
+  const [detailLoading, setDetailLoading] = useState<Record<SkillType, boolean>>({
+    reading: false,
+    listening: false,
+    writing: false,
+    speaking: false,
+  });
+  const [structureErrors, setStructureErrors] = useState<Record<SkillType, string | null>>({
+    reading: null,
+    listening: null,
+    writing: null,
+    speaking: null,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const detailEndpoints: Record<SkillType, (id: string) => string> = {
+    reading: (id) => `/reading/${id}`,
+    listening: (id) => `/listening/${id}`,
+    writing: (id) => `/writing/items/${id}`,
+    speaking: (id) => `/speaking/tests/${id}`,
+  };
+
+  const normalizeSkillDetail = useCallback((skill: SkillType, raw: any) => {
+    const source = raw?.data ?? raw;
+
+    if (skill === 'reading') {
+      const passages = Array.isArray(source?.passages)
+        ? source.passages
+        : Array.isArray(source?.parts)
+          ? source.parts
+          : [];
+
+      const normalized: RLSkillData = {
+        _id: source?._id ?? '',
+        title: source?.title ?? 'Reading Test',
+        description: source?.description ?? '',
+        parts: passages.map((p: any, idx: number) => ({
+          partNumber: Number(p?.partNumber ?? p?.passageNumber ?? idx + 1),
+          title: p?.title ?? `Passage ${idx + 1}`,
+          description: p?.description ?? p?.content ?? '',
+          questions: Array.isArray(p?.questions)
+            ? p.questions.map((q: any, qIdx: number) => ({
+                questionNumber: Number(q?.questionNumber ?? qIdx + 1),
+                questionText: q?.questionText ?? q?.text ?? '',
+                type: String(q?.type ?? '').toLowerCase(),
+                options: Array.isArray(q?.options) ? q.options : [],
+                correctAnswer: q?.correctAnswer ?? '',
+                imageUrl: q?.imageUrl,
+              }))
+            : [],
+        })),
+      };
+
+      return normalized;
+    }
+
+    if (skill === 'listening') {
+      const parts = Array.isArray(source?.parts) ? source.parts : [];
+      const normalized: RLSkillData = {
+        _id: source?._id ?? '',
+        title: source?.title ?? 'Listening Test',
+        description: source?.description ?? '',
+        parts: parts.map((p: any, idx: number) => ({
+          partNumber: Number(p?.partNumber ?? idx + 1),
+          title: p?.title ?? `Part ${idx + 1}`,
+          description: p?.description ?? '',
+          audioUrl: p?.audioUrl,
+          questions: Array.isArray(p?.questions)
+            ? p.questions.map((q: any, qIdx: number) => ({
+                questionNumber: Number(q?.questionNumber ?? qIdx + 1),
+                questionText: q?.questionText ?? q?.text ?? '',
+                type: String(q?.type ?? '').toLowerCase(),
+                options: Array.isArray(q?.options) ? q.options : [],
+                correctAnswer: q?.correctAnswer ?? '',
+                imageUrl: q?.imageUrl,
+              }))
+            : [],
+        })),
+      };
+
+      return normalized;
+    }
+
+    if (skill === 'writing') {
+      const tasks = Array.isArray(source?.tasks)
+        ? source.tasks
+        : source
+          ? [{
+              taskNumber: source?.type === 'Task 2' ? 2 : 1,
+              title: source?.title ?? `Writing ${source?.type ?? 'Task'}`,
+              type: source?.type ?? 'Task 1',
+              category: source?.category ?? 'Mixed',
+              contentHtml: source?.contentHtml ?? '',
+              minWords: source?.type === 'Task 2' ? 250 : 150,
+            }]
+          : [];
+
+      const normalized: WritingSkillData = {
+        _id: source?._id ?? '',
+        title: source?.title ?? 'Writing Test',
+        tasks,
+      };
+
+      return normalized;
+    }
+
+    const parts = Array.isArray(source?.parts)
+      ? source.parts
+      : [
+          {
+            partNumber: 1,
+            title: 'Part 1 - Introduction & Interview',
+            questions: Array.isArray(source?.part1) ? source.part1 : [],
+          },
+          {
+            partNumber: 2,
+            title: 'Part 2 - Long Turn',
+            instructions: source?.part2 ?? '',
+            cueCardHtml: source?.part2 ? `<p>${String(source.part2).replace(/\n/g, '<br/>')}</p>` : '',
+            questions: [],
+          },
+          {
+            partNumber: 3,
+            title: 'Part 3 - Discussion',
+            questions: Array.isArray(source?.part3) ? source.part3 : [],
+          },
+        ];
+
+    const normalized: SpeakingSkillData = {
+      _id: source?._id ?? '',
+      title: source?.title ?? 'Speaking Test',
+      parts,
+    };
+
+    return normalized;
+  }, []);
+
+  const validateStructure = useCallback((skill: SkillType, data: any): string | null => {
+    if (!data) return `Không tải được dữ liệu ${skill}.`;
+    if (skill === 'reading') {
+      const count = Array.isArray(data.parts) ? data.parts.length : 0;
+      return count === 3 ? null : `Reading phải có đúng 3 passage (hiện có ${count}).`;
+    }
+    if (skill === 'listening') {
+      const count = Array.isArray(data.parts) ? data.parts.length : 0;
+      return count === 4 ? null : `Listening phải có đúng 4 parts (hiện có ${count}).`;
+    }
+    if (skill === 'writing') {
+      const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      const hasTask1 = tasks.some((t: any) => String(t?.type || '').toLowerCase().includes('1'));
+      const hasTask2 = tasks.some((t: any) => String(t?.type || '').toLowerCase().includes('2'));
+      if (!hasTask1 || !hasTask2) {
+        return `Writing cần gộp đủ Task 1 và Task 2 (hiện có ${tasks.length} task).`;
+      }
+      return null;
+    }
+    const count = Array.isArray(data.parts) ? data.parts.length : 0;
+    return count === 3 ? null : `Speaking phải có đúng 3 parts (hiện có ${count}).`;
+  }, []);
+
+  const mergeWritingDetails = useCallback((ids: string[], cache: Record<string, WritingSkillData>) => {
+    const taskSeed = ids.flatMap((id) => cache[id]?.tasks ?? []);
+    if (taskSeed.length === 0) return null;
+
+    const tasks = taskSeed.map((task, idx) => {
+      const taskType = String(task.type || '').includes('2') ? 'Task 2' : 'Task 1';
+      return {
+        ...task,
+        type: taskType,
+        taskNumber: taskType === 'Task 2' ? 2 : 1,
+        title: task.title || `${taskType} - Prompt ${idx + 1}`,
+      };
+    });
+
+    return {
+      _id: ids.join(','),
+      title: `Writing tổng hợp (${ids.length} mục)`,
+      tasks,
+    } as WritingSkillData;
+  }, []);
+
+  const loadSkillList = useCallback(async (skill: SkillType) => {
+    if (skillLists[skill].length > 0) return; // cached
+    setSkillListLoading((prev) => ({ ...prev, [skill]: true }));
+    try {
+      const res = await apiClient.get(SKILL_API_URLS[skill]);
+      const raw = res.data?.data ?? res.data ?? [];
+      const items: SkillListItem[] = Array.isArray(raw)
+        ? raw.map((item: any) => ({ _id: item._id, title: item.title || item.testTitle || `ID: ${item._id}` }))
+        : [];
+      setSkillLists((prev) => ({ ...prev, [skill]: items }));
+    } catch {
+      toast.error(`Không tải được danh sách ${skill}.`);
+    } finally {
+      setSkillListLoading((prev) => ({ ...prev, [skill]: false }));
+    }
+  }, [skillLists]);
+
+  // Load first tab when wizard opens
+  useEffect(() => {
+    if (open) loadSkillList('reading');
+  }, [open]); // eslint-disable-line
+
+  const handleTabChange = (skill: SkillType) => {
+    setActiveTab(skill);
+    loadSkillList(skill);
+  };
+
+  const loadSkillDetail = useCallback(async (skill: SkillType, id: string) => {
+    if (skill === 'writing') {
+      if (writingDetailCache[id]) {
+        return writingDetailCache[id];
+      }
+      const res = await apiClient.get(detailEndpoints.writing(id));
+      const detail = normalizeSkillDetail('writing', res.data ?? null) as WritingSkillData;
+      setWritingDetailCache((prev) => ({ ...prev, [id]: detail }));
+      return detail;
+    }
+
+    setDetailLoading((prev) => ({ ...prev, [skill]: true }));
+    try {
+      const res = await apiClient.get(detailEndpoints[skill](id));
+      const detail = normalizeSkillDetail(skill, res.data ?? null);
+      const error = validateStructure(skill, detail);
+      setStructureErrors((prev) => ({ ...prev, [skill]: error }));
+      setSelectedDetails((prev) => ({ ...prev, [skill]: detail }));
+      if (error) {
+        toast.error(error);
+      }
+    } catch {
+      setStructureErrors((prev) => ({ ...prev, [skill]: `Không tải được preview ${skill}.` }));
+      setSelectedDetails((prev) => ({ ...prev, [skill]: null }));
+      toast.error(`Không tải được preview ${skill}.`);
+    } finally {
+      setDetailLoading((prev) => ({ ...prev, [skill]: false }));
+    }
+  }, [detailEndpoints, normalizeSkillDetail, validateStructure, writingDetailCache]);
+
+  useEffect(() => {
+    if (selectedWritingIds.length === 0) {
+      setSelected((prev) => ({ ...prev, writing: '' }));
+      setSelectedDetails((prev) => ({ ...prev, writing: null }));
+      setStructureErrors((prev) => ({ ...prev, writing: 'Writing cần gộp đủ Task 1 và Task 2.' }));
+      return;
+    }
+
+    const merged = mergeWritingDetails(selectedWritingIds, writingDetailCache);
+    if (!merged) {
+      setSelectedDetails((prev) => ({ ...prev, writing: null }));
+      setStructureErrors((prev) => ({ ...prev, writing: 'Không tải được dữ liệu Writing đã chọn.' }));
+      return;
+    }
+
+    setSelected((prev) => ({ ...prev, writing: selectedWritingIds[0] }));
+    setSelectedDetails((prev) => ({ ...prev, writing: merged }));
+    setStructureErrors((prev) => ({ ...prev, writing: validateStructure('writing', merged) }));
+  }, [mergeWritingDetails, selectedWritingIds, validateStructure, writingDetailCache]);
+
+  const handleSave = async () => {
+    if (!form.title.trim()) { toast.error('Vui lòng nhập tên đề thi.'); return; }
+    const missing = skillOrder.filter((s) => !selected[s]);
+    if (missing.length > 0) {
+      toast.error(`Chưa chọn: ${missing.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}`);
+      return;
+    }
+    const notLoaded = skillOrder.filter((s) => !selectedDetails[s]);
+    if (notLoaded.length > 0) {
+      toast.error(`Vui lòng tải preview trước khi lưu: ${notLoaded.join(', ')}.`);
+      return;
+    }
+    const invalid = skillOrder
+      .map((s) => structureErrors[s])
+      .filter((msg): msg is string => Boolean(msg));
+    if (invalid.length > 0) {
+      toast.error(invalid[0]);
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiClient.post('/exams/teacher/exams', {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        durationMinutes: form.durationMinutes,
+        globalLimitHours: form.globalLimitHours,
+        publish: form.publish,
+        skillRefs: {
+          readingId:   selected.reading,
+          listeningId: selected.listening,
+          writingId:   selected.writing,
+          speakingId:  selected.speaking,
+        },
+      });
+      toast.success('Đã tạo đề thi thủ công!');
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Không thể tạo đề thi.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetWizard = () => {
+    setForm({ title: '', description: '', durationMinutes: 165, globalLimitHours: 24, publish: false });
+    setActiveTab('reading');
+    setSelected({ reading: '', listening: '', writing: '', speaking: '' });
+    setSelectedWritingIds([]);
+    setWritingDetailCache({});
+    setSearch({ reading: '', listening: '', writing: '', speaking: '' });
+    setSkillLists({ reading: [], listening: [], writing: [], speaking: [] });
+    setSelectedDetails({ reading: null, listening: null, writing: null, speaking: null });
+    setStructureErrors({ reading: null, listening: null, writing: 'Writing cần gộp đủ Task 1 và Task 2.', speaking: null });
+  };
+
+  if (!open) return null;
+
+  const allSelected = skillOrder.every((s) => !!selected[s]);
+  const allValid = skillOrder.every((s) => !structureErrors[s]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex bg-black/40">
+      <div className="flex w-full flex-col bg-white shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <FileText className="h-5 w-5 text-slate-700" />
+            <h2 className="text-lg font-bold text-slate-900">Tạo Đề Thi Thủ Công</h2>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+              Ghép đề từ ngân hàng có sẵn
+            </span>
+          </div>
+          <button
+            onClick={() => { resetWizard(); onClose(); }}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Left panel: metadata */}
+          <div className="w-72 shrink-0 border-r border-slate-200 overflow-y-auto px-5 py-6 space-y-4 bg-slate-50">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Thông tin đề thi</p>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Tên đề thi *</label>
+              <input
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="VD: Cambridge IELTS 17 Test 1"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">Mô tả</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                rows={3}
+                placeholder="Mô tả ngắn..."
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                <Clock className="mr-1 inline h-3 w-3" />Thời gian (phút)
+              </label>
+              <input
+                type="number"
+                value={form.durationMinutes}
+                onChange={(e) => setForm((f) => ({ ...f, durationMinutes: Number(e.target.value) }))}
+                min={1}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                <Calendar className="mr-1 inline h-3 w-3" />Deadline (giờ)
+              </label>
+              <input
+                type="number"
+                value={form.globalLimitHours}
+                onChange={(e) => setForm((f) => ({ ...f, globalLimitHours: Number(e.target.value) }))}
+                min={1}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={form.publish}
+                onChange={(e) => setForm((f) => ({ ...f, publish: e.target.checked }))}
+                className="rounded"
+              />
+              Tự động công bố
+            </label>
+
+            {/* Selection summary */}
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 space-y-1.5">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Đã chọn</p>
+              {SKILL_TABS.map((tab) => {
+                const item = tab.id === 'writing' ? null : skillLists[tab.id].find((i) => i._id === selected[tab.id]);
+                const error = structureErrors[tab.id];
+                return (
+                  <div key={tab.id} className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold w-16 ${(tab.id === 'writing' ? selectedWritingIds.length > 0 : selected[tab.id]) ? 'text-slate-700' : 'text-slate-300'}`}>
+                      {tab.label}
+                    </span>
+                    {tab.id === 'writing' && selectedWritingIds.length === 0 && <span className="flex-1 text-xs text-slate-300 italic">Chưa chọn</span>}
+                    {tab.id === 'writing' && selectedWritingIds.length > 0 && !error && (
+                      <span className="flex-1 truncate text-xs text-emerald-700 font-medium">✓ Đã gộp {selectedWritingIds.length} mục</span>
+                    )}
+                    {tab.id === 'writing' && selectedWritingIds.length > 0 && error && (
+                      <span className="flex-1 truncate text-xs text-rose-600 font-medium">✕ {error}</span>
+                    )}
+                    {tab.id !== 'writing' && !item && <span className="flex-1 text-xs text-slate-300 italic">Chưa chọn</span>}
+                    {item && !error && <span className="flex-1 truncate text-xs text-emerald-700 font-medium">✓ {item.title}</span>}
+                    {item && error && <span className="flex-1 truncate text-xs text-rose-600 font-medium">✕ {error}</span>}
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={handleSave}
+              disabled={saving || !form.title.trim() || !allSelected || !allValid}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Tạo đề thi
+            </button>
+          </div>
+
+          {/* Right panel: skill selectors */}
+          <div className="flex flex-1 min-w-0 flex-col">
+            {/* Skill tabs */}
+            <div className="flex shrink-0 border-b border-slate-200">
+              {SKILL_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-5 py-3 text-sm font-medium transition ${
+                    activeTab === tab.id
+                      ? `${tab.activeClass} bg-white`
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {(tab.id === 'writing' ? selectedWritingIds.length > 0 : selected[tab.id]) && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-emerald-500" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Skill list + preview split view */}
+            <div className="flex-1 min-h-0 overflow-hidden p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <input
+                  value={search[activeTab]}
+                  onChange={(e) => setSearch((s) => ({ ...s, [activeTab]: e.target.value }))}
+                  placeholder={`Tìm kiếm ${activeTab}...`}
+                  className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-400"
+                />
+                {detailLoading[activeTab] ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500"><Loader2 className="h-3.5 w-3.5 animate-spin" />Đang tải preview</span>
+                ) : structureErrors[activeTab] ? (
+                  <span className="text-xs font-semibold text-rose-600">{structureErrors[activeTab]}</span>
+                ) : (activeTab === 'writing' ? selectedWritingIds.length > 0 : selected[activeTab]) ? (
+                  <span className="text-xs font-semibold text-emerald-600">Đề {activeTab} đạt chuẩn cấu trúc</span>
+                ) : (
+                  <span className="text-xs text-slate-400">Chọn đề để xem preview + đáp án</span>
+                )}
+              </div>
+
+              <div className="grid h-[calc(100%-2.25rem)] min-h-0 grid-cols-1 gap-4 xl:grid-cols-2">
+                <div className="min-h-0 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3">
+                  {skillListLoading[activeTab] ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                    </div>
+                  ) : skillLists[activeTab].length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                      <AlertCircle className="h-8 w-8 mb-2 opacity-40" />
+                      <p className="text-sm">Chưa có đề {activeTab} nào trong hệ thống.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {skillLists[activeTab]
+                        .filter((item) =>
+                          !search[activeTab] || item.title.toLowerCase().includes(search[activeTab].toLowerCase())
+                        )
+                        .map((item) => {
+                          const isSelected = activeTab === 'writing'
+                            ? selectedWritingIds.includes(item._id)
+                            : selected[activeTab] === item._id;
+                          return (
+                            <button
+                              key={item._id}
+                              onClick={async () => {
+                                if (activeTab === 'writing') {
+                                  const alreadySelected = selectedWritingIds.includes(item._id);
+                                  const nextIds = alreadySelected
+                                    ? selectedWritingIds.filter((id) => id !== item._id)
+                                    : [...selectedWritingIds, item._id];
+                                  setSelectedWritingIds(nextIds);
+                                  if (!alreadySelected) {
+                                    setDetailLoading((prev) => ({ ...prev, writing: true }));
+                                    try {
+                                      await loadSkillDetail('writing', item._id);
+                                    } catch {
+                                      toast.error('Không tải được dữ liệu Writing để gộp.');
+                                    } finally {
+                                      setDetailLoading((prev) => ({ ...prev, writing: false }));
+                                    }
+                                  }
+                                  return;
+                                }
+
+                                setSelected((s) => ({ ...s, [activeTab]: item._id }));
+                                loadSkillDetail(activeTab, item._id);
+                              }}
+                              className={`w-full rounded-xl border-2 px-4 py-3 text-left text-sm transition ${
+                                isSelected
+                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+                                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300'}`}>
+                                  {isSelected && <span className="h-2 w-2 rounded-full bg-white" />}
+                                </span>
+                                <span className="flex-1 font-medium leading-snug line-clamp-2">{item.title}</span>
+                              </div>
+                              <p className="mt-1.5 pl-6 text-xs text-slate-400 font-mono truncate">{item._id}</p>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  {!selectedDetails[activeTab] ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                      <AlertCircle className="h-8 w-8 opacity-40" />
+                      <p className="text-sm">Chọn một đề để xem preview dạng split-view.</p>
+                    </div>
+                  ) : activeTab === 'reading' || activeTab === 'listening' ? (
+                    <RLPreviewPanel
+                      skill={activeTab}
+                      data={selectedDetails[activeTab] as RLSkillData}
+                      onChange={(updated) => setSelectedDetails((prev) => ({ ...prev, [activeTab]: updated }))}
+                    />
+                  ) : activeTab === 'writing' ? (
+                    <WritingPreviewPanel
+                      data={selectedDetails.writing as WritingSkillData}
+                      onChange={(updated) => setSelectedDetails((prev) => ({ ...prev, writing: updated }))}
+                    />
+                  ) : (
+                    <SpeakingPreviewPanel data={selectedDetails.speaking as SpeakingSkillData} />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MockExamBuilderPage – main export
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function MockExamBuilderPage() {
   const [exams, setExams] = useState<ExamItem[]>([]);
   const [loadingExams, setLoadingExams] = useState(true);
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
 
   const loadExams = useCallback(async () => {
     setLoadingExams(true);
@@ -1265,13 +1895,22 @@ export default function MockExamBuilderPage() {
             <h1 className="text-2xl font-bold text-slate-900">Quản lý Thi thử</h1>
             <p className="mt-0.5 text-sm text-slate-500">Tạo và quản lý đề thi IELTS Mock Test cho học viên</p>
           </div>
-          <button
-            onClick={() => setWizardOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Tạo đề thi thử
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setManualOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Edit3 className="h-4 w-4" />
+              Tạo thủ công
+            </button>
+            <button
+              onClick={() => toast('Tính năng tạo full đề bằng PDF hiện đang phát triển.')}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-400"
+            >
+              <PlusCircle className="h-4 w-4" />
+              Tạo đề thi thử
+            </button>
+          </div>
         </div>
 
         {/* Exams table */}
@@ -1288,7 +1927,7 @@ export default function MockExamBuilderPage() {
       </div>
 
       {/* Creation wizard */}
-      <MockExamWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onSuccess={loadExams} />
+      <ManualExamWizard open={manualOpen} onClose={() => setManualOpen(false)} onSuccess={loadExams} />
     </div>
   );
 }

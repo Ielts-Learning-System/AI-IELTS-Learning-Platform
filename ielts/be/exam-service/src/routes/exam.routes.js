@@ -17,6 +17,8 @@ router.post('/attempts/:attemptId/skills/:skillType/submit', verifyToken, author
 router.post('/attempts/:attemptId/submit', verifyToken, authorizeRoles('student', 'teacher', 'admin'), examController.submitExam);
 
 router.get('/teacher/exams', verifyToken, authorizeRoles('teacher', 'admin'), examController.listTeacherExams);
+// SSE endpoint — must be declared before /:examId to avoid path collision
+router.get('/teacher/exams/orchestrate-progress/:jobId', verifyToken, authorizeRoles('teacher', 'admin'), examController.orchestrateProgress);
 router.post('/teacher/exams', verifyToken, authorizeRoles('teacher', 'admin'), examController.createExam);
 router.post('/teacher/exams/:examId/publish', verifyToken, authorizeRoles('teacher', 'admin'), examController.publishExam);
 router.delete('/teacher/exams/:examId', verifyToken, authorizeRoles('teacher', 'admin'), examController.deleteExam);

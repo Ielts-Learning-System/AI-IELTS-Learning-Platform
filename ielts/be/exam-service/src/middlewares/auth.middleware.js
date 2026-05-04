@@ -8,6 +8,11 @@ const verifyToken = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
     }
 
+    // Fallback: allow token via query param for SSE connections (EventSource cannot set headers)
+    if (!token && req.query && req.query.token) {
+      token = String(req.query.token);
+    }
+
     if (!token) {
       return res.status(401).json({
         success: false,

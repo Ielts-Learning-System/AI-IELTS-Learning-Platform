@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import Split from 'react-split';
 import {
   AlertTriangle,
+  BookOpen,
   CheckCircle2,
   Clock3,
   FileAudio,
@@ -12,6 +14,7 @@ import {
   Lock,
   Mic,
   PencilLine,
+  Play,
   Save,
   Send,
   Trash2,
@@ -102,17 +105,7 @@ function formatSeconds(seconds: number) {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  const hh = String(h).padStart(2, '0');
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
-}
-
-function skillRoute(skillType: SkillType, skillRefId: string) {
-  if (skillType === 'reading') return `/reading/${skillRefId}`;
-  if (skillType === 'listening') return `/listening/ielts/${skillRefId}`;
-  if (skillType === 'writing') return `/writing/${skillRefId}`;
-  return `/speaking/${skillRefId}`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function unwrapData<T>(payload: { data?: T } | T): T {
@@ -207,8 +200,7 @@ export default function MockExamExecutionPage() {
   const globalSeconds = attempt?.globalTimeRemainingSeconds ?? 0;
 
   const selectedSkillAttempt = useMemo(() => {
-    if (!attempt) return null;
-    if (!selectedSkill) return null;
+    if (!attempt || !selectedSkill) return null;
     return attempt.skills.find((s) => s.skillType === selectedSkill) || null;
   }, [attempt, selectedSkill]);
 
@@ -230,31 +222,20 @@ export default function MockExamExecutionPage() {
       currentSkillInProgress === selectedSkill
   );
 
-  const readingQuestions = useMemo(
-    () => flattenReadingQuestions(resources.reading),
-    [resources.reading]
-  );
-
-  const listeningQuestions = useMemo(
-    () => flattenListeningQuestions(resources.listening),
-    [resources.listening]
-  );
+  const readingQuestions = useMemo(() => flattenReadingQuestions(resources.reading), [resources.reading]);
+  const listeningQuestions = useMemo(() => flattenListeningQuestions(resources.listening), [resources.listening]);
 
   const currentUnansweredCount = useMemo(() => {
     if (!selectedSkill) return 0;
 
     if (selectedSkill === 'reading') {
       const answers = draftSnapshot.answers as Record<string, string> | undefined;
-      return countBlankAnswers(
-        readingQuestions.map((question) => String(answers?.[question._id] || ''))
-      );
+      return countBlankAnswers(readingQuestions.map((q) => String(answers?.[q._id] || '')));
     }
 
     if (selectedSkill === 'listening') {
       const answers = draftSnapshot.answers as Record<string, string> | undefined;
-      return countBlankAnswers(
-        listeningQuestions.map((question) => String(answers?.[question._id] || ''))
-      );
+      return countBlankAnswers(listeningQuestions.map((q) => String(answers?.[q._id] || '')));
     }
 
     if (selectedSkill === 'writing') {
@@ -267,22 +248,19 @@ export default function MockExamExecutionPage() {
   }, [draftSnapshot, listeningQuestions, readingQuestions, resources.speaking, selectedSkill]);
 
   const buildSnapshotForSelectedSkill = () => {
-    if (!selectedSkill) {
-      return {};
-    }
+    if (!selectedSkill) return {};
 
     if (selectedSkill === 'reading') {
       return {
         answers: (draftSnapshot.answers as Record<string, string> | undefined) || {},
-        questionOrder: readingQuestions.map((question) => question._id),
-        timeSpentSeconds: selectedSkillAttempt?.timeRemainingSeconds != null ? undefined : undefined,
+        questionOrder: readingQuestions.map((q) => q._id),
       };
     }
 
     if (selectedSkill === 'listening') {
       return {
         answers: (draftSnapshot.answers as Record<string, string> | undefined) || {},
-        questionOrder: listeningQuestions.map((question) => question._id),
+        questionOrder: listeningQuestions.map((q) => q._id),
       };
     }
 
@@ -293,14 +271,12 @@ export default function MockExamExecutionPage() {
       };
     }
 
-    return {
-      answers: getAudioAnswers(draftSnapshot),
-    };
+    return { answers: getAudioAnswers(draftSnapshot) };
   };
 
+  // Fetch attempt on mount
   useEffect(() => {
     if (!attemptId) return;
-
     let alive = true;
     setLoading(true);
 
@@ -317,11 +293,10 @@ export default function MockExamExecutionPage() {
         if (alive) setLoading(false);
       });
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [attemptId]);
 
+  // Polling interval
   useEffect(() => {
     if (!attemptId) return;
 
@@ -350,12 +325,11 @@ export default function MockExamExecutionPage() {
     }, 5000);
 
     return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-      }
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
     };
   }, [attemptId, selectedSkill]);
 
+  // Beforeunload warning
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!attempt || attempt.status !== 'IN_PROGRESS') return;
@@ -368,6 +342,7 @@ export default function MockExamExecutionPage() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [attempt]);
 
+  // Active skill lock in localStorage
   useEffect(() => {
     if (!attempt || attempt.status !== 'IN_PROGRESS' || !attempt.currentSkillInProgress) {
       localStorage.removeItem('activeMockSkillLock');
@@ -376,17 +351,13 @@ export default function MockExamExecutionPage() {
 
     localStorage.setItem(
       'activeMockSkillLock',
-      JSON.stringify({
-        attemptId: attempt._id,
-        skillType: attempt.currentSkillInProgress,
-      })
+      JSON.stringify({ attemptId: attempt._id, skillType: attempt.currentSkillInProgress })
     );
 
-    return () => {
-      localStorage.removeItem('activeMockSkillLock');
-    };
+    return () => { localStorage.removeItem('activeMockSkillLock'); };
   }, [attempt?._id, attempt?.status, attempt?.currentSkillInProgress]);
 
+  // Sync draftSnapshot when selected skill changes
   useEffect(() => {
     if (!selectedSkillAttempt) {
       setDraftSnapshot({});
@@ -397,6 +368,7 @@ export default function MockExamExecutionPage() {
     setDraftSnapshot(snapshot);
   }, [selectedSkillAttempt?._id]);
 
+  // Load skill resources
   useEffect(() => {
     if (!attempt) return;
 
@@ -424,11 +396,12 @@ export default function MockExamExecutionPage() {
     }
   }, [attempt, resourceLoading, resources]);
 
+  // Reset listening part when skill changes
   useEffect(() => {
-    if (selectedSkill === 'listening') {
-      setListeningPartIndex(0);
-    }
+    if (selectedSkill === 'listening') setListeningPartIndex(0);
   }, [selectedSkill]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleStartSkill = async (skill: SkillType) => {
     if (!attemptId || !attempt) return;
@@ -550,16 +523,11 @@ export default function MockExamExecutionPage() {
       );
 
       const audioUrl = String(uploadResponse.data?.secure_url || '');
-      if (!audioUrl) {
-        throw new Error('Cloudinary không trả về audio URL.');
-      }
+      if (!audioUrl) throw new Error('Cloudinary không trả về audio URL.');
 
       setDraftSnapshot((prev) => {
         const currentAnswers = getAudioAnswers(prev).filter((item) => item.questionKey !== questionKey);
-        return {
-          ...prev,
-          answers: [...currentAnswers, { questionKey, audioUrl }],
-        };
+        return { ...prev, answers: [...currentAnswers, { questionKey, audioUrl }] };
       });
 
       toast.success('Đã upload audio Speaking.');
@@ -580,55 +548,65 @@ export default function MockExamExecutionPage() {
     }));
   };
 
+  // ── Render functions ─────────────────────────────────────────────────────────
+
   const renderReadingWorkspace = () => {
     const reading = resources.reading;
     if (!reading) return null;
-
     const answers = (draftSnapshot.answers as Record<string, string> | undefined) || {};
 
     return (
-      <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr]">
-        <div className="space-y-4">
+      <Split
+        className="flex flex-1 w-full overflow-hidden"
+        sizes={[55, 45]}
+        minSize={200}
+        gutterSize={8}
+        direction="horizontal"
+        cursor="col-resize"
+      >
+        {/* LEFT: passages */}
+        <div className="overflow-y-auto bg-white px-5 py-4 space-y-4">
           {reading.passages.map((passage, passageIndex) => (
-            <article key={passage._id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Passage {passageIndex + 1}</p>
-                <h3 className="mt-1 text-lg font-bold text-slate-900">{passage.title}</h3>
+            <article key={passage._id} className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+              <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Passage {passageIndex + 1}</p>
+                <h3 className="mt-1 text-base font-bold text-slate-900">{passage.title}</h3>
               </div>
               <div
-                className="prose prose-slate max-w-none px-5 py-5 prose-headings:text-slate-900"
+                className="prose prose-slate max-w-none px-4 py-4 text-sm prose-headings:text-slate-900"
                 dangerouslySetInnerHTML={{ __html: passage.content }}
               />
             </article>
           ))}
         </div>
 
-        <div className="space-y-4">
+        {/* RIGHT: questions */}
+        <div className="overflow-y-auto bg-slate-50 px-4 py-4 space-y-4">
           {reading.passages.map((passage) => (
-            <article key={`questions-${passage._id}`} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900">{passage.title}</h3>
-              <div className="mt-5 space-y-4">
+            <article key={`q-${passage._id}`} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-800 mb-3">{passage.title}</h3>
+              <div className="space-y-3">
                 {passage.questions.map((question, index) => (
-                  <div key={question._id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+                  <div key={question._id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                    <div className="flex items-start gap-2.5">
+                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">
                         {question.questionNumber || index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-3">
-                        <p className="font-medium text-slate-800">{question.text}</p>
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <p className="text-sm font-medium text-slate-800">{question.text}</p>
                         {question.options && question.options.length > 0 ? (
-                          <div className="space-y-2">
-                            {question.options.map((option) => (
-                              <label key={option} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
+                          <div className="space-y-1.5">
+                            {question.options.map((opt) => (
+                              <label key={opt} className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-100">
                                 <input
                                   type="radio"
                                   disabled={!isSelectedSkillEditable}
                                   name={question._id}
-                                  value={option}
-                                  checked={answers[question._id] === option}
-                                  onChange={(event) => updateMappedAnswer(question._id, event.target.value)}
+                                  value={opt}
+                                  checked={answers[question._id] === opt}
+                                  onChange={(e) => updateMappedAnswer(question._id, e.target.value)}
                                 />
-                                <span>{option}</span>
+                                <span>{opt}</span>
                               </label>
                             ))}
                           </div>
@@ -636,8 +614,8 @@ export default function MockExamExecutionPage() {
                           <input
                             value={answers[question._id] || ''}
                             disabled={!isSelectedSkillEditable}
-                            onChange={(event) => updateMappedAnswer(question._id, event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-900"
+                            onChange={(e) => updateMappedAnswer(question._id, e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-slate-600"
                             placeholder="Nhập câu trả lời"
                           />
                         )}
@@ -649,112 +627,112 @@ export default function MockExamExecutionPage() {
             </article>
           ))}
         </div>
-      </div>
+      </Split>
     );
   };
 
   const renderListeningWorkspace = () => {
     const listening = resources.listening;
     if (!listening) return null;
-
     const currentPart = listening.parts[listeningPartIndex];
     const answers = (draftSnapshot.answers as Record<string, string> | undefined) || {};
 
     return (
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {listening.parts.map((part, index) => (
-            <button
-              key={part.partNumber}
-              type="button"
-              onClick={() => setListeningPartIndex(index)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                listeningPartIndex === index
-                  ? 'bg-red-600 text-white'
-                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-red-50 hover:text-red-600'
-              }`}
-            >
-              Part {part.partNumber}
-            </button>
-          ))}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Part tabs + audio bar */}
+        <div className="flex-none border-b border-slate-200 bg-white px-4 py-2 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1">
+            {listening.parts.map((part, index) => (
+              <button
+                key={part.partNumber}
+                type="button"
+                onClick={() => setListeningPartIndex(index)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  listeningPartIndex === index
+                    ? 'bg-red-600 text-white'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-red-50 hover:text-red-600'
+                }`}
+              >
+                Part {part.partNumber}
+              </button>
+            ))}
+          </div>
+          <audio controls preload="none" src={currentPart.audioUrl} className="flex-1 h-8 min-w-[200px]" />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[0.95fr,1.05fr]">
-          <article className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-red-500">Listening source</p>
-              <h3 className="mt-1 text-lg font-bold text-slate-900">{currentPart.title}</h3>
-            </div>
-            <div className="space-y-5 px-5 py-5">
-              <audio controls preload="none" src={currentPart.audioUrl} className="w-full" />
-              <div
-                className="prose prose-slate max-w-none prose-headings:text-slate-900"
-                dangerouslySetInnerHTML={{ __html: currentPart.description }}
-              />
-            </div>
-          </article>
+        {/* Split: description | questions */}
+        <Split
+          className="flex flex-1 w-full overflow-hidden"
+          sizes={[50, 50]}
+          minSize={200}
+          gutterSize={8}
+          direction="horizontal"
+          cursor="col-resize"
+        >
+          <div className="overflow-y-auto bg-white px-4 py-4">
+            <h3 className="mb-3 text-sm font-bold text-slate-800">{currentPart.title}</h3>
+            <div
+              className="prose prose-slate max-w-none text-sm prose-headings:text-slate-900"
+              dangerouslySetInnerHTML={{ __html: currentPart.description }}
+            />
+          </div>
 
-          <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900">Questions</h3>
-            <div className="mt-5 space-y-4">
-              {currentPart.questions.map((question, index) => (
-                <div key={question._id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-sm font-bold text-white">
-                      {listening.parts
-                        .slice(0, listeningPartIndex)
-                        .reduce((sum, part) => sum + part.questions.length, 0) +
-                        index +
-                        1}
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <p className="font-medium text-slate-800">{question.questionText.replace(/^\d+\.\s*/, '')}</p>
-                      {question.options && question.options.length > 0 ? (
-                        question.type === 'multiple_choice' ? (
-                          <div className="space-y-2">
-                            {question.options.map((option) => (
-                              <label key={option} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
-                                <input
-                                  type="radio"
-                                  disabled={!isSelectedSkillEditable}
-                                  name={question._id}
-                                  value={option}
-                                  checked={answers[question._id] === option}
-                                  onChange={(event) => updateMappedAnswer(question._id, event.target.value)}
-                                />
-                                <span>{option}</span>
-                              </label>
-                            ))}
-                          </div>
-                        ) : (
-                          <select
-                            value={answers[question._id] || ''}
-                            disabled={!isSelectedSkillEditable}
-                            onChange={(event) => updateMappedAnswer(question._id, event.target.value)}
-                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-red-500"
-                          >
-                            <option value="">Chọn đáp án</option>
-                            {question.options.map((option) => (
-                              <option key={option} value={option}>{option}</option>
-                            ))}
-                          </select>
-                        )
+          <div className="overflow-y-auto bg-slate-50 px-4 py-4 space-y-3">
+            {currentPart.questions.map((question, index) => (
+              <div key={question._id} className="rounded-xl border border-slate-100 bg-white p-3">
+                <div className="flex items-start gap-2.5">
+                  <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white">
+                    {listening.parts
+                      .slice(0, listeningPartIndex)
+                      .reduce((sum, p) => sum + p.questions.length, 0) + index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <p className="text-sm font-medium text-slate-800">{question.questionText.replace(/^\d+\.\s*/, '')}</p>
+                    {question.options && question.options.length > 0 ? (
+                      question.type === 'multiple_choice' ? (
+                        <div className="space-y-1.5">
+                          {question.options.map((opt) => (
+                            <label key={opt} className="flex cursor-pointer items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-red-50">
+                              <input
+                                type="radio"
+                                disabled={!isSelectedSkillEditable}
+                                name={question._id}
+                                value={opt}
+                                checked={answers[question._id] === opt}
+                                onChange={(e) => updateMappedAnswer(question._id, e.target.value)}
+                              />
+                              <span>{opt}</span>
+                            </label>
+                          ))}
+                        </div>
                       ) : (
-                        <input
+                        <select
                           value={answers[question._id] || ''}
                           disabled={!isSelectedSkillEditable}
-                          onChange={(event) => updateMappedAnswer(question._id, event.target.value)}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-red-500"
-                          placeholder="Nhập câu trả lời"
-                        />
-                      )}
-                    </div>
+                          onChange={(e) => updateMappedAnswer(question._id, e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-red-500"
+                        >
+                          <option value="">Chọn đáp án</option>
+                          {question.options.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      )
+                    ) : (
+                      <input
+                        value={answers[question._id] || ''}
+                        disabled={!isSelectedSkillEditable}
+                        onChange={(e) => updateMappedAnswer(question._id, e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-red-500"
+                        placeholder="Nhập câu trả lời"
+                      />
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </article>
-        </div>
+              </div>
+            ))}
+          </div>
+        </Split>
       </div>
     );
   };
@@ -764,35 +742,46 @@ export default function MockExamExecutionPage() {
     if (!writing) return null;
 
     return (
-      <div className="grid gap-5 xl:grid-cols-[0.95fr,1.05fr]">
-        <article className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-red-500">Writing prompt</p>
-            <h3 className="mt-1 text-lg font-bold text-slate-900">{writing.title}</h3>
-            <p className="mt-1 text-sm text-slate-500">{writing.type} {writing.category ? `· ${writing.category}` : ''}</p>
+      <Split
+        className="flex flex-1 w-full overflow-hidden"
+        sizes={[45, 55]}
+        minSize={200}
+        gutterSize={8}
+        direction="horizontal"
+        cursor="col-resize"
+      >
+        {/* LEFT: prompt */}
+        <div className="overflow-y-auto bg-white px-4 py-4">
+          <div className="mb-4 border-b border-slate-100 pb-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-red-500">Writing Prompt</p>
+            <h3 className="mt-1 text-base font-bold text-slate-900">{writing.title}</h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {writing.type}{writing.category ? ` · ${writing.category}` : ''}
+            </p>
           </div>
           <div
-            className="prose prose-slate max-w-none px-5 py-5 prose-headings:text-slate-900"
+            className="prose prose-slate max-w-none text-sm prose-headings:text-slate-900"
             dangerouslySetInnerHTML={{ __html: writing.contentHtml }}
           />
-        </article>
+        </div>
 
-        <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-bold text-slate-900">Bài làm của bạn</h3>
-            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600">
+        {/* RIGHT: answer */}
+        <div className="flex flex-col overflow-hidden bg-slate-50 px-4 py-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800">Bài làm của bạn</h3>
+            <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-600">
               {String(draftSnapshot.content || '').trim().split(/\s+/).filter(Boolean).length} từ
             </span>
           </div>
           <textarea
             value={String(draftSnapshot.content || '')}
             disabled={!isSelectedSkillEditable}
-            onChange={(event) => setDraftSnapshot((prev) => ({ ...prev, content: event.target.value }))}
-            className="mt-4 min-h-[520px] w-full rounded-[24px] border border-slate-300 bg-[linear-gradient(180deg,#fffafa_0%,#ffffff_100%)] px-5 py-4 text-[15px] leading-8 text-slate-800 outline-none focus:border-red-400"
+            onChange={(e) => setDraftSnapshot((prev) => ({ ...prev, content: e.target.value }))}
+            className="flex-1 w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-7 text-slate-800 outline-none focus:border-red-400"
             placeholder="Viết bài luận của bạn tại đây..."
           />
-        </article>
-      </div>
+        </div>
+      </Split>
     );
   };
 
@@ -804,33 +793,33 @@ export default function MockExamExecutionPage() {
     const audioMap = new Map(audioAnswers.map((item) => [item.questionKey, item.audioUrl]));
 
     return (
-      <div className="space-y-4">
-        <div className="rounded-[28px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+      <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-4">
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
           Upload audio cho từng câu hỏi. Sau khi submit, bạn vẫn có thể mở lại phần Speaking để nghe lại file đã nộp nhưng không sửa nữa.
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-3 xl:grid-cols-2">
           {getSpeakingPrompts(speaking).map((prompt) => {
             const audioUrl = audioMap.get(prompt.questionKey);
             const isUploading = speakingUploadingKey === prompt.questionKey;
 
             return (
-              <article key={prompt.questionKey} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <article key={prompt.questionKey} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-2xl bg-amber-50 p-3 text-amber-700">
-                    <Mic className="h-5 w-5" />
+                  <div className="rounded-xl bg-amber-50 p-2.5 text-amber-700">
+                    <Mic className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">{prompt.label}</p>
-                    <p className="mt-2 text-sm leading-7 text-slate-700">{prompt.text}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-amber-600">{prompt.label}</p>
+                    <p className="mt-1.5 text-sm leading-6 text-slate-700">{prompt.text}</p>
                   </div>
                 </div>
 
-                <div className="mt-5 space-y-3">
+                <div className="mt-4 space-y-2">
                   {audioUrl ? (
-                    <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">
-                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-800">
-                        <FileAudio className="h-4 w-4" />
+                    <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+                        <FileAudio className="h-3.5 w-3.5" />
                         Audio đã nộp
                       </div>
                       <audio controls src={audioUrl} className="w-full" />
@@ -838,30 +827,28 @@ export default function MockExamExecutionPage() {
                   ) : null}
 
                   {isSelectedSkillEditable ? (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
                         <input
                           type="file"
                           accept="audio/*"
                           className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) {
-                              void uploadSpeakingAudio(prompt.questionKey, file);
-                            }
-                            event.currentTarget.value = '';
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void uploadSpeakingAudio(prompt.questionKey, file);
+                            e.currentTarget.value = '';
                           }}
                         />
-                        {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+                        {isUploading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Mic className="h-3.5 w-3.5" />}
                         {audioUrl ? 'Thay audio' : 'Upload audio'}
                       </label>
                       {audioUrl ? (
                         <button
                           type="button"
                           onClick={() => removeSpeakingAudio(prompt.questionKey)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                           Xóa
                         </button>
                       ) : null}
@@ -876,13 +863,64 @@ export default function MockExamExecutionPage() {
     );
   };
 
-  const renderSelectedWorkspace = () => {
-    if (!selectedSkill) return null;
+  const renderSkillContent = () => {
+    if (!selectedSkill) {
+      return (
+        <div className="flex flex-1 items-center justify-center text-slate-400">
+          Chọn một kỹ năng để bắt đầu
+        </div>
+      );
+    }
+
+    const node = attempt!.skills.find((s) => s.skillType === selectedSkill);
+
+    if (node?.status === 'NOT_STARTED') {
+      const lockedByOther = Boolean(currentSkillInProgress && currentSkillInProgress !== selectedSkill);
+      return (
+        <div className="flex flex-1 items-center justify-center bg-white">
+          <div className="w-full max-w-sm p-8 text-center">
+            {lockedByOther ? (
+              <>
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100">
+                  <Lock className="h-6 w-6 text-amber-600" />
+                </div>
+                <h2 className="mb-2 text-lg font-bold text-slate-900">{selectedSkill.toUpperCase()} bị khóa</h2>
+                <p className="text-sm text-slate-500">
+                  Hoàn thành <strong>{currentSkillInProgress?.toUpperCase()}</strong> trước khi chuyển kỹ năng.
+                </p>
+              </>
+            ) : attempt?.status === 'IN_PROGRESS' ? (
+              <>
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+                  <Play className="ml-0.5 h-6 w-6 text-slate-700" />
+                </div>
+                <h2 className="mb-2 text-lg font-bold text-slate-900">
+                  Sẵn sàng bắt đầu {selectedSkill.toUpperCase()}
+                </h2>
+                <p className="mb-5 text-sm text-slate-500">
+                  Bấm bắt đầu để tính thời gian cho kỹ năng này.
+                </p>
+                <button
+                  onClick={() => void handleStartSkill(selectedSkill)}
+                  disabled={busy}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+                >
+                  {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Play className="ml-0.5 h-4 w-4" />}
+                  Bắt đầu
+                </button>
+              </>
+            ) : (
+              <p className="text-slate-500">Bài thi đã kết thúc.</p>
+            )}
+          </div>
+        </div>
+      );
+    }
 
     if (resourceLoading[selectedSkill]) {
       return (
-        <div className="flex min-h-[360px] items-center justify-center rounded-[28px] border border-slate-200 bg-white">
-          <div className="flex items-center gap-3 text-slate-600">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
             <LoaderCircle className="h-5 w-5 animate-spin" />
             Đang tải nội dung kỹ năng...
           </div>
@@ -896,205 +934,196 @@ export default function MockExamExecutionPage() {
     return renderSpeakingWorkspace();
   };
 
+  // ── Loading / error states ───────────────────────────────────────────────────
+
   if (loading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">Đang tải bài thi...</div>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoaderCircle className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    );
   }
 
   if (!attempt) {
-    return <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-700">Không tìm thấy tiến trình bài thi.</div>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-red-600">Không tìm thấy tiến trình bài thi.</p>
+      </div>
+    );
   }
 
+  // ── Main render ──────────────────────────────────────────────────────────────
+
   return (
-    <section className="space-y-6">
-      <header className="overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(135deg,#fffdfd_0%,#ffffff_35%,#f8fafc_100%)] shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-        <div className="border-b border-slate-100 bg-white/80 px-6 py-5 backdrop-blur sm:px-8">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-red-500">IELTS Full Mock Test</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{attempt.exam?.title || 'Mock Test'}</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{attempt.exam?.description || 'Làm đủ 4 kỹ năng trong cùng một luồng thi thử. Những kỹ năng đã nộp vẫn có thể mở lại để xem ở chế độ chỉ đọc.'}</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Global countdown</p>
-                <p className="mt-2 text-2xl font-black text-slate-900">{formatSeconds(globalSeconds)}</p>
-              </div>
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Trạng thái</p>
-                <p className="mt-2 text-lg font-bold text-amber-900">{attempt.status}</p>
-                {resolvedOverallBand != null ? (
-                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                    Overall band: {Number(resolvedOverallBand).toFixed(1)}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="px-6 py-5 sm:px-8">
-          <div className="grid gap-4 xl:grid-cols-4">
-            {SKILL_ORDER.map((skill) => {
-              const node = attempt.skills.find((item) => item.skillType === skill);
-              const lockedByOther = Boolean(
-                currentSkillInProgress && currentSkillInProgress !== skill && node?.status === 'NOT_STARTED'
-              );
-              const isSelected = selectedSkill === skill;
-              const isReviewable = ['SUBMITTED', 'EXPIRED', 'GRADED'].includes(node?.status || '');
+    <div className="flex flex-col overflow-hidden bg-slate-50" style={{ height: 'calc(100vh - 64px)' }}>
 
-              return (
-                <button
-                  key={skill}
-                  type="button"
-                  onClick={() => setSelectedSkill(skill)}
-                  className={`rounded-[24px] border p-4 text-left shadow-sm transition ${
-                    isSelected
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-900 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className={`text-xs font-bold uppercase tracking-[0.22em] ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>{skill}</p>
-                      <p className={`mt-2 text-sm font-semibold ${isSelected ? 'text-white' : 'text-slate-700'}`}>Status: {node?.status || 'N/A'}</p>
-                      <p className={`mt-1 text-xs ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>Time left: {formatSeconds(node?.timeRemainingSeconds || 0)}</p>
-                    </div>
-                    {isReviewable ? <CheckCircle2 className={`h-5 w-5 ${isSelected ? 'text-emerald-300' : 'text-emerald-500'}`} /> : null}
-                  </div>
-
-                  {node?.status === 'NOT_STARTED' && !lockedByOther && attempt.status === 'IN_PROGRESS' ? (
-                    <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700'}`}>
-                      Sẵn sàng bắt đầu
-                    </div>
-                  ) : null}
-                  {lockedByOther ? (
-                    <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${isSelected ? 'bg-white/10 text-white' : 'bg-amber-50 text-amber-700'}`}>
-                      Đang khóa bởi {currentSkillInProgress}
-                    </div>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </header>
-
-
-      {selectedSkillAttempt ? (
-        <div className="space-y-4 rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fff9f9_100%)] p-5 shadow-sm sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black text-slate-900">
-                {selectedSkillAttempt.skillType.toUpperCase()} Exam Workspace
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {isSelectedSkillEditable
-                  ? 'Bạn đang ở chế độ làm bài. Lưu snapshot định kỳ để tránh mất dữ liệu.'
-                  : 'Kỹ năng này đang ở chế độ review. Bạn có thể xem lại bài đã nộp nhưng không thể chỉnh sửa.'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-700">
-              <Clock3 className="h-4 w-4" />
-              {formatSeconds(selectedSkillAttempt.timeRemainingSeconds)}
-            </div>
-          </div>
-
-          {isSelectedSkillEditable ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex items-start gap-2">
-              <Lock className="mt-0.5 h-4 w-4" />
-              Khi đã bắt đầu kỹ năng này, bạn không thể chuyển sang kỹ năng khác cho đến khi nộp.
-            </p>
-          ) : null}
-
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700">
-              {selectedSkill === 'reading' ? <PencilLine className="h-4 w-4" /> : null}
-              {selectedSkill === 'listening' ? <Headphones className="h-4 w-4" /> : null}
-              {selectedSkill === 'writing' ? <PencilLine className="h-4 w-4" /> : null}
-              {selectedSkill === 'speaking' ? <Mic className="h-4 w-4" /> : null}
-              Chưa trả lời: {currentUnansweredCount}
+      {/* ── TOP BAR ── */}
+      <div className="flex h-14 flex-none items-center gap-3 border-b border-slate-200 bg-white px-4">
+        {/* Title + status */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h1 className="truncate text-sm font-bold text-slate-900">{attempt.exam?.title || 'Mock Test'}</h1>
+          <span
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
+              attempt.status === 'IN_PROGRESS'
+                ? 'bg-emerald-100 text-emerald-700'
+                : attempt.status === 'SUBMITTED'
+                ? 'bg-slate-100 text-slate-600'
+                : 'bg-amber-100 text-amber-700'
+            }`}
+          >
+            {attempt.status}
+          </span>
+          {resolvedOverallBand != null && (
+            <span className="whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+              Band {Number(resolvedOverallBand).toFixed(1)}
             </span>
-            <a
-              href={skillRoute(selectedSkillAttempt.skillType, selectedSkillAttempt.skillRefId)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Mở giao diện gốc ở tab mới
-            </a>
+          )}
+        </div>
+
+        {/* Timers */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-mono font-semibold text-slate-700">
+            <Clock3 className="h-3.5 w-3.5" />
+            {formatSeconds(globalSeconds)}
           </div>
+          {selectedSkillAttempt && !['SUBMITTED', 'EXPIRED', 'GRADED'].includes(selectedSkillAttempt.status) && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-mono font-semibold text-amber-700">
+              <Clock3 className="h-3.5 w-3.5" />
+              {formatSeconds(selectedSkillAttempt.timeRemainingSeconds ?? 0)}
+            </div>
+          )}
+        </div>
 
-          {renderSelectedWorkspace()}
-
-          {isSelectedSkillEditable ? (
-            <div className="flex flex-wrap gap-3">
+        {/* Action buttons */}
+        <div className="flex items-center gap-1.5">
+          {isSelectedSkillEditable && (
+            <>
               <button
-                onClick={handleSaveSnapshot}
+                onClick={() => void handleSaveSnapshot()}
                 disabled={busy}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
-                <Save className="h-4 w-4" />
-                Lưu snapshot
+                {busy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                Lưu
               </button>
               <button
-                onClick={() => {
-                  setPendingAction('skill');
-                  setShowSubmitWarning(true);
-                }}
+                onClick={() => { setPendingAction('skill'); setShowSubmitWarning(true); }}
                 disabled={busy}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
                 Nộp kỹ năng
               </button>
-            </div>
-          ) : null}
+            </>
+          )}
+          {attempt.status === 'IN_PROGRESS' && (
+            <button
+              onClick={() => { setPendingAction('exam'); setShowSubmitWarning(true); }}
+              disabled={busy}
+              className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Nộp tất cả
+            </button>
+          )}
         </div>
-      ) : null}
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <button
-          onClick={() => {
-            setPendingAction('exam');
-            setShowSubmitWarning(true);
-          }}
-          disabled={busy || attempt.status !== 'IN_PROGRESS'}
-          className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-        >
-          Nộp toàn bộ bài thi
-        </button>
       </div>
 
-      {showSubmitWarning ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
-            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              Xác nhận nộp bài
-            </h3>
-            <p className="mt-3 text-sm text-slate-600">
-              Bạn còn {currentUnansweredCount} câu chưa trả lời. Bạn có chắc chắn muốn nộp không?
-            </p>
+      {/* ── SKILL TABS ── */}
+      <div className="flex h-11 flex-none items-center gap-1 border-b border-slate-200 bg-white px-4">
+        {SKILL_ORDER.map((skill) => {
+          const node = attempt.skills.find((s) => s.skillType === skill);
+          const isSelected = selectedSkill === skill;
+          const isSubmitted = ['SUBMITTED', 'EXPIRED', 'GRADED'].includes(node?.status || '');
+          const isInProgress = node?.status === 'IN_PROGRESS';
+          const isLocked = Boolean(currentSkillInProgress && currentSkillInProgress !== skill && node?.status === 'NOT_STARTED');
+          const ICONS = { reading: BookOpen, listening: Headphones, writing: PencilLine, speaking: Mic } as const;
+          const Icon = ICONS[skill];
 
-            <div className="mt-5 flex justify-end gap-3">
+          return (
+            <button
+              key={skill}
+              type="button"
+              onClick={() => setSelectedSkill(skill)}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1 text-xs font-semibold transition ${
+                isSelected
+                  ? 'bg-slate-900 text-white'
+                  : isSubmitted
+                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {isLocked ? (
+                <Lock className="h-3.5 w-3.5" />
+              ) : isSubmitted ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <Icon className="h-3.5 w-3.5" />
+              )}
+              {skill.charAt(0).toUpperCase() + skill.slice(1)}
+              {isInProgress && isSelected && currentUnansweredCount > 0 && (
+                <span className="rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                  {currentUnansweredCount}
+                </span>
+              )}
+              {isSubmitted && attempt.overallBandScores?.[skill] != null && (
+                <span
+                  className={`rounded-full px-1.5 text-[10px] font-bold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-700'
+                  }`}
+                >
+                  {Number(attempt.overallBandScores[skill]).toFixed(1)}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        <div className="ml-auto text-xs text-slate-400">
+          {isSelectedSkillEditable && currentUnansweredCount > 0
+            ? `${currentUnansweredCount} câu chưa trả lời`
+            : selectedSkillAttempt && ['SUBMITTED', 'GRADED'].includes(selectedSkillAttempt.status)
+            ? 'Chế độ xem lại'
+            : ''}
+        </div>
+      </div>
+
+      {/* ── CONTENT AREA ── */}
+      <div className="flex flex-1 overflow-hidden">
+        {renderSkillContent()}
+      </div>
+
+      {/* ── SUBMIT WARNING MODAL ── */}
+      {showSubmitWarning ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-80 rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-3 flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <h3 className="font-bold text-slate-900">Xác nhận nộp bài</h3>
+            </div>
+            <p className="mb-5 text-sm text-slate-600">
+              {pendingAction === 'skill'
+                ? `Bạn có chắc muốn nộp kỹ năng ${selectedSkill?.toUpperCase()}? Sau khi nộp bạn không thể chỉnh sửa.`
+                : 'Bạn có chắc muốn nộp toàn bộ bài thi? Hành động này không thể hoàn tác.'}
+            </p>
+            <div className="flex justify-end gap-2">
               <button
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700"
-                onClick={() => {
-                  setShowSubmitWarning(false);
-                  setPendingAction(null);
-                }}
+                onClick={() => { setShowSubmitWarning(false); setPendingAction(null); }}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Quay lại
               </button>
               <button
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
                 onClick={pendingAction === 'skill' ? confirmSubmitSkill : confirmSubmitExam}
+                disabled={busy}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
               >
-                Xác nhận nộp
+                {busy ? <LoaderCircle className="h-4 w-4 animate-spin inline" /> : 'Xác nhận nộp'}
               </button>
             </div>
           </div>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

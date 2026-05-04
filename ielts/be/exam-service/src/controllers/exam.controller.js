@@ -23,6 +23,47 @@ const {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// ─── In-memory job-progress store for PDF orchestration SSE ──────────────────
+// Structure: jobId → { progress: number, message: string, listeners: Response[] }
+const progressStore = new Map();
+
+function emitJobProgress(jobId, progress, message) {
+  const job = progressStore.get(jobId);
+  if (!job) return;
+  job.progress = Math.min(Math.round(progress), 99);
+  job.message = message;
+  const payload = `data: ${JSON.stringify({ progress: job.progress, message })}\n\n`;
+  job.listeners = job.listeners.filter((res) => {
+    try { res.write(payload); return true; } catch { return false; }
+  });
+}
+
+exports.orchestrateProgress = (req, res) => {
+  const { jobId } = req.params;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  if (!progressStore.has(jobId)) {
+    progressStore.set(jobId, { progress: 0, message: 'Đang chờ kết nối...', listeners: [] });
+  }
+  const job = progressStore.get(jobId);
+  res.write(`data: ${JSON.stringify({ progress: job.progress, message: job.message })}\n\n`);
+  job.listeners.push(res);
+
+  const heartbeat = setInterval(() => {
+    try { res.write(': heartbeat\n\n'); } catch { clearInterval(heartbeat); }
+  }, 20_000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    const j = progressStore.get(jobId);
+    if (j) j.listeners = j.listeners.filter((r) => r !== res);
+  });
+};
+
 function createError(message, status = 400) {
   const err = new Error(message);
   err.status = status;
@@ -942,6 +983,36 @@ function buildSkillForm(testType, examBuffer, examFilename, examMime, keyBuffer,
   return form;
 }
 
+async function extractOneSkillWithRetry({ skillType, fullExamFile, answerKeyFile, authHeaders, retries = 2 }) {
+  let lastError;
+  for (let attempt = 1; attempt <= retries + 1; attempt += 1) {
+    try {
+      const form = buildSkillForm(
+        skillType,
+        fullExamFile.buffer,
+        fullExamFile.originalname,
+        fullExamFile.mimetype,
+        answerKeyFile.buffer,
+        answerKeyFile.originalname,
+        answerKeyFile.mimetype,
+      );
+
+      const aiRes = await aiClient.post('/api/ai/extract-test', form, {
+        headers: { ...form.getHeaders(), ...authHeaders },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity,
+        timeout: 5 * 60 * 1000,
+      });
+
+      return aiRes.data;
+    } catch (error) {
+      lastError = error;
+      if (attempt > retries) break;
+    }
+  }
+  throw lastError;
+}
+
 exports.createExamFromPdf = async (req, res, next) => {
   try {
     const fullExamFile = req.files?.fullExamPdf?.[0];
@@ -954,63 +1025,91 @@ exports.createExamFromPdf = async (req, res, next) => {
     const token = req.headers.authorization?.startsWith('Bearer ')
       ? req.headers.authorization.split(' ')[1]
       : null;
-
     const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
-    // Call /api/ai/extract-test once per skill type (in parallel).
-    // The AI endpoint accepts exactly one testType at a time.
-    const skillTypes = ['reading', 'listening', 'writing', 'speaking'];
-    const skillResults = await Promise.all(
-      skillTypes.map(async (skillType) => {
-        const form = buildSkillForm(
-          skillType,
-          fullExamFile.buffer,
-          fullExamFile.originalname,
-          fullExamFile.mimetype,
-          answerKeyFile.buffer,
-          answerKeyFile.originalname,
-          answerKeyFile.mimetype,
-        );
-        const res = await aiClient.post('/api/ai/extract-test', form, {
-          headers: { ...form.getHeaders(), ...authHeaders },
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-        });
-        return { skillType, data: res.data };
-      })
-    );
-
-    // Assemble the combined payload that extractSkillPayloads expects
-    const combinedPayload = {};
-    for (const { skillType, data } of skillResults) {
-      combinedPayload[skillType] = data;
+    // Job ID for SSE progress tracking (sent by frontend as form field)
+    const jobId = (req.body?.jobId || '').trim() || null;
+    if (jobId) {
+      progressStore.set(jobId, { progress: 3, message: 'Đã nhận file, đang gửi đến AI...', listeners: [] });
+      emitJobProgress(jobId, 3, 'Đã nhận file, đang gửi đến AI...');
     }
+
+    const skillTypes = ['reading', 'listening', 'writing', 'speaking'];
+    const skillLabels = { reading: 'Reading', listening: 'Listening', writing: 'Writing', speaking: 'Speaking' };
+
+    // Run all 4 skill extractions in parallel; retry each skill independently.
+    let completedCount = 0;
+    const skillPromises = skillTypes.map(async (skillType) => {
+      if (jobId) emitJobProgress(jobId, 5, `Phân tích ${skillLabels[skillType]}...`);
+
+      const skillData = await extractOneSkillWithRetry({
+        skillType,
+        fullExamFile,
+        answerKeyFile,
+        authHeaders,
+        retries: 2,
+      });
+
+      completedCount++;
+      if (jobId) {
+        const progress = 5 + Math.round((completedCount / skillTypes.length) * 65);
+        emitJobProgress(jobId, progress, `✓ ${skillLabels[skillType]} xong (${completedCount}/${skillTypes.length})`);
+      }
+      return { skillType, data: skillData };
+    });
+
+    const settled = await Promise.allSettled(skillPromises);
+
+    // Build combined payload from successful skills only.
+    const combinedPayload = {};
+    const failedSkills = [];
+    settled.forEach((result, i) => {
+      const skillType = skillTypes[i];
+      if (result.status === 'fulfilled') {
+        combinedPayload[skillType] = result.value.data;
+      } else {
+        failedSkills.push(skillType);
+      }
+    });
+
+    if (failedSkills.length > 0) {
+      if (jobId) emitJobProgress(jobId, 0, `Lỗi trích xuất: ${failedSkills.join(', ')}`);
+      throw createError(
+        `AI extraction failed for: ${failedSkills.join(', ')}. Vui lòng thử lại để đảm bảo tạo đề đầy đủ 4 kỹ năng.`,
+        502
+      );
+    }
+
+    if (jobId) emitJobProgress(jobId, 72, 'Đang lưu tài nguyên kỹ năng...');
 
     const { reading, listening, writing, speaking } = extractSkillPayloads(combinedPayload);
     const refs = await createSkillResources({ token, reading, listening, writing, speaking });
 
-    const payload = sanitizeExamPayload(
-      {
-        ...req.body,
-        skillRefs: refs,
-      },
-      req.user.id
-    );
+    if (jobId) emitJobProgress(jobId, 90, 'Đang tạo đề thi...');
 
+    const payload = sanitizeExamPayload({ ...req.body, skillRefs: refs }, req.user.id);
     if (!payload.title) {
       payload.title = `Mock Test ${new Date().toISOString().slice(0, 10)}`;
     }
 
     const exam = await Exam.create(payload);
 
+    if (jobId) {
+      emitJobProgress(jobId, 100, 'Hoàn thành!');
+      // Clean up job store after 60 s
+      setTimeout(() => progressStore.delete(jobId), 60_000);
+    }
+
     res.status(201).json({
       success: true,
-      data: {
-        exam,
-        refs,
-      },
+      data: { exam, refs },
     });
   } catch (error) {
+    const jobId = (req.body?.jobId || '').trim() || null;
+    if (jobId) {
+      emitJobProgress(jobId, 0, `Lỗi: ${error.message}`);
+      setTimeout(() => progressStore.delete(jobId), 60_000);
+    }
     next(error);
   }
 };
