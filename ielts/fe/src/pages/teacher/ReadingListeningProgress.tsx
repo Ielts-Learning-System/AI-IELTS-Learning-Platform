@@ -68,7 +68,7 @@ const getStudentId = (attempt: AttemptRecord) => {
 };
 
 const getTestName = (attempt: AttemptRecord) => {
-  if (typeof attempt.testId === 'object') {
+  if (attempt.testId && typeof attempt.testId === 'object') {
     return attempt.testId.title || 'Untitled Test';
   }
   return 'Untitled Test';

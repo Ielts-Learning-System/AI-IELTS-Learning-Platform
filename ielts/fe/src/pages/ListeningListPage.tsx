@@ -49,13 +49,12 @@ function getErrorMessage(err: unknown): string {
 function buildCompletedKeys(attempts: PartAttemptSummary[]): Set<string> {
   const keys = new Set<string>();
   attempts.forEach((a) => {
-    if (a.partNumber != null) {
-      const tid =
-        a.testId !== null && typeof a.testId === 'object'
-          ? (a.testId as { _id: string })._id
-          : String(a.testId);
-      keys.add(`${tid}-${a.partNumber}`);
-    }
+    if (!a || a.partNumber == null) return;
+    const tid =
+      a.testId != null && typeof a.testId === 'object'
+        ? (a.testId as { _id: string })._id ?? ''
+        : String(a.testId ?? '');
+    if (tid) keys.add(`${tid}-${a.partNumber}`);
   });
   return keys;
 }
@@ -144,7 +143,7 @@ export default function ListeningListPage() {
 
   // ── Flatten tests → individual part cards ────────────────────────
   const flatParts = useMemo<FlattenedPart[]>(() => {
-    return tests.flatMap((test) =>
+    return tests.filter((test): test is ListeningTest => test != null && typeof test === 'object' && Boolean(test._id)).flatMap((test) =>
       (test.parts ?? []).map((part) => ({
         key: `${test._id}-${part.partNumber ?? 0}`,
         testId: test._id,

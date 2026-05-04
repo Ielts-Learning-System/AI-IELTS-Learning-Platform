@@ -32,6 +32,7 @@ router.post(
 );
 
 router.get('/teacher/monitoring/attempts', verifyToken, authorizeRoles('teacher', 'admin'), examController.listMonitoringAttempts);
+router.get('/teacher/students/:userId/attempts', verifyToken, authorizeRoles('teacher', 'admin'), examController.getStudentAttempts);
 router.get('/teacher/attempts/:attemptId', verifyToken, authorizeRoles('teacher', 'admin'), examController.getAttemptForTeacher);
 router.post('/teacher/attempts/:attemptId/grade', verifyToken, authorizeRoles('teacher', 'admin'), examController.gradeAttempt);
 

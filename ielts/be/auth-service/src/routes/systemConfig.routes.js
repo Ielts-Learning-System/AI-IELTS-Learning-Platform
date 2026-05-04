@@ -9,6 +9,14 @@ const {
   createAILog,
   getAILogs,
 } = require('../controllers/systemConfig.controller');
+const {
+  listApiKeys,
+  bulkAddApiKeys,
+  deleteApiKey,
+  resetAllQuotas,
+  getActiveKey,
+  rotateKey,
+} = require('../controllers/apiKey.controller');
 
 const router = express.Router();
 
@@ -20,8 +28,16 @@ router.put('/api/admin/system-config', verifyToken, isAdmin, updateSystemConfig)
 router.post('/api/admin/ai-logs', verifyToken, createAILog);   // teacher or admin can log usage
 router.get('/api/admin/ai-logs', verifyToken, isAdmin, getAILogs);
 
-// Internal route – called by ai-service inside Docker network only
+// API Key Pool – Admin-facing
+router.get('/api/admin/api-keys', verifyToken, isAdmin, listApiKeys);
+router.post('/api/admin/api-keys/bulk', verifyToken, isAdmin, bulkAddApiKeys);
+router.post('/api/admin/api-keys/reset-quotas', verifyToken, isAdmin, resetAllQuotas);
+router.delete('/api/admin/api-keys/:id', verifyToken, isAdmin, deleteApiKey);
+
+// Internal routes – called by ai-service inside Docker network only
 router.get('/api/internal/system-config', getInternalConfig);
 router.post('/api/internal/system-config/quota-exhausted', markQuotaExhausted);
+router.get('/api/internal/api-keys/active', getActiveKey);
+router.post('/api/internal/api-keys/rotate', rotateKey);
 
 module.exports = router;

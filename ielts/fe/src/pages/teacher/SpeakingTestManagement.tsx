@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import MiniRichEditor from '../../components/MiniRichEditor';
-import ExcelImportWizard from './ExcelImportWizard';
 import toast, { Toaster } from 'react-hot-toast';
-import { Edit, FileText, LoaderCircle, Mic, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { Edit, FileText, LoaderCircle, Mic, Plus, Search, Trash2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUserStore } from '../../store/useUserStore';
 
@@ -135,7 +134,6 @@ export default function SpeakingTestManagement() {
   const [tests, setTests] = useState<SpeakingTest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isExcelWizardOpen, setIsExcelWizardOpen] = useState(false);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('create');
@@ -327,14 +325,6 @@ export default function SpeakingTestManagement() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsExcelWizardOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 font-semibold text-emerald-700 transition hover:bg-emerald-100"
-            >
-              <Upload className="h-4 w-4" />
-              Import Excel
-            </button>
             <Link
               to="/teacher/speaking-pdf"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white transition hover:bg-indigo-700"
@@ -537,16 +527,6 @@ export default function SpeakingTestManagement() {
         </div>
       )}
 
-      {isExcelWizardOpen && (
-        <ExcelImportWizard
-          scope="speaking"
-          onClose={() => setIsExcelWizardOpen(false)}
-          onImported={() => {
-            setIsExcelWizardOpen(false);
-            window.location.reload();
-          }}
-        />
-      )}
     </section>
   );
 }

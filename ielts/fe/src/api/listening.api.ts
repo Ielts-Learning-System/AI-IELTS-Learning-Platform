@@ -75,7 +75,7 @@ export async function fetchListeningTests(
     throw new Error(res.message ?? 'Không thể tải danh sách đề thi Listening.');
   }
 
-  return res.data ?? [];
+  return (res.data ?? []).filter((t): t is ListeningTest => t != null);
 }
 
 /** Fetch the current user's listening attempts. Returns [] if not authenticated. */

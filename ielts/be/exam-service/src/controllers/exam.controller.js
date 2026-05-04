@@ -926,6 +926,21 @@ exports.getAttemptForTeacher = async (req, res, next) => {
   }
 };
 
+/**
+ * Build a FormData for one skill extraction call to /api/ai/extract-test.
+ * Field names must match the FastAPI endpoint: testFile / answerKeyFile / testType.
+ */
+function buildSkillForm(testType, examBuffer, examFilename, examMime, keyBuffer, keyFilename, keyMime) {
+  const form = new FormData();
+  form.append('testType', testType);
+  form.append('testFile', examBuffer, { filename: examFilename, contentType: examMime });
+  // answer key only used for reading + listening
+  if (keyBuffer && (testType === 'reading' || testType === 'listening')) {
+    form.append('answerKeyFile', keyBuffer, { filename: keyFilename, contentType: keyMime });
+  }
+  return form;
+}
+
 exports.createExamFromPdf = async (req, res, next) => {
   try {
     const fullExamFile = req.files?.fullExamPdf?.[0];
@@ -939,26 +954,38 @@ exports.createExamFromPdf = async (req, res, next) => {
       ? req.headers.authorization.split(' ')[1]
       : null;
 
-    const form = new FormData();
-    form.append('test_pdf', fullExamFile.buffer, {
-      filename: fullExamFile.originalname,
-      contentType: fullExamFile.mimetype,
-    });
-    form.append('answer_pdf', answerKeyFile.buffer, {
-      filename: answerKeyFile.originalname,
-      contentType: answerKeyFile.mimetype,
-    });
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
-    const aiRes = await aiClient.post('/api/ai/extract-test', form, {
-      headers: {
-        ...form.getHeaders(),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      maxBodyLength: Infinity,
-      maxContentLength: Infinity,
-    });
+    // Call /api/ai/extract-test once per skill type (in parallel).
+    // The AI endpoint accepts exactly one testType at a time.
+    const skillTypes = ['reading', 'listening', 'writing', 'speaking'];
+    const skillResults = await Promise.all(
+      skillTypes.map(async (skillType) => {
+        const form = buildSkillForm(
+          skillType,
+          fullExamFile.buffer,
+          fullExamFile.originalname,
+          fullExamFile.mimetype,
+          answerKeyFile.buffer,
+          answerKeyFile.originalname,
+          answerKeyFile.mimetype,
+        );
+        const res = await aiClient.post('/api/ai/extract-test', form, {
+          headers: { ...form.getHeaders(), ...authHeaders },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        });
+        return { skillType, data: res.data };
+      })
+    );
 
-    const { reading, listening, writing, speaking } = extractSkillPayloads(aiRes.data);
+    // Assemble the combined payload that extractSkillPayloads expects
+    const combinedPayload = {};
+    for (const { skillType, data } of skillResults) {
+      combinedPayload[skillType] = data;
+    }
+
+    const { reading, listening, writing, speaking } = extractSkillPayloads(combinedPayload);
     const refs = await createSkillResources({ token, reading, listening, writing, speaking });
 
     const payload = sanitizeExamPayload(
@@ -982,6 +1009,22 @@ exports.createExamFromPdf = async (req, res, next) => {
         refs,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /teacher/students/:userId/attempts
+ * Teacher/Admin: fetch all exam attempts (any status) for a given student.
+ */
+exports.getStudentAttempts = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const attempts = await ExamAttempt.find({ userId })
+      .sort({ createdAt: 1 })
+      .lean();
+    res.json({ success: true, data: attempts });
   } catch (error) {
     next(error);
   }

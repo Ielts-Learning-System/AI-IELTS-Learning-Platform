@@ -36,4 +36,8 @@ router.put('/preferences', ctrl.updatePreferences);
 router.post('/push/subscribe', ctrl.pushSubscribe);
 router.delete('/push/subscribe', ctrl.pushUnsubscribe);
 
+// Teacher/Admin endpoints — view & send notifications for a specific student
+router.get('/teacher/users/:userId/notifications', ctrl.getNotificationsForUser);
+router.post('/teacher/send', ctrl.sendNotificationToUser);
+
 module.exports = router;

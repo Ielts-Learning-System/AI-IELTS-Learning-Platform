@@ -167,3 +167,54 @@ exports.pushUnsubscribe = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+/**
+ * GET /api/notification/teacher/users/:userId/notifications
+ * Teacher/Admin: list in-app notifications for a specific student.
+ */
+exports.getNotificationsForUser = async (req, res) => {
+  try {
+    const role = req.user.role || '';
+    if (!['Admin', 'Teacher'].includes(role)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const { userId } = req.params;
+    const notifications = await NotificationLog.find({ userId, channel: 'in-app' })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json({ notifications });
+  } catch (err) {
+    console.error('getNotificationsForUser error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * POST /api/notification/teacher/send
+ * Teacher/Admin: send an in-app notification to a specific student.
+ * Body: { userId, message, title? }
+ */
+exports.sendNotificationToUser = async (req, res) => {
+  try {
+    const role = req.user.role || '';
+    if (!['Admin', 'Teacher'].includes(role)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const { userId, message, title } = req.body;
+    if (!userId || !message) {
+      return res.status(400).json({ message: 'userId and message are required' });
+    }
+    const notification = await NotificationLog.create({
+      userId,
+      type: 'system',
+      title: title || 'Nhắc nhở từ giáo viên',
+      message,
+      channel: 'in-app',
+    });
+    res.status(201).json({ notification });
+  } catch (err) {
+    console.error('sendNotificationToUser error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};

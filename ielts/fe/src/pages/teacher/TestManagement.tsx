@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Music2, Pencil, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, Loader2, Music2, Pencil, Plus, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
 import MiniRichEditor from '../../components/MiniRichEditor';
 import { TestModal } from './TestModal';
 import { AdvancedPdfExtractor, type PdfParsedTest } from './AdvancedPdfExtractor';
-import { ExcelImportWizard } from './ExcelImportWizard';
 import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 import { apiClient } from '../../lib/api/client';
@@ -305,7 +304,6 @@ export function TestManagement() {
   const [editingContent, setEditingContent] = useState(false);
   const [editingTest, setEditingTest] = useState<TestListItem | null>(null);
   const [form, setForm] = useState<TestFormState>(createInitialForm(routeModule === 'all' ? 'reading' : routeModule));
-  const [isExcelWizardOpen, setIsExcelWizardOpen] = useState(false);
 
   useEffect(() => {
     setSelectedModule(routeModule);
@@ -836,15 +834,6 @@ export function TestManagement() {
 
           <button
             type="button"
-            onClick={() => setIsExcelWizardOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-700"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            Import Excel
-          </button>
-
-          <button
-            type="button"
             onClick={openCreateModal}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
           >
@@ -946,14 +935,6 @@ export function TestManagement() {
         onApply={applyParsedTest}
         defaultTestType={selectedModule === 'listening' ? 'listening' : 'reading'}
       />
-
-      {isExcelWizardOpen && (
-        <ExcelImportWizard
-          scope={selectedModule === 'listening' ? 'listening' : 'reading'}
-          onClose={() => setIsExcelWizardOpen(false)}
-          onImported={fetchTests}
-        />
-      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-white">

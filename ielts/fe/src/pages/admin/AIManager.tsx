@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Bot,
   Eye,
@@ -19,6 +19,12 @@ import {
   TrendingUp,
   Clock,
   X,
+  Plus,
+  Trash2,
+  RefreshCw,
+  ShieldCheck,
+  ShieldOff,
+  ShieldAlert,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../lib/api/client';
@@ -26,6 +32,17 @@ import { apiClient } from '../../lib/api/client';
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface ApiKeyEntry {
+  _id: string;
+  label: string;
+  maskedKey: string;
+  status: 'ACTIVE' | 'AVAILABLE' | 'EXHAUSTED';
+  usageCount: number;
+  lastUsedAt: string | null;
+  exhaustedAt: string | null;
+  createdAt: string;
+}
 
 interface AIConfig {
   geminiApiKeySet: boolean;
@@ -72,6 +89,7 @@ interface AILog {
 }
 
 type TabId =
+  | 'keyPool'
   | 'quota'
   | 'reading'
   | 'listening'
@@ -243,6 +261,193 @@ function PromptSection({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Key Pool Tab
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STATUS_META: Record<ApiKeyEntry['status'], { label: string; color: string; icon: React.ReactNode }> = {
+  ACTIVE:    { label: 'Active',    color: 'bg-emerald-100 text-emerald-700', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+  AVAILABLE: { label: 'Available', color: 'bg-blue-100 text-blue-700',       icon: <ShieldAlert className="h-3.5 w-3.5" /> },
+  EXHAUSTED: { label: 'Exhausted', color: 'bg-red-100 text-red-700',         icon: <ShieldOff className="h-3.5 w-3.5" /> },
+};
+
+function KeyPoolTab() {
+  const [keys, setKeys] = useState<ApiKeyEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [bulkInput, setBulkInput] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadKeys = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await apiClient.get<{ success: boolean; data: ApiKeyEntry[] }>('/admin/api-keys');
+      setKeys(data.data ?? []);
+    } catch {
+      toast.error('Không thể tải danh sách API key');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadKeys(); }, [loadKeys]);
+
+  const handleBulkAdd = async () => {
+    const trimmed = bulkInput.trim();
+    if (!trimmed) return;
+    setAdding(true);
+    try {
+      const { data } = await apiClient.post<{ message: string; addedCount: number; skippedCount: number }>(
+        '/admin/api-keys/bulk',
+        { keys: trimmed },
+      );
+      toast.success(data.message);
+      setBulkInput('');
+      await loadKeys();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg ?? 'Thêm key thất bại');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await apiClient.delete(`/admin/api-keys/${id}`);
+      toast.success('Đã xóa key');
+      setKeys((prev) => prev.filter((k) => k._id !== id));
+    } catch {
+      toast.error('Xóa thất bại');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleResetQuotas = async () => {
+    setResetting(true);
+    try {
+      const { data } = await apiClient.post<{ message: string }>('/admin/api-keys/reset-quotas', {});
+      toast.success(data.message);
+      await loadKeys();
+    } catch {
+      toast.error('Reset thất bại');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const exhaustedCount = keys.filter((k) => k.status === 'EXHAUSTED').length;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-slate-900 mb-1">API Key Pool</h3>
+        <p className="text-sm text-slate-500">
+          Hệ thống tự động xoay vòng sang key tiếp theo khi key hiện tại hết quota (429). Thêm nhiều key để tăng khả năng chịu tải.
+        </p>
+      </div>
+
+      {/* ── Add keys ── */}
+      <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+        <p className="text-sm font-medium text-slate-700">Thêm key mới (paste nhiều key, phân cách bởi dấu phẩy)</p>
+        <textarea
+          rows={3}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+          placeholder="AIzaSy..., AIzaSy..., AIzaSy..."
+          value={bulkInput}
+          onChange={(e) => setBulkInput(e.target.value)}
+        />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleBulkAdd}
+            disabled={adding || !bulkInput.trim()}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {adding ? 'Đang thêm...' : 'Thêm key'}
+          </button>
+          <button
+            onClick={handleResetQuotas}
+            disabled={resetting || exhaustedCount === 0}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Reset quota ({exhaustedCount} exhausted)
+          </button>
+          <button onClick={loadKeys} className="ml-auto inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600">
+            <RotateCcw className="h-3.5 w-3.5" /> Làm mới
+          </button>
+        </div>
+      </div>
+
+      {/* ── Key table ── */}
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-red-500" /></div>
+      ) : keys.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">
+          Chưa có key nào. Hãy thêm ít nhất một Gemini API key.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-500 uppercase tracking-wide">
+                <th className="px-4 py-3 text-left">#</th>
+                <th className="px-4 py-3 text-left">Key (masked)</th>
+                <th className="px-4 py-3 text-left">Trạng thái</th>
+                <th className="px-4 py-3 text-right">Số lần dùng</th>
+                <th className="px-4 py-3 text-left">Lần dùng cuối</th>
+                <th className="px-4 py-3 text-left">Thêm lúc</th>
+                <th className="px-4 py-3 text-center">Xóa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((k, i) => {
+                const meta = STATUS_META[k.status];
+                return (
+                  <tr key={k._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                    <td className="px-4 py-3 text-slate-400">{i + 1}</td>
+                    <td className="px-4 py-3 font-mono text-slate-700">{k.maskedKey}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${meta.color}`}>
+                        {meta.icon} {meta.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600">{k.usageCount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString('vi-VN') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {new Date(k.createdAt).toLocaleDateString('vi-VN')}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleDelete(k._id)}
+                        disabled={deletingId === k._id || k.status === 'ACTIVE'}
+                        title={k.status === 'ACTIVE' ? 'Không thể xóa key đang ACTIVE' : 'Xóa key'}
+                        className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-30"
+                      >
+                        {deletingId === k._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="text-xs text-slate-400">
+        * Key ACTIVE là key đang được dùng. Khi hết quota (429), hệ thống tự rotate sang key AVAILABLE tiếp theo và retry request ngay lập tức. Mỗi đêm lúc 00:00, tất cả key EXHAUSTED được reset về AVAILABLE.
+      </p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -390,7 +595,8 @@ export function AIManager() {
   ).sort((a, b) => new Date(b.lastUsedAt).getTime() - new Date(a.lastUsedAt).getTime());
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'quota', label: 'Quota & API Key', icon: <BarChart3 className="h-4 w-4" /> },
+    { id: 'keyPool', label: 'Key Pool', icon: <KeyRound className="h-4 w-4" /> },
+    { id: 'quota', label: 'Quota & Key đơn', icon: <BarChart3 className="h-4 w-4" /> },
     { id: 'reading', label: 'Reading (Image)', icon: <BookOpen className="h-4 w-4" /> },
     { id: 'listening', label: 'Listening (Image)', icon: <Headphones className="h-4 w-4" /> },
     { id: 'writingExtract', label: 'Writing Extract', icon: <PenLine className="h-4 w-4" /> },
@@ -547,6 +753,9 @@ export function AIManager() {
 
       {/* ── Tab content ──────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+
+        {/* ─ Key Pool ─ */}
+        {activeTab === 'keyPool' && <KeyPoolTab />}
 
         {/* ─ Quota & API Key ─ */}
         {activeTab === 'quota' && (

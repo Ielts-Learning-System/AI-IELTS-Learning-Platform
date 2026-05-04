@@ -79,7 +79,7 @@ export async function fetchReadingTests(
     throw new Error(res.message ?? 'Không thể tải danh sách đề thi.');
   }
 
-  return (res.data ?? []).filter((t) => t.isPublished !== false);
+  return (res.data ?? []).filter((t): t is ReadingTest => t != null && t.isPublished !== false);
 }
 
 /** Fetch the current user's reading attempts. Returns [] if not authenticated. */

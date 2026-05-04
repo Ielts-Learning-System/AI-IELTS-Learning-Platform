@@ -14,6 +14,17 @@ import base64
 import hashlib
 import io
 from contextlib import asynccontextmanager
+from typing import Any
+
+# Optional OCR libraries – service starts normally even when not installed
+try:
+    import numpy as np
+    from pdf2image import convert_from_bytes as _pdf2images
+    _OCR_LIBS_AVAILABLE = True
+except ImportError:
+    _OCR_LIBS_AVAILABLE = False
+    np = None          # type: ignore[assignment]
+    _pdf2images = None # type: ignore[assignment]
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -40,7 +51,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-04-17")
 
 async def _fetch_ai_config() -> dict:
     """
-    Fetch the live Gemini API key + prompt templates from the auth-service
+    Fetch prompt templates + legacy single-key config from the auth-service
     internal endpoint.  Raises HTTPException on failure.
     """
     url = f"{AUTH_SERVICE_INTERNAL_URL}/api/internal/system-config"
@@ -65,6 +76,65 @@ async def _fetch_ai_config() -> dict:
             )
 
 
+async def _fetch_active_key() -> dict:
+    """
+    Fetch the current ACTIVE key from the ApiKey pool in auth-service.
+    Returns { keyId, keyString }.
+    Raises HTTPException(503) when no key is configured.
+    """
+    url = f"{AUTH_SERVICE_INTERNAL_URL}/api/internal/api-keys/active"
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(url, headers={"x-internal-secret": INTERNAL_SECRET})
+            if resp.status_code == 503:
+                raise HTTPException(
+                    status_code=503,
+                    detail=resp.json().get(
+                        "message",
+                        "No active Gemini API key configured. Please add keys in Admin → AI Manager.",
+                    ),
+                )
+            resp.raise_for_status()
+            return resp.json()  # { keyId, keyString }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Failed to fetch active API key: %s", exc)
+            raise HTTPException(status_code=503, detail="Auth-service unreachable.")
+
+
+async def _rotate_key(exhausted_key_id: str) -> dict:
+    """
+    Tell auth-service to mark exhaustedKeyId as EXHAUSTED and promote the next
+    AVAILABLE key.  Returns { keyId, keyString } of the new ACTIVE key.
+    Raises HTTPException(503) when all keys are exhausted.
+    """
+    url = f"{AUTH_SERVICE_INTERNAL_URL}/api/internal/api-keys/rotate"
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.post(
+                url,
+                headers={"x-internal-secret": INTERNAL_SECRET},
+                json={"exhaustedKeyId": exhausted_key_id},
+            )
+            data = resp.json()
+            if resp.status_code == 503:
+                raise HTTPException(
+                    status_code=503,
+                    detail=data.get(
+                        "message",
+                        "Tất cả API key đã hết quota. Vui lòng thêm key mới hoặc chờ reset lúc 00:00.",
+                    ),
+                )
+            resp.raise_for_status()
+            return data  # { keyId, keyString }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("Failed to rotate API key: %s", exc)
+            raise HTTPException(status_code=503, detail="Auth-service unreachable during key rotation.")
+
+
 def _strip_markdown_fences(text: str) -> str:
     """Remove ```json ... ``` or ``` ... ``` wrappers that Gemini sometimes adds."""
     text = text.strip()
@@ -86,8 +156,8 @@ def _is_quota_exhausted_error(err: Exception | str) -> bool:
 
 async def _mark_quota_exhausted(message: str) -> None:
     """
-    Notify auth-service that current key is exhausted.
-    This is best-effort and should never break extraction responses.
+    Legacy: notify auth-service that current key is exhausted (used by old code paths).
+    Best-effort; never raises.
     """
     url = f"{AUTH_SERVICE_INTERNAL_URL}/api/internal/system-config/quota-exhausted"
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -99,6 +169,87 @@ async def _mark_quota_exhausted(message: str) -> None:
             )
         except Exception:
             logger.warning("Failed to notify auth-service about exhausted quota", exc_info=True)
+
+
+async def _call_gemini_contents_with_rotation(
+    contents: list,
+    *,
+    max_output_tokens: int = 8192,
+    temperature: float = 0.1,
+    use_thread: bool = False,
+) -> str:
+    """
+    Central Gemini call wrapper with automatic key rotation on quota exhaustion.
+
+    Algorithm:
+      1. Fetch ACTIVE key from pool.
+      2. Try Gemini call.
+         a. On 429 / RESOURCE_EXHAUSTED → rotate to next AVAILABLE key, retry once.
+         b. On 503 UNAVAILABLE → linear back-off, retry up to 3 times.
+         c. Any other error → raise immediately.
+      3. If all keys exhausted → raise HTTPException(503).
+
+    Returns the raw text from Gemini response.
+    use_thread=True: wraps synchronous _generate() in asyncio.to_thread (needed for PDF calls).
+    """
+    key_info = await _fetch_active_key()
+    rotated = False  # allow at most one rotation per request
+
+    for attempt in range(4):  # max 4 tries across all keys + retries
+        api_key = key_info["keyString"]
+        key_id = key_info["keyId"]
+        client_obj = genai.Client(api_key=api_key, http_options={"api_version": "v1"})
+
+        def _generate():
+            return client_obj.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_output_tokens,
+                ),
+            )
+
+        try:
+            if use_thread:
+                response = await asyncio.to_thread(_generate)
+            else:
+                response = _generate()
+            return response.text or ""
+
+        except Exception as exc:
+            err_str = str(exc)
+
+            # ── Quota exhausted → rotate key ──────────────────────────────
+            if _is_quota_exhausted_error(exc):
+                logger.warning(
+                    "Quota exhausted on key %s (attempt %d). Rotating…", key_id, attempt + 1
+                )
+                if rotated:
+                    # We already rotated once; all keys must be exhausted
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Tất cả API key đã hết quota. Vui lòng thêm key mới hoặc chờ reset lúc 00:00.",
+                    )
+                rotated = True
+                key_info = await _rotate_key(key_id)
+                logger.info("Rotated to new key %s. Retrying…", key_info["keyId"])
+                continue  # retry with new key
+
+            # ── Transient 503 → back-off ──────────────────────────────────
+            if "503" in err_str or "UNAVAILABLE" in err_str:
+                wait = (attempt + 1) * 6
+                logger.warning(
+                    "Gemini 503 (attempt %d/3), retrying in %ds…", attempt + 1, wait
+                )
+                await asyncio.sleep(wait)
+                continue
+
+            # ── Any other error → fail fast ───────────────────────────────
+            logger.exception("Gemini API call failed on attempt %d", attempt + 1)
+            raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
+
+    raise HTTPException(status_code=502, detail="Gemini API unavailable after all retries.")
 
 
 def _guess_image_mime(data: bytes) -> str | None:
@@ -206,6 +357,239 @@ def _inject_writing_images(result: dict, image_urls: list[str]) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# OCR Stage 1 – PaddleOCR PP-Structure helpers
+# ---------------------------------------------------------------------------
+
+_pp_structure: Any = None
+_fallback_ocr: Any = None
+
+
+def _init_ocr_engines() -> None:
+    """Lazy-init PaddleOCR engines exactly once per process."""
+    global _pp_structure, _fallback_ocr
+    if _pp_structure is not None:
+        return
+    if not _OCR_LIBS_AVAILABLE:
+        raise RuntimeError(
+            "OCR libraries not installed. Add paddlepaddle, paddleocr, pdf2image to requirements.txt."
+        )
+    from paddleocr import PPStructure, PaddleOCR  # noqa: PLC0415
+    logger.info("Initialising PP-Structure (lang=en, recovery=True) …")
+    _pp_structure = PPStructure(table=False, ocr=True, lang="en", show_log=False, recovery=True)
+    _fallback_ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+    logger.info("OCR engines ready.")
+
+
+def _ocr_page(img_arr: Any) -> str:
+    """Extract text from one page image array via PP-Structure with flat-OCR fallback."""
+    _init_ocr_engines()
+
+    def _sort_key(r: dict) -> tuple[int, int]:
+        bb = r.get("bbox") or [0, 0, 0, 0]
+        return int(bb[1]), int(bb[0])
+
+    try:
+        regions: list[dict] = _pp_structure(img_arr)  # type: ignore[operator]
+    except Exception as exc:
+        logger.warning("PP-Structure failed, falling back to flat OCR: %s", exc)
+        return _ocr_page_flat(img_arr)
+
+    if not regions:
+        return _ocr_page_flat(img_arr)
+
+    segments: list[str] = []
+    for region in sorted(regions, key=_sort_key):
+        rtype = str(region.get("type", "")).lower()
+        if rtype == "figure":
+            segments.append("[FIGURE]")
+            continue
+        if rtype == "table":
+            segments.append("[TABLE]")
+            continue
+        res = region.get("res")
+        if not res:
+            continue
+        prefix = "# " if rtype == "title" else ""
+        if isinstance(res, dict):
+            text = str(res.get("text") or "").strip()
+            if text:
+                segments.append(f"{prefix}{text}")
+        elif isinstance(res, list):
+            line_texts: list[str] = []
+            for item in res:
+                if not (isinstance(item, (list, tuple)) and len(item) == 2):
+                    continue
+                info = item[1]
+                if not (isinstance(info, (list, tuple)) and len(info) >= 2):
+                    continue
+                txt, conf = str(info[0]), float(info[1])
+                if conf >= OCR_CONF_THRESHOLD and txt.strip():
+                    line_texts.append(txt.strip())
+            if line_texts:
+                segments.append(f"{prefix}{' '.join(line_texts)}")
+    return "\n\n".join(segments)
+
+
+def _ocr_page_flat(img_arr: Any) -> str:
+    """Flat PaddleOCR fallback sorted by y-centre."""
+    _init_ocr_engines()
+    try:
+        result = _fallback_ocr.ocr(img_arr, cls=True)  # type: ignore[union-attr]
+    except Exception as exc:
+        logger.error("Flat OCR failed: %s", exc)
+        return ""
+    lines: list[tuple[float, str]] = []
+    for page_res in result or []:
+        for item in page_res or []:
+            if not (isinstance(item, (list, tuple)) and len(item) == 2):
+                continue
+            pts, info = item
+            if not (isinstance(info, (list, tuple)) and len(info) >= 2):
+                continue
+            txt, conf = str(info[0]), float(info[1])
+            if conf >= OCR_CONF_THRESHOLD and txt.strip():
+                y = sum(float(p[1]) for p in pts) / max(len(pts), 1)
+                lines.append((y, txt.strip()))
+    lines.sort(key=lambda t: t[0])
+    return "\n".join(t[1] for t in lines)
+
+
+async def _pdf_to_text(pdf_bytes: bytes) -> str:
+    """Convert PDF bytes → multi-page OCR text (runs in thread pool)."""
+    def _blocking() -> str:
+        images = _pdf2images(pdf_bytes, dpi=OCR_DPI, fmt="jpeg")  # type: ignore[operator]
+        pages: list[str] = []
+        for i, img in enumerate(images, 1):
+            arr = np.asarray(img)  # type: ignore[operator]
+            pages.append(f"=== PAGE {i} ===\n{_ocr_page(arr)}")
+        return "\n\n".join(pages)
+    return await asyncio.to_thread(_blocking)
+
+
+# ---------------------------------------------------------------------------
+# OCR Stage 2 – text-only Gemini call + text-injection prompts
+# ---------------------------------------------------------------------------
+
+async def _call_gemini_text_only(prompt: str) -> tuple[dict, dict]:
+    """
+    Send a plain-text prompt to Gemini (EXTRACT_MODEL, v1beta) with key-pool rotation.
+    Returns (parsed_dict, usage_dict).
+    """
+    key_info = await _fetch_active_key()
+    rotated = False
+    usage: dict = {}
+
+    for attempt in range(4):
+        api_key = key_info["keyString"]
+        key_id = key_info["keyId"]
+        client_obj = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
+
+        def _generate() -> Any:
+            return client_obj.models.generate_content(
+                model=EXTRACT_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=0.05, max_output_tokens=32768),
+            )
+
+        try:
+            response = await asyncio.to_thread(_generate)
+        except Exception as exc:
+            err_str = str(exc)
+            if _is_quota_exhausted_error(exc):
+                logger.warning("Quota exhausted on key %s (text attempt %d). Rotating…", key_id, attempt + 1)
+                if rotated:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Tất cả API key đã hết quota. Vui lòng thêm key mới hoặc chờ reset lúc 00:00.",
+                    )
+                rotated = True
+                key_info = await _rotate_key(key_id)
+                continue
+            if "503" in err_str or "UNAVAILABLE" in err_str:
+                wait = (attempt + 1) * 10
+                await asyncio.sleep(wait)
+                continue
+            raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
+        else:
+            try:
+                meta = response.usage_metadata
+                if meta:
+                    usage = {
+                        "promptTokenCount": getattr(meta, "prompt_token_count", 0) or 0,
+                        "candidatesTokenCount": getattr(meta, "candidates_token_count", 0) or 0,
+                        "totalTokenCount": getattr(meta, "total_token_count", 0) or 0,
+                    }
+            except Exception:
+                pass
+            raw = response.text or ""
+            cleaned = _strip_markdown_fences(raw)
+            try:
+                return json.loads(cleaned), usage
+            except json.JSONDecodeError as exc:
+                logger.error("Gemini text-only response is not valid JSON: %s", exc)
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "message": "Gemini returned invalid JSON after the OCR stage.",
+                        "hint": "The OCR text may be too noisy. Try OCR_DPI=300 or a higher-resolution scan.",
+                        "raw_snippet": raw[:800],
+                    },
+                )
+
+    raise HTTPException(status_code=502, detail="Gemini unavailable after all retries.")
+
+
+_OCR_TEXT_RULES = """
+STRICT OUTPUT RULES:
+  • Return ONLY raw JSON — no markdown fences, no commentary.
+  • Do NOT invent content that is absent from the source text.
+  • Preserve all original question numbers exactly.
+  • fill_blank: represent each blank as exactly _____ (5 underscores).
+  • multiple_choice options MUST be prefixed: "A. text", "B. text", etc.
+  • true_false options array must be ["TRUE","FALSE","NOT GIVEN"] or ["YES","NO","NOT GIVEN"].
+  • Ignore OCR artefacts (stray characters, broken hyphens, mis-spaced words)."""
+
+
+def _build_ocr_text_prompt(
+    test_type: str,
+    part_selection: str,
+    ocr_text: str,
+    ocr_key_text: str | None,
+) -> str:
+    """Build a text-only Gemini prompt by injecting OCR text into type-specific instructions."""
+    safe_text = ocr_text[:GEMINI_CHAR_LIMIT]
+    if len(ocr_text) > GEMINI_CHAR_LIMIT:
+        logger.warning("OCR text truncated %d → %d chars", len(ocr_text), GEMINI_CHAR_LIMIT)
+
+    key_block = ""
+    if ocr_key_text:
+        safe_key = ocr_key_text[:10_000]
+        key_block = f"\n\n<ANSWER_KEY_TEXT>\n{safe_key}\n</ANSWER_KEY_TEXT>"
+
+    if test_type == "writing":
+        instructions = _PDF_WRITING_SYSTEM_PROMPT
+    elif test_type == "speaking":
+        instructions = _PDF_SPEAKING_SYSTEM_PROMPT
+    else:
+        instructions = _build_extract_prompt(
+            part_selection=part_selection,
+            test_type=test_type,
+            has_answer_key=ocr_key_text is not None,
+        )
+
+    return (
+        f"You are a professional IELTS test digitiser.\n"
+        f"The text below was extracted via PaddleOCR from an IELTS {test_type.title()} test PDF.\n"
+        f"Parse it into structured JSON following the rules and schema below.\n\n"
+        f"<EXTRACTED_OCR_TEXT>\n{safe_text}\n</EXTRACTED_OCR_TEXT>"
+        f"{key_block}\n\n"
+        f"{instructions}\n"
+        f"{_OCR_TEXT_RULES}\n\n"
+        f"JSON output:"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Lifespan
 # ---------------------------------------------------------------------------
 
@@ -258,13 +642,8 @@ async def parse_listening_image(file: UploadFile = File(...)):
     """
     Accept a PNG/JPEG image of an IELTS Listening test page and return a
     structured JSON object that matches the ListeningTest MongoDB schema.
-
-    The endpoint:
-    1. Fetches the live Gemini API key + listening prompt from auth-service.
-    2. Sends the image + prompt to Gemini.
-    3. Parses and returns the JSON (strips markdown fences if present).
+    Uses the key-pool rotation mechanism automatically on quota exhaustion.
     """
-    # --- validate mime type ------------------------------------------------
     allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
     if file.content_type not in allowed_types:
         raise HTTPException(
@@ -272,66 +651,28 @@ async def parse_listening_image(file: UploadFile = File(...)):
             detail=f"Unsupported file type '{file.content_type}'. Use JPEG, PNG, WEBP, or GIF.",
         )
 
-    # --- load AI config from DB -------------------------------------------
     config = await _fetch_ai_config()
-    api_key: str = config.get("geminiApiKey", "").strip()
     system_prompt: str = config.get("listeningPromptTemplate", "").strip()
-
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Gemini API key is not configured. Please set it in Admin → AI Manager.",
-        )
     if not system_prompt:
         raise HTTPException(
             status_code=503,
             detail="Listening prompt template is not configured. Please set it in Admin → AI Manager.",
         )
 
-    # --- read image bytes -------------------------------------------------
     image_bytes = await file.read()
-    if len(image_bytes) > 20 * 1024 * 1024:  # 20 MB hard limit
+    if len(image_bytes) > 20 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Image file is too large (max 20 MB).")
 
-    # --- call Gemini with retry on transient 503 -------------------------
-    client = genai.Client(api_key=api_key, http_options={"api_version": "v1"})
-    response = None
-    last_exc = None
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=[
-                    types.Part.from_bytes(data=image_bytes, mime_type=file.content_type),
-                    system_prompt,
-                ],
-                config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    max_output_tokens=8192,
-                ),
-            )
-            break
-        except Exception as exc:
-            last_exc = exc
-            err_str = str(exc)
-            if "503" in err_str or "UNAVAILABLE" in err_str:
-                logger.warning("Gemini 503 (attempt %d/3), retrying in %ds...", attempt+1, (attempt+1)*5)
-                time.sleep((attempt + 1) * 5)
-            else:
-                logger.exception("Gemini API call failed")
-                raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
-    if response is None:
-        raise HTTPException(status_code=502, detail=f"Gemini API unavailable after retries: {last_exc}")
+    raw_text = await _call_gemini_contents_with_rotation(
+        [types.Part.from_bytes(data=image_bytes, mime_type=file.content_type), system_prompt],
+        max_output_tokens=8192,
+    )
 
-    raw_text: str = response.text or ""
-
-    # --- parse JSON -------------------------------------------------------
     cleaned = _strip_markdown_fences(raw_text)
     try:
-        parsed = json.loads(cleaned)
+        return json.loads(cleaned)
     except json.JSONDecodeError as exc:
         logger.error("Failed to parse Gemini response as JSON: %s", exc)
-        logger.debug("Raw response: %s", raw_text[:2000])
         raise HTTPException(
             status_code=422,
             detail={
@@ -340,24 +681,16 @@ async def parse_listening_image(file: UploadFile = File(...)):
             },
         )
 
-    return parsed
-
 
 @app.post("/api/ai/parse-reading-image")
 async def parse_reading_image(file: UploadFile = File(...)):
-    """
-    Same flow as parse_listening_image but uses readingPromptTemplate.
-    """
+    """Same flow as parse_listening_image but uses readingPromptTemplate."""
     allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif"}
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail=f"Unsupported file type '{file.content_type}'.")
 
     config = await _fetch_ai_config()
-    api_key: str = config.get("geminiApiKey", "").strip()
     system_prompt: str = config.get("readingPromptTemplate", "").strip()
-
-    if not api_key:
-        raise HTTPException(status_code=503, detail="Gemini API key is not configured.")
     if not system_prompt:
         raise HTTPException(status_code=503, detail="Reading prompt template is not configured.")
 
@@ -365,43 +698,19 @@ async def parse_reading_image(file: UploadFile = File(...)):
     if len(image_bytes) > 20 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Image file is too large (max 20 MB).")
 
-    client = genai.Client(api_key=api_key, http_options={"api_version": "v1"})
-    response = None
-    last_exc = None
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=[
-                    types.Part.from_bytes(data=image_bytes, mime_type=file.content_type),
-                    system_prompt,
-                ],
-                config=types.GenerateContentConfig(temperature=0.1, max_output_tokens=8192),
-            )
-            break
-        except Exception as exc:
-            last_exc = exc
-            err_str = str(exc)
-            if "503" in err_str or "UNAVAILABLE" in err_str:
-                logger.warning("Gemini 503 (attempt %d/3), retrying in %ds...", attempt+1, (attempt+1)*5)
-                time.sleep((attempt + 1) * 5)
-            else:
-                logger.exception("Gemini API call failed")
-                raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
-    if response is None:
-        raise HTTPException(status_code=502, detail=f"Gemini API unavailable after retries: {last_exc}")
+    raw_text = await _call_gemini_contents_with_rotation(
+        [types.Part.from_bytes(data=image_bytes, mime_type=file.content_type), system_prompt],
+        max_output_tokens=8192,
+    )
 
-    raw_text: str = response.text or ""
     cleaned = _strip_markdown_fences(raw_text)
     try:
-        parsed = json.loads(cleaned)
+        return json.loads(cleaned)
     except json.JSONDecodeError as exc:
         raise HTTPException(
             status_code=422,
             detail={"message": "Gemini did not return valid JSON.", "raw_snippet": raw_text[:500]},
         )
-
-    return parsed
 
 
 # ---------------------------------------------------------------------------
@@ -598,60 +907,16 @@ IMPORTANT:
 PDF_SIZE_LIMIT = 50 * 1024 * 1024  # 50 MB
 
 
-async def _call_gemini_with_pdf(
-    api_key: str, pdf_bytes: bytes, system_prompt: str
-) -> dict:
+async def _call_gemini_with_pdf(pdf_bytes: bytes, system_prompt: str) -> dict:
     """
-    Upload the PDF bytes to Gemini and return the parsed JSON response.
-    Retries up to 3 times on transient 503 errors.
-    Uses asyncio.to_thread so the synchronous SDK call does not block the event loop.
+    Upload PDF bytes to Gemini and return the parsed JSON response.
+    Uses _call_gemini_contents_with_rotation for automatic key-pool rotation.
     """
-    client = genai.Client(api_key=api_key, http_options={"api_version": "v1"})
-
-    def _generate():
-        return client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=[
-                types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
-                system_prompt,
-            ],
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=32768,
-            ),
-        )
-
-    response = None
-    last_exc: Exception | None = None
-    for attempt in range(3):
-        try:
-            response = await asyncio.to_thread(_generate)
-            break
-        except Exception as exc:
-            last_exc = exc
-            err_str = str(exc)
-            if _is_quota_exhausted_error(exc):
-                await _mark_quota_exhausted(err_str)
-                raise HTTPException(
-                    status_code=429,
-                    detail="Gemini API key đã hết quota. Vui lòng thay key mới trong Admin -> AI Manager.",
-                )
-            if "503" in err_str or "UNAVAILABLE" in err_str:
-                wait = (attempt + 1) * 8
-                logger.warning(
-                    "Gemini 503 on PDF call (attempt %d/3), retrying in %ds…", attempt + 1, wait
-                )
-                await asyncio.sleep(wait)
-            else:
-                logger.exception("Gemini PDF call failed")
-                raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
-
-    if response is None:
-        raise HTTPException(
-            status_code=502, detail=f"Gemini API unavailable after retries: {last_exc}"
-        )
-
-    raw_text: str = response.text or ""
+    raw_text = await _call_gemini_contents_with_rotation(
+        [types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"), system_prompt],
+        max_output_tokens=32768,
+        use_thread=True,
+    )
     cleaned = _strip_markdown_fences(raw_text)
     try:
         return json.loads(cleaned)
@@ -718,15 +983,6 @@ async def parse_pdf_test(
         len(pdf_bytes) // 1024,
     )
 
-    # --- fetch API key from auth-service ---------------------------------
-    config = await _fetch_ai_config()
-    api_key: str = config.get("geminiApiKey", "").strip()
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Gemini API key is not configured. Please set it in Admin → AI Manager.",
-        )
-
     # --- choose system prompt based on test type -------------------------
     system_prompt = (
         _PDF_READING_SYSTEM_PROMPT
@@ -734,8 +990,8 @@ async def parse_pdf_test(
         else _PDF_LISTENING_SYSTEM_PROMPT
     )
 
-    # --- call Gemini -----------------------------------------------------
-    result = await _call_gemini_with_pdf(api_key, pdf_bytes, system_prompt)
+    # --- call Gemini (key pool rotation handled inside) ------------------
+    result = await _call_gemini_with_pdf(pdf_bytes, system_prompt)
 
     logger.info(
         "parse-pdf-test | success | parts=%d",
@@ -751,6 +1007,12 @@ async def parse_pdf_test(
 EXTRACT_MODEL = os.getenv("EXTRACT_MODEL", "gemini-2.5-flash")
 EXTRACT_FILE_SIZE_LIMIT = 50 * 1024 * 1024   # 50 MB  – test PDF
 EXTRACT_KEY_SIZE_LIMIT  = 20 * 1024 * 1024   # 20 MB  – answer key
+
+# Two-stage OCR pipeline config
+OCR_ENABLED         = os.getenv("OCR_ENABLED", "true").lower() in ("1", "true", "yes")
+OCR_DPI             = int(os.getenv("OCR_DPI", "200"))
+OCR_CONF_THRESHOLD  = float(os.getenv("OCR_CONF_THRESHOLD", "0.55"))
+GEMINI_CHAR_LIMIT   = int(os.getenv("GEMINI_CHAR_LIMIT", "60000"))
 
 _ANSWER_KEY_MIME_TYPES = {
     "application/pdf",
@@ -1078,7 +1340,6 @@ FILE CONTEXT
 
 
 async def _call_gemini_extract(
-    api_key: str,
     test_bytes: bytes,
     test_mime: str,
     system_prompt: str,
@@ -1087,91 +1348,89 @@ async def _call_gemini_extract(
 ) -> tuple[dict, dict]:
     """
     Send one (or two) files to Gemini for advanced extraction.
-    Uses EXTRACT_MODEL (default gemini-1.5-pro) for superior accuracy on dense text.
-    Retries up to 3 times on 503 / UNAVAILABLE errors.
+    Uses EXTRACT_MODEL (default gemini-2.5-flash) with v1beta API.
+    Includes automatic key-pool rotation on quota exhaustion.
 
-    Returns a tuple of (parsed_result, usage_metadata) where usage_metadata contains:
-      - prompt_token_count
-      - candidates_token_count
-      - total_token_count
+    Returns (parsed_result, usage_metadata).
     """
-    # gemini-1.5-pro (and 1.5-flash) are only accessible on v1beta, not v1.
-    # Use v1beta unconditionally here; v1 models (2.x) also work on v1beta.
-    client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
-
     contents: list = [types.Part.from_bytes(data=test_bytes, mime_type=test_mime)]
     if key_bytes and key_mime:
         contents.append(types.Part.from_bytes(data=key_bytes, mime_type=key_mime))
     contents.append(system_prompt)
 
-    def _generate():
-        return client.models.generate_content(
-            model=EXTRACT_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=32768,
-            ),
-        )
+    key_info = await _fetch_active_key()
+    rotated = False
+    usage: dict = {}
 
-    response = None
-    last_exc: Exception | None = None
-    for attempt in range(3):
+    for attempt in range(4):
+        api_key = key_info["keyString"]
+        key_id = key_info["keyId"]
+        # v1beta for extended model access
+        client_obj = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
+
+        def _generate():
+            return client_obj.models.generate_content(
+                model=EXTRACT_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=32768,
+                ),
+            )
+
         try:
             response = await asyncio.to_thread(_generate)
-            break
         except Exception as exc:
-            last_exc = exc
             err_str = str(exc)
+
             if _is_quota_exhausted_error(exc):
-                await _mark_quota_exhausted(err_str)
-                raise HTTPException(
-                    status_code=429,
-                    detail="Gemini API key đã hết quota. Vui lòng thay key mới trong Admin -> AI Manager.",
-                )
+                logger.warning("Quota exhausted on key %s (extract attempt %d). Rotating…", key_id, attempt + 1)
+                if rotated:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Tất cả API key đã hết quota. Vui lòng thêm key mới hoặc chờ reset lúc 00:00.",
+                    )
+                rotated = True
+                key_info = await _rotate_key(key_id)
+                logger.info("Rotated to new key %s. Retrying extract…", key_info["keyId"])
+                continue
+
             if "503" in err_str or "UNAVAILABLE" in err_str:
                 wait = (attempt + 1) * 10
-                logger.warning(
-                    "Gemini 503 on extract (attempt %d/3), retrying in %ds…", attempt + 1, wait
-                )
+                logger.warning("Gemini 503 on extract (attempt %d/3), retrying in %ds…", attempt + 1, wait)
                 await asyncio.sleep(wait)
-            else:
-                logger.exception("Gemini extract call failed")
-                raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
+                continue
 
-    if response is None:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Gemini API unavailable after retries: {last_exc}",
-        )
+            logger.exception("Gemini extract call failed")
+            raise HTTPException(status_code=502, detail=f"Gemini API error: {err_str}")
+        else:
+            # Success – capture token usage
+            try:
+                meta = response.usage_metadata
+                if meta:
+                    usage = {
+                        "promptTokenCount": getattr(meta, "prompt_token_count", 0) or 0,
+                        "candidatesTokenCount": getattr(meta, "candidates_token_count", 0) or 0,
+                        "totalTokenCount": getattr(meta, "total_token_count", 0) or 0,
+                    }
+            except Exception:
+                pass
 
-    # --- Extract token usage metadata ------------------------------------
-    usage = {}
-    try:
-        meta = response.usage_metadata
-        if meta:
-            usage = {
-                "promptTokenCount": getattr(meta, "prompt_token_count", 0) or 0,
-                "candidatesTokenCount": getattr(meta, "candidates_token_count", 0) or 0,
-                "totalTokenCount": getattr(meta, "total_token_count", 0) or 0,
-            }
-    except Exception:
-        pass  # usage tracking is best-effort
+            raw_text: str = response.text or ""
+            cleaned = _strip_markdown_fences(raw_text)
+            try:
+                return json.loads(cleaned), usage
+            except json.JSONDecodeError as exc:
+                logger.error("Failed to parse Gemini extract response as JSON: %s", exc)
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "message": "Gemini did not return valid JSON. Try selecting a specific Part instead of All, or use a cleaner PDF scan.",
+                        "raw_snippet": raw_text[:800],
+                    },
+                )
 
-    raw_text: str = response.text or ""
-    cleaned = _strip_markdown_fences(raw_text)
-    try:
-        return json.loads(cleaned), usage
-    except json.JSONDecodeError as exc:
-        logger.error("Failed to parse Gemini extract response as JSON: %s", exc)
-        logger.debug("Raw snippet: %s", raw_text[:3000])
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Gemini did not return valid JSON. Try selecting a specific Part instead of All, or use a cleaner PDF scan.",
-                "raw_snippet": raw_text[:800],
-            },
-        )
+    raise HTTPException(status_code=502, detail="Gemini API unavailable after all retries.")
 
 
 @app.post("/api/ai/extract-test")
@@ -1258,50 +1517,70 @@ async def extract_test(
                 detail=f"answerKeyFile is too large ({len(key_bytes) // (1024*1024)} MB). Maximum is 20 MB.",
             )
 
+    use_ocr = OCR_ENABLED and _OCR_LIBS_AVAILABLE
     logger.info(
-        "extract-test | type=%s | part=%s | testFile=%s (%d KB) | hasKey=%s | model=%s",
-        testType,
-        partSelection,
-        testFile.filename,
-        len(test_bytes) // 1024,
-        key_bytes is not None,
-        EXTRACT_MODEL,
+        "extract-test | type=%s | part=%s | file=%s (%d KB) | hasKey=%s | model=%s | ocr=%s",
+        testType, partSelection, testFile.filename,
+        len(test_bytes) // 1024, key_bytes is not None, EXTRACT_MODEL, use_ocr,
     )
 
-    # ── fetch Gemini API key ─────────────────────────────────────────────
-    config = await _fetch_ai_config()
-    api_key: str = config.get("geminiApiKey", "").strip()
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="Gemini API key is not configured. Please set it in Admin → AI Manager.",
-        )
+    # ── Stage 1: PaddleOCR (when enabled and libs are installed) ─────────
+    ocr_text: str | None = None
+    ocr_key_text: str | None = None
 
-    # ── build prompt ─────────────────────────────────────────────────────
-    if testType == "writing":
-        system_prompt = _PDF_WRITING_SYSTEM_PROMPT
-    elif testType == "speaking":
-        system_prompt = _PDF_SPEAKING_SYSTEM_PROMPT
-    else:
-        system_prompt = _build_extract_prompt(
-            part_selection=partSelection,
+    if use_ocr:
+        try:
+            ocr_text = await _pdf_to_text(test_bytes)
+            if not ocr_text.strip():
+                raise ValueError("OCR produced empty text")
+            if key_bytes:
+                ocr_key_text = await _pdf_to_text(key_bytes)
+            logger.info(
+                "extract-test | OCR_DONE | testType=%s | chars=%d | hasKeyText=%s",
+                testType, len(ocr_text), ocr_key_text is not None,
+            )
+        except Exception as ocr_exc:
+            # OCR failure is non-fatal – silently fall back to PDF-direct mode
+            logger.warning(
+                "extract-test | OCR_FAILED (%s) – falling back to PDF-direct mode", ocr_exc
+            )
+            ocr_text = None
+            ocr_key_text = None
+
+    # ── Stage 2: Gemini ───────────────────────────────────────────────────
+    if ocr_text:
+        # Text-only path (2-stage pipeline)
+        prompt = _build_ocr_text_prompt(
             test_type=testType,
-            has_answer_key=key_bytes is not None,
+            part_selection=partSelection,
+            ocr_text=ocr_text,
+            ocr_key_text=ocr_key_text,
+        )
+        result, usage = await _call_gemini_text_only(prompt)
+    else:
+        # PDF-bytes path (original single-stage, automatic fallback)
+        if testType == "writing":
+            system_prompt = _PDF_WRITING_SYSTEM_PROMPT
+        elif testType == "speaking":
+            system_prompt = _PDF_SPEAKING_SYSTEM_PROMPT
+        else:
+            system_prompt = _build_extract_prompt(
+                part_selection=partSelection,
+                test_type=testType,
+                has_answer_key=key_bytes is not None,
+            )
+        result, usage = await _call_gemini_extract(
+            test_bytes=test_bytes,
+            test_mime="application/pdf",
+            system_prompt=system_prompt,
+            key_bytes=key_bytes,
+            key_mime=key_mime,
         )
 
-    # ── call Gemini ──────────────────────────────────────────────────────
-    result, usage = await _call_gemini_extract(
-        api_key=api_key,
-        test_bytes=test_bytes,
-        test_mime="application/pdf",
-        system_prompt=system_prompt,
-        key_bytes=key_bytes,
-        key_mime=key_mime,
-    )
-
+    # ── Post-processing ───────────────────────────────────────────────────
     if testType == "writing":
-      image_urls = _extract_pdf_image_data_urls(test_bytes)
-      result = _inject_writing_images(result, image_urls)
+        image_urls = _extract_pdf_image_data_urls(test_bytes)
+        result = _inject_writing_images(result, image_urls)
 
     if testType in ("reading", "listening"):
         logger.info(

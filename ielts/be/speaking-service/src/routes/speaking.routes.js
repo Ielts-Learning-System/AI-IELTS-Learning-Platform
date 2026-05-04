@@ -20,7 +20,6 @@ const {
   deleteTest,
 } = require('../controllers/speakingTest.controller');
 const { verifyToken, authorizeRoles } = require('../middlewares/auth.middleware');
-const { importJson } = require('../controllers/importJson.controller');
 
 const router = express.Router();
 
@@ -33,9 +32,6 @@ router.get('/tests/:id', getTestById);
 router.post('/tests', verifyToken, authorizeRoles('teacher', 'admin'), createTest);
 router.put('/tests/:id', verifyToken, authorizeRoles('teacher', 'admin'), updateTest);
 router.delete('/tests/:id', verifyToken, authorizeRoles('teacher', 'admin'), deleteTest);
-
-// ── Import from Excel JSON ────────────────────────────────────────────────
-router.post('/import-json', verifyToken, authorizeRoles('teacher', 'admin'), importJson);
 
 // ── Student self-service submission ───────────────────────────────────────
 // Student uploads audio directly from a test (no teacher assignment needed)

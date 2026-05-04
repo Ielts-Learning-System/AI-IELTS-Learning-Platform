@@ -49,13 +49,12 @@ function getErrorMessage(err: unknown): string {
 function buildCompletedKeys(attempts: PassageAttemptSummary[]): Set<string> {
   const keys = new Set<string>();
   attempts.forEach((a) => {
-    if (a.passageNumber != null) {
-      const tid =
-        a.testId !== null && typeof a.testId === 'object'
-          ? (a.testId as { _id: string })._id
-          : String(a.testId);
-      keys.add(`${tid}-${a.passageNumber}`);
-    }
+    if (!a || a.passageNumber == null) return;
+    const tid =
+      a.testId != null && typeof a.testId === 'object'
+        ? (a.testId as { _id: string })._id ?? ''
+        : String(a.testId ?? '');
+    if (tid) keys.add(`${tid}-${a.passageNumber}`);
   });
   return keys;
 }
@@ -143,7 +142,7 @@ export default function ReadingListPage() {
 
   // ── Flatten tests → individual passage cards ─────────────────────
   const flatPassages = useMemo<FlattenedPassage[]>(() => {
-    return tests.flatMap((test) =>
+    return tests.filter((test): test is ReadingTest => test != null && typeof test === 'object' && Boolean(test._id)).flatMap((test) =>
       (test.passages ?? []).map((passage) => ({
         key: `${test._id}-${passage.passageNumber ?? 0}`,
         testId: test._id,
