@@ -1,105 +1,148 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  DollarSign, Users, TrendingDown, Cpu, Download, ArrowUpRight, ArrowDownRight,
+  DollarSign, Users, TrendingDown, Cpu, Download,
   BarChart3, PieChart as PieIcon, Activity, Zap,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { apiClient } from '../../lib/api/client';
 
-// ─── Realistic Mock Data ────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────
 
-/** 30-day MRR + New Users with weekend peaks */
-const DAILY_DATA = (() => {
-  const base = new Date('2026-04-05');
-  return Array.from({ length: 30 }, (_, i) => {
-    const d = new Date(base);
-    d.setDate(d.getDate() + i);
-    const dow = d.getDay();
-    const isWeekend = dow === 0 || dow === 6;
-    const mrrBase = 42_000_000 + i * 380_000;
-    const usersBase = 12 + Math.floor(i * 0.8);
-    return {
-      date: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
-      mrr: mrrBase + (isWeekend ? 2_800_000 : 0) + Math.floor(Math.random() * 1_500_000),
-      newUsers: usersBase + (isWeekend ? 8 : 0) + Math.floor(Math.random() * 5),
-    };
-  });
-})();
+interface DailyDataPoint {
+  date: string;
+  mrr: number;
+  newUsers: number;
+}
 
-const TOP_TESTS = [
-  { name: 'Cambridge 15 Test 1', attempts: 1247 },
-  { name: 'Actual Test 2024 Vol.1', attempts: 983 },
-  { name: 'Cambridge 18 Test 3', attempts: 876 },
-  { name: 'Cambridge 16 Test 2', attempts: 724 },
-  { name: 'Cambridge 17 Test 4', attempts: 651 },
-];
+interface TopTest {
+  name: string;
+  attempts: number;
+}
 
-const SUB_DISTRIBUTION = [
-  { name: 'Free', value: 4820, color: '#94a3b8' },
-  { name: 'Plus', value: 1340, color: '#3b82f6' },
-  { name: 'Pro', value: 580, color: '#E31837' },
-];
+interface SubDistributionItem {
+  name: string;
+  value: number;
+}
 
-const API_HEALTH = [
-  { skill: 'Reading', tokensUsed: '2.4M', cost: '$18.20', errorRate: '0.12%', errors429: 3, status: 'healthy' },
-  { skill: 'Listening', tokensUsed: '1.8M', cost: '$13.60', errorRate: '0.08%', errors429: 1, status: 'healthy' },
-  { skill: 'Writing', tokensUsed: '5.1M', cost: '$38.70', errorRate: '0.31%', errors429: 12, status: 'warning' },
-  { skill: 'Speaking', tokensUsed: '3.6M', cost: '$27.40', errorRate: '0.22%', errors429: 7, status: 'healthy' },
-];
+interface ApiHealthRow {
+  skill: string;
+  tokensUsed: string;
+  cost: string;
+  errorRate: string;
+  errors429: number;
+  status: 'healthy' | 'warning';
+}
 
-const QUICK_STATS = [
-  {
-    title: 'Doanh thu tháng',
-    value: '₫53,400,000',
-    change: '+12.4%',
-    isUp: true,
-    icon: DollarSign,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-  },
-  {
-    title: 'Subscriptions Active',
-    value: '1,920',
-    change: '+8.2%',
-    isUp: true,
-    icon: Users,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-  },
-  {
-    title: 'Churn Rate',
-    value: '3.2%',
-    change: '-0.5%',
-    isUp: false,
-    icon: TrendingDown,
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
-  },
-  {
-    title: 'API Costs (tháng)',
-    value: '$97.90',
-    change: '+5.1%',
-    isUp: true,
-    icon: Cpu,
-    color: 'text-purple-600',
-    bg: 'bg-purple-50',
-  },
-];
+interface DashboardData {
+  quickStats: {
+    monthlyRevenue: number;
+    activeSubscriptions: number;
+    churnRate: number;
+    apiCostUSD: number;
+  };
+  dailyData: DailyDataPoint[];
+  topTests: TopTest[];
+  subDistribution: SubDistributionItem[];
+  apiHealth: ApiHealthRow[];
+  totalApiTokens: string;
+  totalApiCost: string;
+}
+
+// ─── Static config ───────────────────────────────────────────────────
+
+/** Per-plan accent colours for the Pie chart. */
+const SUB_COLORS: Record<string, string> = {
+  Free: '#94a3b8',
+  Plus: '#3b82f6',
+  Pro: '#E31837',
+};
 
 const formatVND = (value: number) =>
   new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
 
-// ─── Component ──────────────────────────────────────────────────────
+// ─── Skeleton loader ─────────────────────────────────────────────────
+
+function Skeleton({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-slate-200 ${className}`} />;
+}
+
+function DashboardSkeleton() {
+  return (
+    <section className="space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-6 py-5">
+        <Skeleton className="h-8 w-56 mb-2" />
+        <Skeleton className="h-4 w-80" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div className="flex justify-between mb-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <Skeleton className="h-5 w-14" />
+            </div>
+            <Skeleton className="h-4 w-32 mb-2" />
+            <Skeleton className="h-8 w-36" />
+          </div>
+        ))}
+      </div>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <Skeleton className="h-6 w-64 mb-5" />
+        <Skeleton className="h-[340px] w-full" />
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <Skeleton className="h-6 w-48 mb-5" />
+            <Skeleton className="h-[280px] w-full" />
+          </div>
+        ))}
+      </div>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <Skeleton className="h-6 w-72 mb-5" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full mb-2" />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ─── Component ───────────────────────────────────────────────────────
 
 export function AnalyticsReport() {
+  const [data, setData]         = useState<DashboardData | null>(null);
+  const [isLoading, setLoading] = useState(true);
+  const [error, setError]       = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiClient.get<{ success: boolean; data: DashboardData }>(
+        '/reports/dashboard'
+      );
+      setData(res.data.data);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Không thể tải dữ liệu báo cáo';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
   const handleExportCSV = () => {
+    if (!data) return;
     setExporting(true);
     const headers = 'Date,MRR (VND),New Users\n';
-    const rows = DAILY_DATA.map((d) => `${d.date},${d.mrr},${d.newUsers}`).join('\n');
+    const rows = data.dailyData.map((d) => `${d.date},${d.mrr},${d.newUsers}`).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -110,8 +153,58 @@ export function AnalyticsReport() {
     setTimeout(() => setExporting(false), 1200);
   };
 
-  const totalApiTokens = '12.9M';
-  const totalApiCost = '$97.90';
+  // ── Render states ────────────────────────────────────────────────
+  if (isLoading) return <DashboardSkeleton />;
+
+  if (error) {
+    return (
+      <section className="flex flex-col items-center justify-center py-24 gap-4">
+        <p className="text-lg font-semibold text-slate-700">{error}</p>
+        <button
+          onClick={fetchDashboard}
+          className="rounded-xl bg-[#E31837] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#c91530] transition"
+        >
+          Thử lại
+        </button>
+      </section>
+    );
+  }
+
+  if (!data) return null;
+
+  const { quickStats, dailyData, topTests, subDistribution, apiHealth, totalApiTokens, totalApiCost } = data;
+
+  // Build quick-stat cards from live API response
+  const QUICK_STATS = [
+    {
+      title: 'Doanh thu tháng',
+      value: formatVND(quickStats.monthlyRevenue),
+      icon: DollarSign,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    },
+    {
+      title: 'Subscriptions Active',
+      value: quickStats.activeSubscriptions.toLocaleString(),
+      icon: Users,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+    },
+    {
+      title: 'Churn Rate',
+      value: `${quickStats.churnRate}%`,
+      icon: TrendingDown,
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+    },
+    {
+      title: 'API Costs (tháng)',
+      value: `$${quickStats.apiCostUSD.toFixed(2)}`,
+      icon: Cpu,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+    },
+  ];
 
   return (
     <section className="space-y-6">
@@ -124,7 +217,7 @@ export function AnalyticsReport() {
           </div>
           <button
             onClick={handleExportCSV}
-            disabled={exporting}
+            disabled={exporting || !data}
             className="inline-flex items-center gap-2 rounded-xl bg-[#E31837] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c91530] disabled:opacity-60"
           >
             <Download className="h-4 w-4" />
@@ -141,10 +234,6 @@ export function AnalyticsReport() {
               <div className={`${stat.bg} ${stat.color} flex h-10 w-10 items-center justify-center rounded-lg`}>
                 <stat.icon className="h-5 w-5" />
               </div>
-              <span className={`inline-flex items-center gap-1 text-xs font-semibold ${stat.isUp ? (stat.title === 'API Costs (tháng)' ? 'text-amber-600' : 'text-emerald-600') : 'text-emerald-600'}`}>
-                {stat.isUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                {stat.change}
-              </span>
             </div>
             <p className="text-sm font-medium text-slate-500">{stat.title}</p>
             <p className="mt-0.5 text-2xl font-bold text-slate-900">{stat.value}</p>
@@ -160,7 +249,7 @@ export function AnalyticsReport() {
         </div>
         <div className="h-[340px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={DAILY_DATA} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={dailyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval={4} />
               <YAxis yAxisId="mrr" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(0)}M`} />
@@ -190,7 +279,7 @@ export function AnalyticsReport() {
           </div>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={TOP_TESTS} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+              <BarChart data={topTests} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#475569' }} tickLine={false} axisLine={false} width={160} />
@@ -210,20 +299,44 @@ export function AnalyticsReport() {
           <div className="h-[280px] flex items-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={SUB_DISTRIBUTION} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {SUB_DISTRIBUTION.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} stroke="white" strokeWidth={2} />
+                <Pie
+                  data={subDistribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={4}
+                  dataKey="value"
+                  label={({ name, percent }: { name?: string; percent?: number }) =>
+                    `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`
+                  }
+                >
+                  {subDistribution.map((entry) => (
+                    <Cell
+                      key={entry.name}
+                      fill={SUB_COLORS[entry.name] ?? '#94a3b8'}
+                      stroke="white"
+                      strokeWidth={2}
+                    />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }} formatter={(v: number) => [`${v.toLocaleString()} users`, 'Subscribers']} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                  formatter={(v: number) => [`${v.toLocaleString()} users`, 'Subscribers']}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div className="mt-2 flex items-center justify-center gap-5">
-            {SUB_DISTRIBUTION.map((s) => (
+            {subDistribution.map((s) => (
               <div key={s.name} className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-xs font-medium text-slate-600">{s.name}: {s.value.toLocaleString()}</span>
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: SUB_COLORS[s.name] ?? '#94a3b8' }}
+                />
+                <span className="text-xs font-medium text-slate-600">
+                  {s.name}: {s.value.toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
@@ -255,7 +368,7 @@ export function AnalyticsReport() {
               </tr>
             </thead>
             <tbody>
-              {API_HEALTH.map((row) => (
+              {apiHealth.map((row) => (
                 <tr key={row.skill} className="border-b border-slate-100 transition hover:bg-slate-50/70">
                   <td className="px-4 py-3 font-semibold text-slate-900">{row.skill}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{row.tokensUsed}</td>
@@ -263,16 +376,22 @@ export function AnalyticsReport() {
                   <td className="px-4 py-3 text-sm text-slate-600">{row.errorRate}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      row.errors429 > 10 ? 'bg-red-100 text-red-700' : row.errors429 > 5 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                      row.errors429 > 10 ? 'bg-red-100 text-red-700'
+                        : row.errors429 > 5 ? 'bg-amber-100 text-amber-700'
+                        : 'bg-green-100 text-green-700'
                     }`}>
                       {row.errors429}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                      row.status === 'healthy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      row.status === 'healthy'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200'
                     }`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${row.status === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <span className={`h-1.5 w-1.5 rounded-full ${
+                        row.status === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`} />
                       {row.status === 'healthy' ? 'Healthy' : 'Warning'}
                     </span>
                   </td>

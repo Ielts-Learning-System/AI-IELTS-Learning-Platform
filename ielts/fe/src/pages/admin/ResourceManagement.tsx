@@ -1,41 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   FileText, Music, Image, Trash2, Eye, Search, Tag, Bot,
   FolderOpen, Upload, HardDrive, Plus, Pencil, Copy,
 } from 'lucide-react';
+import { apiClient } from '../../lib/api/client';
 
-// ─── Realistic Mock Data ────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────
 
-const FILES = [
-  { id: '1', name: 'Cam_15_Listening_Test1.mp3', type: 'MP3' as const, size: 24.5, uploadedBy: 'Nguyễn Thị Hương', date: '2026-04-28', preview: null },
-  { id: '2', name: 'Cam_18_Reading_Passage3.pdf', type: 'PDF' as const, size: 3.8, uploadedBy: 'Trần Văn Huy', date: '2026-04-27', preview: null },
-  { id: '3', name: 'Writing_Task1_BarChart.png', type: 'PNG' as const, size: 1.2, uploadedBy: 'Lê Minh Đức', date: '2026-04-26', preview: 'https://res.cloudinary.com/ielts-platform/image/upload/v1714200000/writing/bar_chart_sample.png' },
-  { id: '4', name: 'Cam_16_Listening_Test3_Section4.mp3', type: 'MP3' as const, size: 18.7, uploadedBy: 'Nguyễn Thị Hương', date: '2026-04-25', preview: null },
-  { id: '5', name: 'Speaking_Part2_CueCards_Collection.pdf', type: 'PDF' as const, size: 5.1, uploadedBy: 'Phạm Anh Tuấn', date: '2026-04-24', preview: null },
-  { id: '6', name: 'Writing_Task2_LineGraph_GDP.png', type: 'PNG' as const, size: 0.9, uploadedBy: 'Lê Minh Đức', date: '2026-04-23', preview: 'https://res.cloudinary.com/ielts-platform/image/upload/v1714100000/writing/line_graph_gdp.png' },
-  { id: '7', name: 'Actual_Test_2024_Reading_Full.pdf', type: 'PDF' as const, size: 12.3, uploadedBy: 'Trần Văn Huy', date: '2026-04-22', preview: null },
-  { id: '8', name: 'Cam_17_Listening_Test2_Map.mp3', type: 'MP3' as const, size: 21.0, uploadedBy: 'Nguyễn Thị Hương', date: '2026-04-21', preview: null },
-  { id: '9', name: 'Reading_TrueFalse_Strategies.pdf', type: 'PDF' as const, size: 2.4, uploadedBy: 'Phạm Anh Tuấn', date: '2026-04-20', preview: null },
-  { id: '10', name: 'Speaking_Part3_Prompt_Environment.png', type: 'PNG' as const, size: 0.6, uploadedBy: 'Lê Minh Đức', date: '2026-04-19', preview: 'https://res.cloudinary.com/ielts-platform/image/upload/v1714000000/speaking/environment_prompt.png' },
-];
+interface FileRecord {
+  id: string;
+  name: string;
+  type: 'MP3' | 'PDF' | 'PNG' | 'JPG' | 'WEBP' | 'WAV';
+  size: number; // MB
+  uploadedBy: string;
+  date: string;
+  secureUrl: string | null;
+}
 
-const TAGS = [
-  { id: '1', name: 'Cambridge 15', category: 'Source', count: 42, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { id: '2', name: 'Cambridge 16', category: 'Source', count: 38, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { id: '3', name: 'Cambridge 17', category: 'Source', count: 35, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { id: '4', name: 'Cambridge 18', category: 'Source', count: 40, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  { id: '5', name: 'Actual Test 2024', category: 'Source', count: 28, color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  { id: '6', name: 'Map Labeling', category: 'Question Type', count: 15, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { id: '7', name: 'Matching Headings', category: 'Question Type', count: 22, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { id: '8', name: 'True/False/Not Given', category: 'Question Type', count: 31, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { id: '9', name: 'Summary Completion', category: 'Question Type', count: 18, color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { id: '10', name: 'Hard Difficulty', category: 'Difficulty', count: 24, color: 'bg-red-100 text-red-700 border-red-200' },
-  { id: '11', name: 'Medium Difficulty', category: 'Difficulty', count: 56, color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { id: '12', name: 'Easy Difficulty', category: 'Difficulty', count: 33, color: 'bg-green-100 text-green-700 border-green-200' },
-  { id: '13', name: 'Band 7.0+ Target', category: 'Level', count: 45, color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
-  { id: '14', name: 'Band 5.5-6.5 Target', category: 'Level', count: 62, color: 'bg-slate-100 text-slate-700 border-slate-200' },
-];
+interface TagRecord {
+  id: string;
+  name: string;
+  category: string;
+  count: number;
+  color: string; // stored in DB; frontend falls back to CATEGORY_COLORS
+}
 
+// ─── Static config ────────────────────────────────────────────────────
+
+/** AI prompts remain static (no CRUD endpoint required yet). */
 const AI_PROMPTS = [
   { id: '1', name: 'Writing Task 2 — Band 8.0 Evaluator', skill: 'Writing', model: 'gemini-2.5-flash', tokens: '~4,200', lastEdited: '2026-04-30', description: 'Evaluates Task 2 essays against official IELTS band descriptors (TA, CC, LR, GRA). Provides per-criterion scores and actionable feedback targeting Band 8.0 improvements.' },
   { id: '2', name: 'Writing Task 1 — Academic Report Scorer', skill: 'Writing', model: 'gemini-2.5-flash', tokens: '~3,800', lastEdited: '2026-04-29', description: 'Scores Task 1 academic reports (bar charts, line graphs, maps, processes). Checks data accuracy, overview quality, and cohesive device usage.' },
@@ -47,46 +39,164 @@ const AI_PROMPTS = [
 ];
 
 const typeConfig: Record<string, { icon: typeof FileText; color: string; bg: string }> = {
-  PDF: { icon: FileText, color: 'text-red-600', bg: 'bg-red-50' },
-  MP3: { icon: Music, color: 'text-purple-600', bg: 'bg-purple-50' },
-  PNG: { icon: Image, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  PDF: { icon: FileText, color: 'text-red-600',    bg: 'bg-red-50'    },
+  MP3: { icon: Music,    color: 'text-purple-600', bg: 'bg-purple-50' },
+  WAV: { icon: Music,    color: 'text-purple-600', bg: 'bg-purple-50' },
+  PNG: { icon: Image,    color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  JPG: { icon: Image,    color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  WEBP:{ icon: Image,    color: 'text-emerald-600', bg: 'bg-emerald-50' },
 };
 
 const skillColors: Record<string, string> = {
-  Writing: 'bg-amber-100 text-amber-700',
-  Speaking: 'bg-purple-100 text-purple-700',
-  Reading: 'bg-blue-100 text-blue-700',
-  Listening: 'bg-emerald-100 text-emerald-700',
+  Writing:    'bg-amber-100 text-amber-700',
+  Speaking:   'bg-purple-100 text-purple-700',
+  Reading:    'bg-blue-100 text-blue-700',
+  Listening:  'bg-emerald-100 text-emerald-700',
   'All Skills': 'bg-red-100 text-red-700',
+};
+
+/** Fallback Tailwind colour classes by tag category (used when tag.color is empty). */
+const CATEGORY_COLORS: Record<string, string> = {
+  'Source':        'bg-blue-100 text-blue-700 border-blue-200',
+  'Question Type': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'Difficulty':    'bg-red-100 text-red-700 border-red-200',
+  'Level':         'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'Skill':         'bg-purple-100 text-purple-700 border-purple-200',
+  'Other':         'bg-slate-100 text-slate-700 border-slate-200',
 };
 
 type TabKey = 'files' | 'tags' | 'prompts';
 
 const TABS: { key: TabKey; label: string; icon: typeof FolderOpen }[] = [
-  { key: 'files', label: 'File Manager', icon: FolderOpen },
-  { key: 'tags', label: 'Categories & Tags', icon: Tag },
-  { key: 'prompts', label: 'AI System Prompts', icon: Bot },
+  { key: 'files',   label: 'File Manager',        icon: FolderOpen },
+  { key: 'tags',    label: 'Categories & Tags',    icon: Tag        },
+  { key: 'prompts', label: 'AI System Prompts',    icon: Bot        },
 ];
 
-// ─── Component ──────────────────────────────────────────────────────
+// ─── Skeleton helpers ────────────────────────────────────────────────
+
+function TableRowSkeleton({ cols }: { cols: number }) {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <tr key={i}>
+          {Array.from({ length: cols }).map((__, j) => (
+            <td key={j} className="px-4 py-3.5">
+              <div className="h-4 animate-pulse rounded bg-slate-200" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// ─── Component ───────────────────────────────────────────────────────
 
 export function ResourceManagement() {
   const [activeTab, setActiveTab] = useState<TabKey>('files');
   const [fileSearch, setFileSearch] = useState('');
-  const [tagSearch, setTagSearch] = useState('');
+  const [tagSearch,  setTagSearch]  = useState('');
 
-  const filteredFiles = FILES.filter((f) =>
-    f.name.toLowerCase().includes(fileSearch.toLowerCase()),
+  // ── Files state ──────────────────────────────────────────────────
+  const [files,         setFiles]         = useState<FileRecord[]>([]);
+  const [filesLoading,  setFilesLoading]  = useState(false);
+  const [filesError,    setFilesError]    = useState<string | null>(null);
+  const [filesTotalSize,setFilesTotalSize] = useState(0);
+
+  // ── Tags state ────────────────────────────────────────────────────
+  const [tags,        setTags]        = useState<TagRecord[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [tagsError,   setTagsError]   = useState<string | null>(null);
+
+  // ── Data fetchers ────────────────────────────────────────────────
+
+  const fetchFiles = useCallback(async () => {
+    setFilesLoading(true);
+    setFilesError(null);
+    try {
+      const res = await apiClient.get<{ success: boolean; data: FileRecord[] }>(
+        '/resources/files',
+        { params: { limit: 100 } }
+      );
+      const data = res.data.data;
+      setFiles(data);
+      setFilesTotalSize(data.reduce((s, f) => s + f.size, 0));
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Không thể tải danh sách file';
+      setFilesError(msg);
+    } finally {
+      setFilesLoading(false);
+    }
+  }, []);
+
+  const fetchTags = useCallback(async () => {
+    setTagsLoading(true);
+    setTagsError(null);
+    try {
+      const res = await apiClient.get<{ success: boolean; data: TagRecord[] }>(
+        '/resources/tags'
+      );
+      setTags(res.data.data);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Không thể tải danh sách tags';
+      setTagsError(msg);
+    } finally {
+      setTagsLoading(false);
+    }
+  }, []);
+
+  // Lazy-load per tab: only fetch when the tab is first activated
+  useEffect(() => {
+    if (activeTab === 'files' && files.length === 0 && !filesLoading) fetchFiles();
+  }, [activeTab, files.length, filesLoading, fetchFiles]);
+
+  useEffect(() => {
+    if (activeTab === 'tags' && tags.length === 0 && !tagsLoading) fetchTags();
+  }, [activeTab, tags.length, tagsLoading, fetchTags]);
+
+  // ── Derived data ─────────────────────────────────────────────────
+
+  const filteredFiles = files.filter((f) =>
+    f.name.toLowerCase().includes(fileSearch.toLowerCase())
   );
 
-  const groupedTags = TAGS.filter((t) =>
-    t.name.toLowerCase().includes(tagSearch.toLowerCase()),
-  ).reduce<Record<string, typeof TAGS>>((acc, tag) => {
-    (acc[tag.category] ??= []).push(tag);
-    return acc;
-  }, {});
+  const groupedTags = tags
+    .filter((t) => t.name.toLowerCase().includes(tagSearch.toLowerCase()))
+    .reduce<Record<string, TagRecord[]>>((acc, tag) => {
+      (acc[tag.category] ??= []).push(tag);
+      return acc;
+    }, {});
 
-  const totalSize = FILES.reduce((s, f) => s + f.size, 0);
+  // ── Delete handlers ──────────────────────────────────────────────
+
+  const handleDeleteFile = async (id: string) => {
+    if (!confirm('Xóa metadata của file này?')) return;
+    try {
+      await apiClient.delete(`/resources/files/${id}`);
+      setFiles((prev) => {
+        const next = prev.filter((f) => String(f.id) !== id);
+        setFilesTotalSize(next.reduce((s, f) => s + f.size, 0));
+        return next;
+      });
+    } catch {
+      alert('Xóa thất bại. Vui lòng thử lại.');
+    }
+  };
+
+  const handleDeleteTag = async (id: string) => {
+    if (!confirm('Xóa tag này?')) return;
+    try {
+      await apiClient.delete(`/resources/tags/${id}`);
+      setTags((prev) => prev.filter((t) => String(t.id) !== id));
+    } catch {
+      alert('Xóa thất bại. Vui lòng thử lại.');
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -98,11 +208,11 @@ export function ResourceManagement() {
             <div className="mt-2 flex items-center gap-4">
               <span className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700">
                 <HardDrive className="h-4 w-4" />
-                {FILES.length} files · {totalSize.toFixed(1)} MB
+                {files.length} files · {filesTotalSize.toFixed(1)} MB
               </span>
               <span className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
                 <Tag className="h-4 w-4" />
-                {TAGS.length} tags
+                {tags.length} tags
               </span>
               <span className="inline-flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-1.5 text-sm font-semibold text-purple-700">
                 <Bot className="h-4 w-4" />
@@ -136,7 +246,7 @@ export function ResourceManagement() {
         </div>
 
         <div className="p-6">
-          {/* ── Tab 1: File Manager ──────────────────────────── */}
+          {/* ── Tab 1: File Manager ─────────────────────────────── */}
           {activeTab === 'files' && (
             <div className="space-y-4">
               <div className="relative max-w-md">
@@ -149,6 +259,13 @@ export function ResourceManagement() {
                   className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-500/20"
                 />
               </div>
+
+              {filesError && (
+                <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {filesError}
+                  <button onClick={fetchFiles} className="ml-4 font-semibold underline">Thử lại</button>
+                </div>
+              )}
 
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px]">
@@ -163,18 +280,20 @@ export function ResourceManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredFiles.length === 0 ? (
+                    {filesLoading ? (
+                      <TableRowSkeleton cols={6} />
+                    ) : filteredFiles.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="py-12 text-center text-sm text-slate-500">
-                          Không tìm thấy file nào.
+                          {fileSearch ? 'Không tìm thấy file phù hợp.' : 'Chưa có file nào được upload.'}
                         </td>
                       </tr>
                     ) : (
                       filteredFiles.map((file) => {
-                        const cfg = typeConfig[file.type];
+                        const cfg = typeConfig[file.type] ?? typeConfig['PNG'];
                         const Icon = cfg.icon;
                         return (
-                          <tr key={file.id} className="border-b border-slate-100 align-middle transition hover:bg-slate-50/70">
+                          <tr key={String(file.id)} className="border-b border-slate-100 align-middle transition hover:bg-slate-50/70">
                             <td className="px-4 py-3.5">
                               <div className="flex items-center gap-3">
                                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${cfg.bg}`}>
@@ -193,10 +312,22 @@ export function ResourceManagement() {
                             <td className="px-4 py-3.5 text-sm text-slate-500">{file.date}</td>
                             <td className="px-4 py-3.5 text-right">
                               <div className="flex items-center justify-end gap-1.5">
-                                <button title="Xem" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-blue-50 hover:text-blue-600">
-                                  <Eye className="h-3.5 w-3.5" />
-                                </button>
-                                <button title="Xóa" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-red-50 hover:text-red-600">
+                                {file.secureUrl && (
+                                  <a
+                                    href={file.secureUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Xem"
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteFile(String(file.id))}
+                                  title="Xóa"
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                                >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
@@ -211,7 +342,7 @@ export function ResourceManagement() {
             </div>
           )}
 
-          {/* ── Tab 2: Categories & Tags ─────────────────────── */}
+          {/* ── Tab 2: Categories & Tags ──────────────────────── */}
           {activeTab === 'tags' && (
             <div className="space-y-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -230,48 +361,74 @@ export function ResourceManagement() {
                 </button>
               </div>
 
-              {Object.entries(groupedTags).map(([category, tags]) => (
-                <div key={category}>
-                  <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">{category}</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
-                          <th className="py-3 px-4 font-semibold">Tag</th>
-                          <th className="py-3 px-4 font-semibold">Số lượng sử dụng</th>
-                          <th className="py-3 px-4 font-semibold text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tags.map((tag) => (
-                          <tr key={tag.id} className="border-b border-slate-100 transition hover:bg-slate-50/70">
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tag.color}`}>
-                                {tag.name}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-slate-600">{tag.count} resources</td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button title="Sửa" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-blue-50 hover:text-blue-600">
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                                <button title="Xóa" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-red-50 hover:text-red-600">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+              {tagsError && (
+                <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {tagsError}
+                  <button onClick={fetchTags} className="ml-4 font-semibold underline">Thử lại</button>
                 </div>
-              ))}
+              )}
+
+              {tagsLoading ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <tbody><TableRowSkeleton cols={3} /></tbody>
+                  </table>
+                </div>
+              ) : Object.entries(groupedTags).length === 0 ? (
+                <p className="py-12 text-center text-sm text-slate-500">
+                  {tagSearch ? 'Không tìm thấy tag phù hợp.' : 'Chưa có tag nào. Nhấn "Thêm Tag" để tạo mới.'}
+                </p>
+              ) : (
+                Object.entries(groupedTags).map(([category, categoryTags]) => (
+                  <div key={category}>
+                    <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">{category}</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50/70 text-left text-xs uppercase tracking-wide text-slate-500">
+                            <th className="py-3 px-4 font-semibold">Tag</th>
+                            <th className="py-3 px-4 font-semibold">Số lượng sử dụng</th>
+                            <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {categoryTags.map((tag) => {
+                            const colorClass = tag.color || CATEGORY_COLORS[tag.category] || CATEGORY_COLORS['Other'];
+                            return (
+                              <tr key={String(tag.id)} className="border-b border-slate-100 transition hover:bg-slate-50/70">
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${colorClass}`}>
+                                    {tag.name}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-slate-600">{tag.count} resources</td>
+                                <td className="px-4 py-3 text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button title="Sửa" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-blue-50 hover:text-blue-600">
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteTag(String(tag.id))}
+                                      title="Xóa"
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
-          {/* ── Tab 3: AI Prompts ────────────────────────────── */}
+          {/* ── Tab 3: AI Prompts ─────────────────────────────── */}
           {activeTab === 'prompts' && (
             <div className="space-y-4">
               {AI_PROMPTS.map((prompt) => (

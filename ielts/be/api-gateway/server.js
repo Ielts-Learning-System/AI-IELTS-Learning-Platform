@@ -322,6 +322,39 @@ app.use(
 );
 
 /**
+ * Admin Reports (served by billing-service)
+ * URL: http://localhost:3000/api/reports/dashboard
+ * Rewrites to:          billing-service /admin/reports/dashboard
+ */
+app.use(
+  '/api/reports',
+  createProxyMiddleware({
+    target: process.env.BILLING_SERVICE_URL || 'http://127.0.0.1:3005',
+    changeOrigin: true,
+    // Express strips '/api/reports' before the middleware sees req.url,
+    // so we must prepend the billing-service prefix via a function.
+    pathRewrite: (path) => '/admin/reports' + path,
+  })
+);
+
+/**
+ * Admin Resources — files + tags (served by billing-service)
+ * URL: http://localhost:3000/api/resources/files
+ * URL: http://localhost:3000/api/resources/tags
+ * Rewrites to:          billing-service /admin/resources/*
+ */
+app.use(
+  '/api/resources',
+  createProxyMiddleware({
+    target: process.env.BILLING_SERVICE_URL || 'http://127.0.0.1:3005',
+    changeOrigin: true,
+    // Express strips '/api/resources' before the middleware sees req.url,
+    // so we must prepend the billing-service prefix via a function.
+    pathRewrite: (path) => '/admin/resources' + path,
+  })
+);
+
+/**
  * =============================
  * 404 Handler
  * =============================

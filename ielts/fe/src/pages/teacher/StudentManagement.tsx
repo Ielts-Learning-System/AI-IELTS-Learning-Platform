@@ -262,7 +262,7 @@ function StudentDrawer({ student, onClose }: { student: StudentRow; onClose: () 
       setNotifInput('');
       toast.success('Đã gửi nhắc nhở!');
     } catch {
-      toast.error('Gui that bai, Thử lại.');
+      toast.error('Gửi thất bại, vui lòng thử lại.');
     } finally {
       setSending(false);
     }
@@ -394,7 +394,7 @@ function StudentDrawer({ student, onClose }: { student: StudentRow; onClose: () 
               <div className="mt-3 flex gap-2">
                 <input type="text" value={notifInput} onChange={e => setNotifInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Viết nhắc nhở cho học viên..." className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
                 <button type="button" onClick={handleSend} disabled={!notifInput.trim() || sending} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-40">
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Gui
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Gửi
                 </button>
               </div>
               <div className="mt-3 space-y-2">
@@ -455,7 +455,19 @@ export default function StudentManagement() {
     }
   }, []);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  // Initial fetch + 30-second auto-refresh
+  useEffect(() => {
+    fetchAll();
+    const id = setInterval(fetchAll, 30_000);
+    return () => clearInterval(id);
+  }, [fetchAll]);
+
+  // Keep the selected drawer in sync when the table refreshes
+  useEffect(() => {
+    if (!selected) return;
+    const updated = students.find(s => s.id === selected.id);
+    if (updated) setSelected(updated);
+  }, [students]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() =>
     students.filter(s => {
@@ -470,7 +482,7 @@ export default function StudentManagement() {
       <Toaster position="top-right" />
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Quan ly Học viên</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Quản lý Học viên</h1>
           <p className="mt-0.5 text-sm text-slate-500">{loading ? 'Đang tải...' : `${students.length} Học viên — ${filtered.length} đang hiển thị`}</p>
         </div>
         <button type="button" onClick={fetchAll} disabled={loading} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40">
@@ -513,7 +525,7 @@ export default function StudentManagement() {
                   </div>
                 </td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="py-12 text-center text-slate-400">Khong tim thay Học viên nao.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-slate-400">Không tìm thấy học viên nào.</td></tr>
               ) : (
                 filtered.map(student => (
                   <tr key={student.id} className="group cursor-pointer transition hover:bg-indigo-50/40" onClick={() => setSelected(student)}>
