@@ -34,12 +34,6 @@ const userSchema = new mongoose.Schema({
     enum: ['FREE', 'PLUS', 'PRO'],
   },
 
-  subscriptionPlan: {
-    type: String,
-    default: 'Free',
-    enum: ['Free', 'VIP_1_MONTH', 'VIP_6_MONTH', 'VIP_1_YEAR'],
-  },
-
   vipValidUntil: {
     type: Date,
     default: null,

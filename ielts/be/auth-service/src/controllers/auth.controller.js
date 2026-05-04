@@ -50,7 +50,6 @@ const register = async (req, res) => {
         name: user.name,
         role: user.role,
         plan: user.plan,
-        subscriptionPlan: user.subscriptionPlan || 'Free',
         vipValidUntil: user.vipValidUntil || null,
         avatar: user.avatar,
         token,
@@ -98,7 +97,6 @@ const login = async (req, res) => {
         name: user.name,
         role: user.role,
         plan: user.plan,
-        subscriptionPlan: user.subscriptionPlan || 'Free',
         vipValidUntil: user.vipValidUntil || null,
         avatar: user.avatar,
         token,
@@ -362,22 +360,27 @@ const batchGetUsersInternal = async (req, res) => {
 /**
  * Internal endpoint for payment-service to upgrade a user's subscription.
  * PATCH /internal/users/:id/subscription
- * Input: { subscriptionPlan, vipValidUntil }
+ * Input: { plan, vipValidUntil }
  */
 const updateSubscriptionInternal = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subscriptionPlan, vipValidUntil } = req.body;
+    const { plan, vipValidUntil } = req.body;
 
-    if (!subscriptionPlan) {
-      return res.status(400).json({ success: false, message: 'subscriptionPlan is required' });
+    if (!plan) {
+      return res.status(400).json({ success: false, message: 'plan is required' });
+    }
+
+    const VALID_PLANS = ['FREE', 'PLUS', 'PRO'];
+    if (!VALID_PLANS.includes(plan)) {
+      return res.status(400).json({ success: false, message: `Invalid plan: ${plan}` });
     }
 
     const user = await User.findByIdAndUpdate(
       id,
-      { subscriptionPlan, vipValidUntil: vipValidUntil || null },
+      { plan, vipValidUntil: vipValidUntil || null },
       { new: true, runValidators: true }
-    ).select('_id subscriptionPlan vipValidUntil');
+    ).select('_id plan vipValidUntil');
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });

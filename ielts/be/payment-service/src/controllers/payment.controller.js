@@ -4,32 +4,14 @@ const axios = require('axios');
 // Internal URL for auth-service — injected via docker-compose environment
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_INTERNAL_URL || 'http://auth-service:3001';
 
+// Maps every planId a transaction can carry to the authoritative `plan` code
+// (FREE / PLUS / PRO) that the auth-service User model actually gates on.
 const PLAN_UPGRADE_CONFIG = {
-  PLUS: {
-    subscriptionPlan: 'VIP_1_MONTH',
-    durationDays: 30,
-    legacyPlan: 'premium',
-  },
-  PRO: {
-    subscriptionPlan: 'VIP_1_YEAR',
-    durationDays: 365,
-    legacyPlan: 'premium',
-  },
-  VIP_1_MONTH: {
-    subscriptionPlan: 'VIP_1_MONTH',
-    durationDays: 30,
-    legacyPlan: 'premium',
-  },
-  VIP_6_MONTH: {
-    subscriptionPlan: 'VIP_6_MONTH',
-    durationDays: 180,
-    legacyPlan: 'premium',
-  },
-  VIP_1_YEAR: {
-    subscriptionPlan: 'VIP_1_YEAR',
-    durationDays: 365,
-    legacyPlan: 'premium',
-  },
+  PLUS:       { plan: 'PLUS', durationDays: 30  },
+  VIP_1_MONTH:{ plan: 'PLUS', durationDays: 30  },
+  VIP_6_MONTH:{ plan: 'PLUS', durationDays: 180 },
+  PRO:        { plan: 'PRO',  durationDays: 365 },
+  VIP_1_YEAR: { plan: 'PRO',  durationDays: 365 },
 };
 
 /**
@@ -208,12 +190,12 @@ const approveTransaction = async (req, res) => {
       Date.now() + upgradeConfig.durationDays * 24 * 60 * 60 * 1000
     );
 
-    // API Composition: delegate user VIP upgrade to auth-service
+    // API Composition: delegate user plan upgrade to auth-service
     try {
       await axios.patch(
         `${AUTH_SERVICE_URL}/api/auth/internal/users/${transaction.userId}/subscription`,
         {
-          subscriptionPlan: upgradeConfig.subscriptionPlan,
+          plan: upgradeConfig.plan,
           vipValidUntil,
         },
         { timeout: 5000 }

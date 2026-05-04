@@ -101,8 +101,7 @@ export default function StudentDashboard() {
           // 2. fallback to billing subscription record planId name
           subscriptionPayload?.data?.planId?.name ||
           subscriptionPayload?.planFallback?.name ||
-          // 3. last resort: auth profile
-          profile?.subscriptionPlan ||
+          // 3. last resort: auth profile plan code
           profile?.plan ||
           'N/A';
 

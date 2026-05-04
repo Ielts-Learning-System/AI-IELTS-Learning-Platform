@@ -29,7 +29,6 @@ export default function LoginPage() {
         avatar,
         plan,
         role,
-        subscriptionPlan,
         vipValidUntil,
         token,
       } = response.data.data;
@@ -43,7 +42,6 @@ export default function LoginPage() {
         role: normalizedRole,
         plan: (plan || 'FREE').toUpperCase(),
         isVip: !!(plan && plan.toUpperCase() !== 'FREE'),
-        subscriptionPlan: subscriptionPlan || 'Free',
         vipValidUntil: vipValidUntil || null,
       };
 

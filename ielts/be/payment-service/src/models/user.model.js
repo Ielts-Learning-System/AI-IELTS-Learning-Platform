@@ -7,10 +7,10 @@ const mongoose = require('mongoose');
  */
 const userSchema = new mongoose.Schema(
   {
-    subscriptionPlan: {
+    plan: {
       type: String,
-      enum: ['Free', 'VIP_1_MONTH', 'VIP_6_MONTH', 'VIP_1_YEAR'],
-      default: 'Free',
+      enum: ['FREE', 'PLUS', 'PRO'],
+      default: 'FREE',
     },
     vipValidUntil: {
       type: Date,

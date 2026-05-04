@@ -9,8 +9,6 @@ interface User {
   role: string;
   /** Active plan from auth-service: 'FREE' | 'PLUS' | 'PRO' (or any future tier) */
   plan: string;
-  /** Legacy VIP field — kept for backward compat, do not use for access control */
-  subscriptionPlan: string;
   vipValidUntil: string | null;
 }
 
