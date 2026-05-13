@@ -41,8 +41,11 @@ const aiLogSchema = new mongoose.Schema(
 
 const authUserSchema = new mongoose.Schema(
   {
+    name: { type: String, default: '' },
+    email: { type: String, default: '' },
     role: { type: String, default: 'Student' },
     plan: { type: String, default: 'FREE' },
+    vipValidUntil: { type: Date, default: null },
   },
   { timestamps: true }
 );

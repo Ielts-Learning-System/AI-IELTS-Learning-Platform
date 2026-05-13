@@ -221,7 +221,10 @@ export function ReadingExamPage() {
 
                   {/* Question Content */}
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900 mb-4">{question.text}</p>
+                    <div
+                      className="font-medium text-slate-900 mb-4 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: question.text }}
+                    />
 
                     {/* Options for Multiple Choice, TFNG, or YNNG */}
                     {(question.type === 'MULTIPLE_CHOICE' ||

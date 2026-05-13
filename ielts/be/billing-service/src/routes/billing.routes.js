@@ -44,6 +44,9 @@ router.post('/admin/remind/:userId', verifyToken, authorizeRoles('admin'), admin
 router.post('/admin/subscriptions/:subscriptionId/cancel', verifyToken, authorizeRoles('admin'), adminController.cancelSubscription);
 router.post('/admin/subscriptions/:subscriptionId/restore', verifyToken, authorizeRoles('admin'), adminController.restoreSubscription);
 
+// Internal endpoint — no auth token required, only called by sibling services
+router.post('/internal/subscriptions/activate', adminController.activateSubscriptionInternal);
+
 // ─────────────────────────────────────────────────────────
 // Ví dụ áp dụng requireSkill cho các endpoint học tập
 // Pattern: verifyToken → requireSkill(skill) → controller

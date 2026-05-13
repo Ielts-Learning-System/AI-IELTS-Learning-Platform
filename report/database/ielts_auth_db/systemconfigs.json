@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "69f0d5d05da89905b042e026",
+    "key": "global",
+    "geminiApiKey": "AIzaSyBki1lG3Osf_tNv9ZKUfSi9UqgfAt2RHBw",
+    "readingPromptTemplate": "You are an expert IELTS test digitizer. Analyze the provided image of an IELTS Reading test page carefully.\n\nConvert its ENTIRE content into a single, valid JSON object that matches the schema below EXACTLY.\n\nCRITICAL RULES:\n1. Return ONLY raw JSON. Do NOT use markdown code fences.\n2. For each Passage's \"content\" field, reproduce the full passage text with basic inline HTML\n   (<p>, <strong>, <em>, <ul><li>, headings) to preserve formatting.\n3. Map each question to the correct type:\n   - \"MULTIPLE_CHOICE\"  – one correct answer from A / B / C / D\n   - \"FILL_IN_BLANK\"    – write one or a few words in a blank\n   - \"MATCHING\"         – match headings, features, or sentence endings\n   - \"TFNG\"             – True / False / Not Given\n   - \"YNNG\"             – Yes / No / Not Given\n4. Populate \"correctAnswer\" when visible; otherwise use \"\".\n5. Copy all question text EXACTLY as written in the image.\n\nJSON Schema:\n{\n  \"title\": \"IELTS Reading Test – [infer from image]\",\n  \"description\": \"Test description\",\n  \"passages\": [\n    {\n      \"passageNumber\": 1,\n      \"title\": \"Passage 1 title\",\n      \"content\": \"<p>Full passage HTML content</p>\",\n      \"image\": \"\",\n      \"questions\": [\n        {\n          \"questionNumber\": 1,\n          \"type\": \"MULTIPLE_CHOICE\",\n          \"text\": \"Exact question text\",\n          \"options\": [\"A. option\", \"B. option\", \"C. option\", \"D. option\"],\n          \"correctAnswer\": \"\",\n          \"explanation\": \"\"\n        }\n      ]\n    }\n  ]\n}",
+    "listeningPromptTemplate": "Return JSON with IELTS listening structure.",
+    "updatedAt": "2026-05-03T03:39:54.345Z",
+    "monthlyTokenQuota": 1000000,
+    "monthlyTokensUsed": 2957,
+    "quotaResetMonth": "2026-05",
+    "speakingExtractPrompt": "",
+    "speakingGradingPrompt": "",
+    "writingExtractPrompt": "",
+    "writingGradingPrompt": "Test writing grading prompt",
+    "keyQuotaMessage": "",
+    "keyQuotaStatus": "unknown",
+    "keyTeam": "default"
+  }
+]

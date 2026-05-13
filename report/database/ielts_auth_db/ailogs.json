@@ -1,0 +1,41 @@
+[
+  {
+    "_id": "69f21ecb5a7d2cf02569a7a1",
+    "service": "Extract Writing",
+    "model": "gemini-2.5-flash",
+    "inputTokens": 5000,
+    "outputTokens": 1200,
+    "totalTokens": 6200,
+    "estimatedCost": 0.000735,
+    "resourceId": "test-resource-123",
+    "createdAt": "2026-04-29T15:07:55.526Z",
+    "updatedAt": "2026-04-29T15:07:55.526Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f21ed55a7d2cf02569a7ae",
+    "service": "Extract Writing",
+    "model": "gemini-2.5-flash",
+    "inputTokens": 5000,
+    "outputTokens": 1200,
+    "totalTokens": 6200,
+    "estimatedCost": 0.000735,
+    "resourceId": "test-resource-123",
+    "createdAt": "2026-04-29T15:08:05.530Z",
+    "updatedAt": "2026-04-29T15:08:05.530Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f6be5417589c64c4821083",
+    "service": "Extract Writing",
+    "model": "gemini-2.5-flash",
+    "inputTokens": 1493,
+    "outputTokens": 630,
+    "totalTokens": 2957,
+    "estimatedCost": 0.000300975,
+    "resourceId": "",
+    "createdAt": "2026-05-03T03:17:40.962Z",
+    "updatedAt": "2026-05-03T03:17:40.962Z",
+    "__v": 0
+  }
+]

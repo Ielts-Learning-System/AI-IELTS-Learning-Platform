@@ -1,0 +1,73 @@
+[
+  {
+    "_id": "69b8faa20559a25d79aa1616",
+    "title": "Hometown-City Chủ đề phổ biến nhất IELTS Speaking",
+    "description": "Video chỉ dùng để testing hệ thống, xin đừng đánh bản quyền =))",
+    "videoUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1773730460/ielts_platform/lessons/e6rosff3znt9cydolkui.mp4",
+    "teacherId": "69ae8c7ed3a57de6189f9789",
+    "status": "Published",
+    "createdAt": "2026-03-17T06:54:26.066Z",
+    "updatedAt": "2026-03-17T06:54:26.066Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f0671655fe7afad107e09b",
+    "title": "Luyện Nghe Tiếng Anh Level B1 - KHÓ DỖ DÀNH",
+    "description": "nội dung video sẽ có 3 phần:\n00:00 - Nghe có phụ đề anh việt\n06:41 - nghe chỉ có phụ đề tiếng việt \n13:11 - nghe 0 có gì cả",
+    "videoUrl": "https://www.youtube.com/watch?v=dNwk5PZ1MFs",
+    "videoType": "youtube",
+    "teacherId": "69ae8c7ed3a57de6189f9789",
+    "status": "Published",
+    "createdAt": "2026-04-28T07:51:50.742Z",
+    "updatedAt": "2026-04-28T07:51:50.742Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f0689255fe7afad107e0c7",
+    "title": "Luyện Nghe Tiếng Anh Level A1 - ĐỪNG BỎ EM",
+    "description": "nội dung video sẽ có 3 phần:\n- Nghe có phụ đề anh việt\n- nghe chỉ có phụ đề tiếng việt \n- nghe 0 có gì cả",
+    "videoUrl": "https://www.youtube.com/watch?v=UffMK3GdmDY&t=497s",
+    "videoType": "youtube",
+    "teacherId": "69ae8c7ed3a57de6189f9789",
+    "status": "Published",
+    "createdAt": "2026-04-28T07:58:10.626Z",
+    "updatedAt": "2026-04-28T07:58:10.626Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f06a1b55fe7afad107e0d7",
+    "title": "Cách mình tự học IELTS Writing Task 1 tại nhà + PDF tài liệu",
+    "description": "IELTS Nguyễn Huyền hướng dẫn quy trình tự học Writing Task 1 tại nhà, từ việc phân tích định dạng đề thi đến cách phân loại các dạng biểu đồ. Video chia sẻ phương pháp lập dàn ý chi tiết, chọn lọc số liệu quan trọng và cách sử dụng công cụ AI để chữa bài miễn phí.",
+    "videoUrl": "https://www.youtube.com/watch?v=1hY7ScMdi9M",
+    "videoType": "youtube",
+    "teacherId": "69ae8c7ed3a57de6189f9789",
+    "status": "Published",
+    "createdAt": "2026-04-28T08:04:43.670Z",
+    "updatedAt": "2026-04-28T08:04:43.670Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f06a5f55fe7afad107e0db",
+    "title": "Cách tự học IELTS Speaking Part 2 tại nhà + PDF tài liệu",
+    "description": "IELTS Nguyễn Huyền hướng dẫn chi tiết quy trình bốn bước tại nhà để chinh phục phần thi nói này. Người học sẽ tìm hiểu cách gộp các nhóm đề tương đồng, xây dựng sườn bài mẫu linh hoạt, tối ưu hóa một phút chuẩn bị và kỹ thuật kéo dài câu trả lời.",
+    "videoUrl": "https://www.youtube.com/watch?v=Hy483YW8olU",
+    "videoType": "youtube",
+    "teacherId": "69ae8c7ed3a57de6189f9789",
+    "status": "Published",
+    "createdAt": "2026-04-28T08:05:51.847Z",
+    "updatedAt": "2026-04-28T08:05:51.847Z",
+    "__v": 0
+  },
+  {
+    "_id": "69f06ab555fe7afad107e0e3",
+    "title": "Phun ý tưởng Speaking với 5 chiến thuật này\" | IELTS Speaking part 1 & 3",
+    "description": "Không biết lên ý tưởng từ đâu cho Part 1 và 3 của bài thi IELTS Speaking? Hãy xem video này nhé!",
+    "videoUrl": "https://www.youtube.com/watch?v=A8C4QbLMn5M",
+    "videoType": "youtube",
+    "teacherId": "69ae8c7ed3a57de6189f9789",
+    "status": "Published",
+    "createdAt": "2026-04-28T08:07:17.341Z",
+    "updatedAt": "2026-04-28T08:07:17.341Z",
+    "__v": 0
+  }
+]

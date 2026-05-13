@@ -593,7 +593,10 @@ export default function MockExamExecutionPage() {
                         {question.questionNumber || index + 1}
                       </span>
                       <div className="min-w-0 flex-1 space-y-2">
-                        <p className="text-sm font-medium text-slate-800">{question.text}</p>
+                        <div
+                          className="text-sm font-medium text-slate-800 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: question.text }}
+                        />
                         {question.options && question.options.length > 0 ? (
                           <div className="space-y-1.5">
                             {question.options.map((opt) => (

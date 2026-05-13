@@ -109,8 +109,8 @@ interface UnifiedHistoryItem {
 
 const API_BASE = 'http://localhost:3000/api';
 
-const READING_API = `${API_BASE}/reading/history`;
-const LISTENING_API = `${API_BASE}/listening/history`;
+const READING_API = `${API_BASE}/reading/my-attempts`;
+const LISTENING_API = `${API_BASE}/listening/my-attempts`;
 const WRITING_API = `${API_BASE}/writing/submissions/my-submissions`;
 const SPEAKING_API = `${API_BASE}/speaking/submissions/my-submissions`;
 
@@ -144,26 +144,28 @@ const statusBadgeMap = {
 };
 
 // Transform API responses to unified format
-const transformReadingData = (items: ReadingTest[]): UnifiedHistoryItem[] =>
+const transformReadingData = (items: any[]): UnifiedHistoryItem[] =>
   (Array.isArray(items) ? items : []).map((item) => ({
     id: item._id,
-    skill: 'Reading',
-    title: item.title || 'Reading Test',
+    skill: 'Reading' as SkillType,
+    title: (typeof item.testId === 'object' && item.testId?.title) ? item.testId.title : (item.title || 'Reading Test'),
     date: item.createdAt,
-    status: 'Graded',
-    score: item.score,
-    totalScore: item.totalScore,
+    status: 'Graded' as const,
+    bandScore: item.bandScore,
+    score: item.rawScore,
+    totalScore: item.details?.length,
   }));
 
-const transformListeningData = (items: ListeningTest[]): UnifiedHistoryItem[] =>
+const transformListeningData = (items: any[]): UnifiedHistoryItem[] =>
   (Array.isArray(items) ? items : []).map((item) => ({
     id: item._id,
-    skill: 'Listening',
-    title: item.title || 'Listening Test',
+    skill: 'Listening' as SkillType,
+    title: (typeof item.testId === 'object' && item.testId?.title) ? item.testId.title : (item.title || 'Listening Test'),
     date: item.createdAt,
-    status: 'Graded',
-    score: item.score,
-    totalScore: item.totalScore,
+    status: 'Graded' as const,
+    bandScore: item.bandScore,
+    score: item.rawScore,
+    totalScore: item.details?.length,
   }));
 
 const transformWritingData = (items: WritingSubmission[]): UnifiedHistoryItem[] =>
@@ -468,7 +470,16 @@ export default function MySkillsHistory() {
                               >
                                 <Mic2 className="h-4 w-4" />
                               </button>
-                            ) : item.status === 'Graded' && (item.grading || item.skill === 'Reading' || item.skill === 'Listening') ? (
+                            ) : item.status === 'Graded' && (item.skill === 'Reading' || item.skill === 'Listening') ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedItem(item)}
+                                title="Xem chi tiết"
+                                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                              >
+                                <MessageSquareQuote className="h-4 w-4" />
+                              </button>
+                            ) : item.status === 'Graded' && item.grading ? (
                               <button
                                 type="button"
                                 onClick={() => navigate(`/history/writing/${item.id}`)}
@@ -746,7 +757,7 @@ function DetailsModal({ item, onClose }: DetailsModalProps) {
   }
 
   // For Reading and Listening
-  if ((item.skill === 'Reading' || item.skill === 'Listening') && item.score !== undefined) {
+  if (item.skill === 'Reading' || item.skill === 'Listening') {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8 backdrop-blur-sm"

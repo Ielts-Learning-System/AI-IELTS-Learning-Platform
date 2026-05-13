@@ -731,6 +731,7 @@ export function TestManagement() {
           ? {
               title: form.title.trim(),
               description: form.description.trim(),
+              isPublished: true,
               passages: form.readingPassages.map((passage, passageIndex) => ({
                 passageNumber: passageIndex + 1,
                 title: passage.title.trim(),

@@ -1,0 +1,138 @@
+[
+  {
+    "_id": "69f0916c53b11059599d37ab",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "testId": "69f07104cbdd9e378104eb31",
+    "questions": [],
+    "answers": [
+      {
+        "questionKey": "p1_0",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373547/ielts_platform/speaking/jnwfq8vycivuw6l1bhnn.wav",
+        "_id": "69f091a153b11059599d37e8"
+      },
+      {
+        "questionKey": "p1_1",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373555/ielts_platform/speaking/wrxof429hutp5dd4ofm1.wav",
+        "_id": "69f091a153b11059599d37e9"
+      },
+      {
+        "questionKey": "p1_2",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373561/ielts_platform/speaking/aueyyr2w1zyhjoynphpl.wav",
+        "_id": "69f091a153b11059599d37ea"
+      },
+      {
+        "questionKey": "p2",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373567/ielts_platform/speaking/gqcfoq3pxrntzczwdv3d.wav",
+        "_id": "69f091a153b11059599d37eb"
+      },
+      {
+        "questionKey": "p3_0",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373574/ielts_platform/speaking/rjdlumb9szwslje2jenl.wav",
+        "_id": "69f091a153b11059599d37ec"
+      },
+      {
+        "questionKey": "p3_2",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373579/ielts_platform/speaking/lky15svzzsilf12qhgzv.wav",
+        "_id": "69f091a153b11059599d37ed"
+      },
+      {
+        "questionKey": "p3_1",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777373600/ielts_platform/speaking/qmkxlpqbyyoitdz7v45z.wav",
+        "_id": "69f091a153b11059599d37ee"
+      }
+    ],
+    "audioUrl": "",
+    "status": "Graded",
+    "createdAt": "2026-04-28T10:52:28.955Z",
+    "updatedAt": "2026-04-28T11:11:55.111Z",
+    "__v": 6,
+    "grading": {
+      "FC": 6,
+      "LR": 6,
+      "GRA": 6,
+      "PR": 6,
+      "overallBand": 6,
+      "teacherFeedback": "tốt",
+      "gradedBy": "69ae8c7ed3a57de6189f9789",
+      "gradedAt": "2026-04-28T11:11:55.101Z"
+    },
+    "isPublished": true
+  },
+  {
+    "_id": "69f6fce8cdbdb76b0b53f969",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "testId": "69f071d9cbdd9e378104eb37",
+    "questions": [],
+    "answers": [
+      {
+        "questionKey": "p1_0",
+        "audioUrl": "https://res.cloudinary.com/demo/video/upload/v1312461204/sample.mp4",
+        "_id": "69f6fce8cdbdb76b0b53f96a"
+      },
+      {
+        "questionKey": "p1_1",
+        "audioUrl": "https://res.cloudinary.com/demo/video/upload/v1312461204/sample.mp4",
+        "_id": "69f6fce8cdbdb76b0b53f96b"
+      },
+      {
+        "questionKey": "p2",
+        "audioUrl": "https://res.cloudinary.com/demo/video/upload/v1312461204/sample.mp4",
+        "_id": "69f6fce8cdbdb76b0b53f96c"
+      },
+      {
+        "questionKey": "p3_0",
+        "audioUrl": "https://res.cloudinary.com/demo/video/upload/v1312461204/sample.mp4",
+        "_id": "69f6fce8cdbdb76b0b53f96d"
+      },
+      {
+        "questionKey": "p3_1",
+        "audioUrl": "https://res.cloudinary.com/demo/video/upload/v1312461204/sample.mp4",
+        "_id": "69f6fce8cdbdb76b0b53f96e"
+      }
+    ],
+    "audioUrl": "",
+    "status": "Graded",
+    "createdAt": "2026-05-03T07:44:40.165Z",
+    "updatedAt": "2026-05-03T07:45:23.254Z",
+    "__v": 0,
+    "grading": {
+      "FC": 6,
+      "LR": 6.5,
+      "GRA": 6,
+      "PR": 6.5,
+      "overallBand": 6.5,
+      "teacherFeedback": "Fluency is decent; pronunciation consistency can improve.",
+      "gradedBy": "69ae8c7ed3a57de6189f9789",
+      "gradedAt": "2026-05-03T07:45:23.250Z"
+    },
+    "isPublished": true
+  },
+  {
+    "_id": "69f93f8236c7a7297bc962fe",
+    "studentId": "69f93b8d60310ebbafed6ef5",
+    "testId": "69f8d529cc6bd4ecce298291",
+    "questions": [],
+    "answers": [
+      {
+        "questionKey": "p1_0",
+        "audioUrl": "https://res.cloudinary.com/dysny6fpe/video/upload/v1777942400/ielts_platform/speaking/y3zqvhv8guncoftv2niu.wav",
+        "_id": "69f93f8236c7a7297bc962ff"
+      }
+    ],
+    "audioUrl": "",
+    "status": "Graded",
+    "createdAt": "2026-05-05T00:53:22.401Z",
+    "updatedAt": "2026-05-05T00:54:15.938Z",
+    "__v": 0,
+    "grading": {
+      "FC": 3.5,
+      "LR": 1.5,
+      "GRA": 6,
+      "PR": 6,
+      "overallBand": 4.5,
+      "teacherFeedback": "hhhhhhh",
+      "gradedBy": "69ae8c7ed3a57de6189f9789",
+      "gradedAt": "2026-05-05T00:54:15.936Z"
+    }
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "_id": "69f8dd223f5455a31b417e8d",
+    "examId": "69f8dd0e3f5455a31b417e8c",
+    "userId": "69c11f3d6c745b2f23539c9d",
+    "globalStartTime": "2026-05-04T17:53:38.480Z",
+    "globalEndTime": "2026-05-05T17:53:38.480Z",
+    "status": "GRADED",
+    "metadata": {
+      "createdFrom": "student_start"
+    },
+    "lastActivityAt": "2026-05-04T18:43:08.700Z",
+    "createdAt": "2026-05-04T17:53:38.482Z",
+    "updatedAt": "2026-05-04T18:43:08.701Z",
+    "__v": 0,
+    "submittedAt": "2026-05-04T18:30:45.577Z",
+    "overallBandScores": {
+      "reading": 0.5,
+      "listening": 0.5,
+      "writing": 0.5,
+      "speaking": 0,
+      "overall": 0.5
+    }
+  },
+  {
+    "_id": "69f93cd9121fec32031fe198",
+    "examId": "69f8dd0e3f5455a31b417e8c",
+    "userId": "69f93b8d60310ebbafed6ef5",
+    "globalStartTime": "2026-05-05T00:42:01.262Z",
+    "globalEndTime": "2026-05-06T00:42:01.262Z",
+    "status": "EXPIRED",
+    "metadata": {
+      "createdFrom": "student_start"
+    },
+    "lastActivityAt": "2026-05-12T14:26:45.304Z",
+    "createdAt": "2026-05-05T00:42:01.274Z",
+    "updatedAt": "2026-05-12T14:26:45.616Z",
+    "__v": 0,
+    "submittedAt": "2026-05-12T14:26:45.304Z"
+  }
+]

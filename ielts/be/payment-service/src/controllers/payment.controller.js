@@ -3,6 +3,7 @@ const axios = require('axios');
 
 // Internal URL for auth-service — injected via docker-compose environment
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_INTERNAL_URL || 'http://auth-service:3001';
+const BILLING_SERVICE_URL = process.env.BILLING_SERVICE_INTERNAL_URL || 'http://billing-service:3005';
 
 // Maps every planId a transaction can carry to the authoritative `plan` code
 // (FREE / PLUS / PRO) that the auth-service User model actually gates on.
@@ -206,6 +207,22 @@ const approveTransaction = async (req, res) => {
         success: false,
         message: 'Transaction found but failed to upgrade user subscription. Please retry.',
       });
+    }
+
+    // Sync subscription record to billing-service (non-blocking — don't fail the whole approval if billing is down)
+    try {
+      await axios.post(
+        `${BILLING_SERVICE_URL}/api/billing/internal/subscriptions/activate`,
+        {
+          userId: String(transaction.userId),
+          planCode: upgradeConfig.plan,
+          validUntil: vipValidUntil,
+        },
+        { timeout: 5000 }
+      );
+    } catch (err) {
+      console.error('approveTransaction: failed to sync subscription to billing-service (non-fatal):', err.message);
+      // Continue — user plan is already updated in auth DB; billing record will be fixed on next admin view
     }
 
     transaction.status = 'Success';

@@ -25,7 +25,7 @@ export interface BillingPlan {
 export interface BillingSubscription {
   _id: string;
   userId: string | { _id?: string; id?: string; name?: string; email?: string };
-  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'FREE';
   validUntil: string;
   daysRemaining?: number;
   planId?: {

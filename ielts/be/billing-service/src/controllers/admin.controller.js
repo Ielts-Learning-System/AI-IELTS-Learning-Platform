@@ -3,6 +3,7 @@ const axios = require('axios');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const { publishEvent } = require('../services/rabbitmq.service');
+const { getAuthUser } = require('../config/reportingConnections');
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const AUTH_SERVICE_BASE_URL = process.env.AUTH_SERVICE_INTERNAL_URL || 'http://auth-service:3001';
@@ -135,54 +136,97 @@ const deletePlan = async (req, res) => {
 
 const getAllUserSubscriptions = async (req, res) => {
   try {
-    const subscriptions = await Subscription.find()
-      .populate('planId', 'name durationMonths benefits')
-      .sort({ createdAt: -1 });
+    // Fetch all subscriptions, all auth users, and all plans in parallel
+    const [subscriptions, allAuthUsers, allPlans] = await Promise.all([
+      Subscription.find()
+        .populate('planId', 'name durationMonths benefits')
+        .sort({ createdAt: -1 })
+        .lean(),
+      getAuthUser().find({ role: { $regex: /^student$/i } }).lean().catch(() => []),
+      Plan.find().lean(),
+    ]);
 
-    const uniqueUserIds = [
-      ...new Set(subscriptions.map((sub) => String(sub.userId)).filter(Boolean)),
-    ];
+    // Build plan lookup by code (uppercase) for fallback
+    const planByCode = new Map(allPlans.map((p) => [p.code?.toUpperCase(), p]));
 
-    let usersById = new Map();
-
-    if (uniqueUserIds.length) {
-      try {
-        const response = await axios.post(
-          `${AUTH_SERVICE_BASE_URL}/api/auth/internal/users/batch`,
-          { userIds: uniqueUserIds },
-          {
-            timeout: AUTH_SERVICE_TIMEOUT_MS,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        const users = response.data?.data || [];
-        usersById = new Map(users.map((user) => [String(user._id), user]));
-      } catch (error) {
-        // Graceful fallback: keep API available even when auth-service is down.
-        console.error('AUTH USER HYDRATION ERROR:', error.message);
-      }
+    // Map subscriptions by userId (latest per user)
+    const subByUserId = new Map();
+    for (const sub of subscriptions) {
+      const uid = String(sub.userId);
+      if (!subByUserId.has(uid)) subByUserId.set(uid, sub);
     }
 
-    const data = subscriptions.map((sub) => {
-      const user = usersById.get(String(sub.userId));
+    // Build result: start with all students
+    const data = allAuthUsers.map((user) => {
+      const uid = String(user._id);
+      const sub = subByUserId.get(uid);
 
+      if (sub) {
+        subByUserId.delete(uid); // mark as processed
+        return {
+          _id: sub._id,
+          userId: { _id: uid, name: user.name || 'Unknown', email: user.email || 'N/A' },
+          status: sub.status,
+          validUntil: sub.validUntil,
+          daysRemaining: calcDaysRemaining(sub.validUntil),
+          planId: sub.planId,
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt,
+        };
+      }
+
+      // No billing subscription record — check auth DB plan as fallback
+      const authPlanCode = (user.plan || 'FREE').toUpperCase();
+      if (authPlanCode !== 'FREE') {
+        // User upgraded via payment but billing record wasn't synced — show their real plan
+        const plan = planByCode.get(authPlanCode);
+        const vipValidUntil = user.vipValidUntil || null;
+        return {
+          _id: null,
+          userId: { _id: uid, name: user.name || 'Unknown', email: user.email || 'N/A' },
+          status: vipValidUntil && new Date(vipValidUntil) > new Date() ? 'ACTIVE' : 'ACTIVE',
+          validUntil: vipValidUntil,
+          daysRemaining: vipValidUntil ? calcDaysRemaining(vipValidUntil) : null,
+          planId: plan ? { _id: plan._id, name: plan.name } : { name: authPlanCode },
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          _legacyNoBillingRecord: true, // flag for debugging
+        };
+      }
+
+      // User has no subscription record and auth plan is FREE
       return {
+        _id: null,
+        userId: { _id: uid, name: user.name || 'Unknown', email: user.email || 'N/A' },
+        status: 'FREE',
+        validUntil: null,
+        daysRemaining: null,
+        planId: { name: 'Free' },
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      };
+    });
+
+    // Append any subscriptions whose userId has no matching auth user (edge case)
+    for (const [uid, sub] of subByUserId) {
+      data.push({
         _id: sub._id,
-        userId: {
-          _id: String(sub.userId),
-          name: user?.name || 'Unknown User',
-          email: user?.email || 'N/A',
-        },
+        userId: { _id: uid, name: 'Unknown User', email: 'N/A' },
         status: sub.status,
         validUntil: sub.validUntil,
         daysRemaining: calcDaysRemaining(sub.validUntil),
         planId: sub.planId,
         createdAt: sub.createdAt,
         updatedAt: sub.updatedAt,
-      };
+      });
+    }
+
+    // Sort: ACTIVE subscribed users first, then legacy (unsynced), then free — all by createdAt desc
+    data.sort((a, b) => {
+      const rank = (s) => (s.status === 'FREE' ? 2 : s.status === 'ACTIVE' ? 0 : 1);
+      const diff = rank(a) - rank(b);
+      if (diff !== 0) return diff;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
     return res.json({ success: true, data });
@@ -489,6 +533,50 @@ const getBillingStats = async (req, res) => {
   }
 };
 
+/**
+ * POST /internal/subscriptions/activate
+ * Called by payment-service after a transaction is approved.
+ * Creates or updates a billing Subscription record for the user.
+ * Body: { userId, planCode, validUntil }
+ * No auth token required — internal use only.
+ */
+const activateSubscriptionInternal = async (req, res) => {
+  try {
+    const { userId, planCode, validUntil } = req.body;
+
+    if (!userId || !planCode || !validUntil) {
+      return res.status(400).json({ success: false, message: 'userId, planCode, and validUntil are required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid userId format' });
+    }
+
+    const plan = await Plan.findOne({ code: planCode.toUpperCase() });
+    if (!plan) {
+      return res.status(404).json({ success: false, message: `Plan with code "${planCode}" not found` });
+    }
+
+    const subscription = await Subscription.findOneAndUpdate(
+      { userId },
+      {
+        userId,
+        planId: plan._id,
+        status: 'ACTIVE',
+        validUntil: new Date(validUntil),
+        cancelledAt: null,
+        cancellationReason: null,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(200).json({ success: true, data: subscription });
+  } catch (error) {
+    console.error('ACTIVATE SUBSCRIPTION INTERNAL ERROR', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createPlan,
   getAllPlansForAdmin,
@@ -500,4 +588,5 @@ module.exports = {
   cancelSubscription,
   restoreSubscription,
   getBillingStats,
+  activateSubscriptionInternal,
 };

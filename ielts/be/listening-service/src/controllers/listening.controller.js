@@ -4,6 +4,18 @@ const { convertRawToBand } = require('../utils/scoreConverter');
 
 const normalizeAnswer = (value) => String(value || '').trim().toLowerCase();
 
+// Check if student answer matches correct answer, supporting "A/B" alternate forms
+const isAnswerCorrect = (studentAnswer, correctAnswer) => {
+  const student = normalizeAnswer(studentAnswer);
+  const correct = normalizeAnswer(correctAnswer);
+  if (student === correct) return true;
+  // Support alternate answers separated by "/"  e.g. "10/ten"
+  if (correct.includes('/')) {
+    return correct.split('/').map((s) => s.trim()).includes(student);
+  }
+  return false;
+};
+
 // Get all tests (with partCount & totalQuestionCount)
 exports.getAllTests = async (req, res) => {
   try {
@@ -160,7 +172,7 @@ exports.submitTest = async (req, res) => {
     const details = correctAnswers.map((correctAnswer, index) => {
       const studentAnswer = String(studentAnswers[index] || '');
       const isCorrect =
-        normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
+        isAnswerCorrect(studentAnswer, correctAnswer);
 
       if (isCorrect) {
         rawScore++;
@@ -235,7 +247,7 @@ exports.submitPart = async (req, res) => {
     let rawScore = 0;
     const details = correctAnswers.map((correctAnswer, index) => {
       const studentAnswer = String(studentAnswers[index] || '');
-      const isCorrect = normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
+      const isCorrect = isAnswerCorrect(studentAnswer, correctAnswer);
       if (isCorrect) rawScore++;
       return {
         questionIndex: index + 1,

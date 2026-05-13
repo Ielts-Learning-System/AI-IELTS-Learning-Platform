@@ -269,6 +269,11 @@ def _extract_pdf_image_data_urls(pdf_bytes: bytes, max_images: int = 2) -> list[
     """
     Extract image blobs directly from PDF so writing prompts can keep original charts/diagrams.
     Returns data URLs ordered by image size (largest first).
+
+    Applies rotation correction:
+      - PIL ImageOps.exif_transpose()  — fixes JPEG EXIF orientation flag
+      - PDF page /Rotate attribute     — counter-rotates the raw XObject bytes so the image
+        appears in the same orientation as it does when viewed in a PDF reader
     """
     try:
         from pypdf import PdfReader
@@ -276,12 +281,24 @@ def _extract_pdf_image_data_urls(pdf_bytes: bytes, max_images: int = 2) -> list[
         logger.warning("pypdf is not available; skipping PDF image extraction")
         return []
 
+    # Pillow is a required transitive dep of pdf2image — safe to import.
+    try:
+        from PIL import Image, ImageOps
+        import io as _bio
+        _pil_ok = True
+    except ImportError:
+        _pil_ok = False
+
     candidates: list[tuple[int, str]] = []
     seen: set[str] = set()
 
     try:
         reader = PdfReader(io.BytesIO(pdf_bytes))
         for page in reader.pages[:8]:
+            # PDF /Rotate: "rotate the page this many degrees CW when displaying".
+            # To make the extracted XObject appear the same way, we apply the same CW rotation.
+            page_rotate = int(page.get("/Rotate", 0) or 0) % 360
+
             images = getattr(page, "images", []) or []
             for image in images:
                 data = getattr(image, "data", None)
@@ -300,6 +317,30 @@ def _extract_pdf_image_data_urls(pdf_bytes: bytes, max_images: int = 2) -> list[
                 # Keep payload bounded to avoid huge DB records.
                 if len(data) > 2_500_000:
                     continue
+
+                # ── Rotation correction via PIL ───────────────────────────
+                if _pil_ok:
+                    try:
+                        img = Image.open(_bio.BytesIO(data))
+                        # Honour JPEG EXIF orientation (e.g. phone camera shots)
+                        img = ImageOps.exif_transpose(img)
+                        # Counter-rotate to match how a PDF reader displays the page.
+                        # PIL.rotate is CCW; for a CW rotation of N degrees use -N.
+                        if page_rotate == 90:
+                            img = img.rotate(-90, expand=True)
+                        elif page_rotate == 180:
+                            img = img.rotate(180, expand=True)
+                        elif page_rotate == 270:
+                            img = img.rotate(90, expand=True)
+                        buf = _bio.BytesIO()
+                        fmt = "JPEG" if mime == "image/jpeg" else "PNG"
+                        save_kw: dict = {"quality": 90} if fmt == "JPEG" else {}
+                        img.save(buf, format=fmt, **save_kw)
+                        data = buf.getvalue()
+                        mime = f"image/{fmt.lower()}"
+                    except Exception:
+                        pass  # fall back to raw data if PIL processing fails
+                # ─────────────────────────────────────────────────────────
 
                 b64 = base64.b64encode(data).decode("ascii")
                 candidates.append((len(data), f"data:{mime};base64,{b64}"))

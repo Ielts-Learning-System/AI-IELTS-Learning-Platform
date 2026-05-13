@@ -1,0 +1,1040 @@
+[
+  {
+    "_id": "69f6fce3063093bfc38ca4d2",
+    "testId": "69aef27a16d31e27978f4a5c",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [],
+    "rawScore": 0,
+    "bandScore": 1.5,
+    "timeSpent": 0,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "",
+        "correctAnswer": "meals",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "",
+        "correctAnswer": "discount",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "",
+        "correctAnswer": "transport",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "",
+        "correctAnswer": "cleanliness",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "",
+        "correctAnswer": "hygiene",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "",
+        "correctAnswer": "Bridge",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "",
+        "correctAnswer": "kitchen",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "",
+        "correctAnswer": "9.50",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "",
+        "correctAnswer": "deliveries",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "",
+        "correctAnswer": "Saturday",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 11,
+        "studentAnswer": "",
+        "correctAnswer": "D",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 12,
+        "studentAnswer": "",
+        "correctAnswer": "E",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 13,
+        "studentAnswer": "",
+        "correctAnswer": "A",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 14,
+        "studentAnswer": "",
+        "correctAnswer": "C",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 15,
+        "studentAnswer": "",
+        "correctAnswer": "H",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 16,
+        "studentAnswer": "",
+        "correctAnswer": "C",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 17,
+        "studentAnswer": "",
+        "correctAnswer": "F",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 18,
+        "studentAnswer": "",
+        "correctAnswer": "B",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 19,
+        "studentAnswer": "",
+        "correctAnswer": "D",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 20,
+        "studentAnswer": "",
+        "correctAnswer": "I",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 21,
+        "studentAnswer": "",
+        "correctAnswer": "C",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 22,
+        "studentAnswer": "",
+        "correctAnswer": "A",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 23,
+        "studentAnswer": "",
+        "correctAnswer": "B",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 24,
+        "studentAnswer": "",
+        "correctAnswer": "C",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 25,
+        "studentAnswer": "",
+        "correctAnswer": "A",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 26,
+        "studentAnswer": "",
+        "correctAnswer": "E",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 27,
+        "studentAnswer": "",
+        "correctAnswer": "D",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 28,
+        "studentAnswer": "",
+        "correctAnswer": "A",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 29,
+        "studentAnswer": "",
+        "correctAnswer": "C",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 30,
+        "studentAnswer": "",
+        "correctAnswer": "F",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 31,
+        "studentAnswer": "",
+        "correctAnswer": "convenient",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 32,
+        "studentAnswer": "",
+        "correctAnswer": "suits",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 33,
+        "studentAnswer": "",
+        "correctAnswer": "tailor",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 34,
+        "studentAnswer": "",
+        "correctAnswer": "profession",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 35,
+        "studentAnswer": "",
+        "correctAnswer": "visible",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 36,
+        "studentAnswer": "",
+        "correctAnswer": "string",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 37,
+        "studentAnswer": "",
+        "correctAnswer": "waist",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 38,
+        "studentAnswer": "",
+        "correctAnswer": "keys",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 39,
+        "studentAnswer": "",
+        "correctAnswer": "figure",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 40,
+        "studentAnswer": "",
+        "correctAnswer": "handbag",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-03T07:44:35.264Z",
+    "updatedAt": "2026-05-03T07:44:35.264Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f83709bbaf0bd2b75b534f",
+    "testId": "69f83709bbaf0bd2b75b52f2",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:04:57.773Z",
+    "updatedAt": "2026-05-04T06:04:57.773Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f83797bbaf0bd2b75b53e8",
+    "testId": "69f83796bbaf0bd2b75b538b",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:19.106Z",
+    "updatedAt": "2026-05-04T06:07:19.106Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f83799bbaf0bd2b75b5478",
+    "testId": "69f83798bbaf0bd2b75b541b",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:21.039Z",
+    "updatedAt": "2026-05-04T06:07:21.039Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f8379abbaf0bd2b75b5508",
+    "testId": "69f8379abbaf0bd2b75b54ab",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:22.742Z",
+    "updatedAt": "2026-05-04T06:07:22.742Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f8379cbbaf0bd2b75b559a",
+    "testId": "69f8379cbbaf0bd2b75b553d",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:24.435Z",
+    "updatedAt": "2026-05-04T06:07:24.435Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f8379ebbaf0bd2b75b562a",
+    "testId": "69f8379dbbaf0bd2b75b55cd",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:26.132Z",
+    "updatedAt": "2026-05-04T06:07:26.132Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f8379fbbaf0bd2b75b56ba",
+    "testId": "69f8379fbbaf0bd2b75b565d",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:27.934Z",
+    "updatedAt": "2026-05-04T06:07:27.934Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f837a1bbaf0bd2b75b571a",
+    "testId": "69f8379fbbaf0bd2b75b565d",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:07:29.127Z",
+    "updatedAt": "2026-05-04T06:07:29.127Z",
+    "__v": 0,
+    "isPublished": true
+  },
+  {
+    "_id": "69f83844bbaf0bd2b75b57b2",
+    "testId": "69f83843bbaf0bd2b75b5755",
+    "studentId": "69c11f3d6c745b2f23539c9d",
+    "studentAnswers": [
+      "ANS_L11",
+      "ANS_L12",
+      "ANS_L13",
+      "ANS_L14",
+      "ANS_L15",
+      "ANS_L16",
+      "ANS_L17",
+      "WRONG",
+      "WRONG",
+      "WRONG"
+    ],
+    "rawScore": 7,
+    "bandScore": 3,
+    "timeSpent": 600,
+    "partNumber": 2,
+    "details": [
+      {
+        "questionIndex": 1,
+        "studentAnswer": "ANS_L11",
+        "correctAnswer": "ANS_L11",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 2,
+        "studentAnswer": "ANS_L12",
+        "correctAnswer": "ANS_L12",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 3,
+        "studentAnswer": "ANS_L13",
+        "correctAnswer": "ANS_L13",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 4,
+        "studentAnswer": "ANS_L14",
+        "correctAnswer": "ANS_L14",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 5,
+        "studentAnswer": "ANS_L15",
+        "correctAnswer": "ANS_L15",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 6,
+        "studentAnswer": "ANS_L16",
+        "correctAnswer": "ANS_L16",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 7,
+        "studentAnswer": "ANS_L17",
+        "correctAnswer": "ANS_L17",
+        "isCorrect": true
+      },
+      {
+        "questionIndex": 8,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L18",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 9,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L19",
+        "isCorrect": false
+      },
+      {
+        "questionIndex": 10,
+        "studentAnswer": "WRONG",
+        "correctAnswer": "ANS_L20",
+        "isCorrect": false
+      }
+    ],
+    "createdAt": "2026-05-04T06:10:12.445Z",
+    "updatedAt": "2026-05-04T06:10:12.445Z",
+    "__v": 0,
+    "isPublished": true
+  }
+]

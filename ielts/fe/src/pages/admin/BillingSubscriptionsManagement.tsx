@@ -83,6 +83,7 @@ const getStatusClasses = (status: BillingSubscription['status']) => {
   if (status === 'ACTIVE') return 'bg-emerald-100 text-emerald-700';
   if (status === 'EXPIRED') return 'bg-rose-100 text-rose-700';
   if (status === 'CANCELLED') return 'bg-slate-200 text-slate-700';
+  if (status === 'FREE') return 'bg-blue-100 text-blue-600';
   return 'bg-slate-200 text-slate-700';
 };
 

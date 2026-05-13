@@ -27,6 +27,6 @@ router.get('/graded', verifyToken, isTeacherOrAdmin, getGradedSubmissions);
 router.get('/stats', verifyToken, isTeacherOrAdmin, getSubmissionStats);
 
 // Teacher grades a specific writing submission.
-router.put('/:id/grade', verifyToken, isTeacher, gradeSubmission);
+router.put('/:id/grade', verifyToken, isTeacherOrAdmin, gradeSubmission);
 
 module.exports = router;

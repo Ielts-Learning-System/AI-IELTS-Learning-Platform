@@ -194,7 +194,7 @@ export function TestModal({ isOpen, onClose, onTestCreated }: TestModalProps) {
       const payload = {
         title: passageTitle || `IELTS Reading Test - ${keywords}`,
         description: `Target Band ${bandScore}`,
-        isPublished: false,
+        isPublished: true,
         passages: [
           {
             passageNumber: parseInt(passageType),
