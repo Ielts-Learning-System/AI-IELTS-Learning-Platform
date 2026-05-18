@@ -53,21 +53,21 @@ describe('Writing Routes — Integration', () => {
     it('should return all items', async () => {
       const res = await request(app).get('/items');
       expect(res.status).toBe(200);
-      expect(res.body.length).toBe(2);
+      expect(res.body.data.length).toBe(2);
     });
 
     it('should filter by type', async () => {
       const res = await request(app).get('/items?type=Task 1');
       expect(res.status).toBe(200);
-      expect(res.body.length).toBe(1);
-      expect(res.body[0].type).toBe('Task 1');
+      expect(res.body.data.length).toBe(1);
+      expect(res.body.data[0].type).toBe('Task 1');
     });
 
     it('should filter by isSample', async () => {
       const res = await request(app).get('/items?isSample=true');
       expect(res.status).toBe(200);
-      expect(res.body.length).toBe(1);
-      expect(res.body[0].isSample).toBe(true);
+      expect(res.body.data.length).toBe(1);
+      expect(res.body.data[0].isSample).toBe(true);
     });
   });
 

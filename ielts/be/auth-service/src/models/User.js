@@ -34,6 +34,13 @@ const userSchema = new mongoose.Schema({
     enum: ['FREE', 'PLUS', 'PRO'],
   },
 
+  // subscriptionPlan: human-readable name used in API responses and display
+  subscriptionPlan: {
+    type: String,
+    default: 'Free',
+    enum: ['Free', 'Plus', 'Pro'],
+  },
+
   vipValidUntil: {
     type: Date,
     default: null,

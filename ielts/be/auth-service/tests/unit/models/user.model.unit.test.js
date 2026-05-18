@@ -15,7 +15,7 @@ describe('User Model — Unit', () => {
     expect(user.email).toBe('test@example.com');
     expect(user.role).toBe('Student');
     expect(user.isActive).toBe(true);
-    expect(user.plan).toBe('free');
+    expect(user.plan).toBe('FREE');
     expect(user.subscriptionPlan).toBe('Free');
     expect(user.vipValidUntil).toBeNull();
   });

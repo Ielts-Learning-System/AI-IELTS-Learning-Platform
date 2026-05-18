@@ -18,6 +18,7 @@ const GradingSchema = new mongoose.Schema(
       content: { type: String, default: '' },
       overall_feedback: { type: String, default: '' }
     },
+    aiFeedback: { type: mongoose.Schema.Types.Mixed, default: undefined },
     gradedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     gradedAt: { type: Date, required: true },
   },

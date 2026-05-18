@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
+  Bot,
   CalendarDays,
   CheckCircle2,
   CircleUserRound,
@@ -10,6 +11,8 @@ import {
   Eye,
   LoaderCircle,
   RefreshCcw,
+  Save,
+  Sparkles,
   Star,
   X,
 } from 'lucide-react';
@@ -33,6 +36,26 @@ interface PendingSubmission {
   createdAt: string;
 }
 
+interface AICriteriaScore {
+  band: number;
+  explanation: string;
+}
+
+interface AIFeedback {
+  overall_band: number;
+  overall_comment: string;
+  tips?: string[];
+  grammar_feedback?: string;
+  vocabulary_feedback?: string;
+  rewrite_suggestion?: string;
+  criteria_scores: {
+    task_response: AICriteriaScore;
+    coherence_cohesion: AICriteriaScore;
+    lexical_resource: AICriteriaScore;
+    grammatical_range: AICriteriaScore;
+  };
+}
+
 interface GradedSubmission {
   _id: string;
   studentId: string;
@@ -46,11 +69,15 @@ interface GradedSubmission {
     criteria: { TR: number; CC: number; LR: number; GRA: number };
     overallBand: number;
     teacherFeedback?: { content?: string; overall_feedback?: string };
+    aiFeedback?: AIFeedback;
     gradedAt: string;
   };
 }
 
 const WRITING_API_BASE = 'http://localhost:3000/api/writing';
+const AI_API_BASE = 'http://localhost:3000/api/ai';
+
+const stripHtml = (html: string) => html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const getToken = (fallbackToken: string | null) =>
   fallbackToken || localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
@@ -72,6 +99,8 @@ export default function GradingDashboard() {
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [activeTab, setActiveTab] = useState<'pending' | 'graded'>('pending');
   const [selectedGraded, setSelectedGraded] = useState<GradedSubmission | null>(null);
+  const [isLoadingAIForModal, setIsLoadingAIForModal] = useState(false);
+  const [aiResultForModal, setAiResultForModal] = useState<AIFeedback | null>(null);
 
   const fetchSubmissions = async () => {
     if (!getToken(token)) {
@@ -105,6 +134,53 @@ export default function GradingDashboard() {
 
   const handleNavigateDetail = (id: string) => {
     navigate(`/teacher/writing/${id}`);
+  };
+
+  const handleRunAIForGraded = async () => {
+    if (!selectedGraded || !selectedGraded.content) {
+      toast.error('Bài này không có nội dung để phân tích.');
+      return;
+    }
+    const writingIdStr = typeof selectedGraded.writingId === 'string'
+      ? selectedGraded.writingId
+      : selectedGraded.writingId._id;
+    try {
+      setIsLoadingAIForModal(true);
+      setAiResultForModal(null);
+      const headers = { Authorization: `Bearer ${getToken(token)}` };
+      const promptRes = await axios.get(`${WRITING_API_BASE}/items/${writingIdStr}`, { headers });
+      const promptData = promptRes.data?.data ?? promptRes.data;
+      const promptText = stripHtml(promptData?.contentHtml || promptData?.title || '');
+      const aiRes = await axios.post(
+        `${AI_API_BASE}/grade-writing`,
+        { task_type: selectedGraded.taskType, prompt_text: promptText, student_essay: selectedGraded.content, target_band: 7.0 },
+        { headers },
+      );
+      setAiResultForModal(aiRes.data);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail?.message || error.response?.data?.message || 'AI chấm bài thất bại.');
+    } finally {
+      setIsLoadingAIForModal(false);
+    }
+  };
+
+  const handleSaveAIForGraded = async () => {
+    if (!selectedGraded || !aiResultForModal) return;
+    try {
+      const headers = { Authorization: `Bearer ${getToken(token)}` };
+      await axios.patch(
+        `${WRITING_API_BASE}/submissions/${selectedGraded._id}/ai-feedback`,
+        { aiFeedback: aiResultForModal },
+        { headers },
+      );
+      toast.success('Đã lưu phân tích AI. Học viên sẽ thấy kết quả ngay bây giờ.');
+      const updated = { ...selectedGraded, grading: { ...selectedGraded.grading, aiFeedback: aiResultForModal } };
+      setSelectedGraded(updated);
+      setGradedSubmissions((prev) => prev.map((s) => (s._id === selectedGraded._id ? updated : s)));
+      setAiResultForModal(null);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Không thể lưu phân tích AI.');
+    }
   };
 
   const renderPendingList = () => {
@@ -201,7 +277,7 @@ export default function GradingDashboard() {
         {gradedSubmissions.map((submission) => (
           <div
             key={submission._id}
-            onClick={() => setSelectedGraded(submission)}
+            onClick={() => { setSelectedGraded(submission); setAiResultForModal(null); }}
             className="cursor-pointer rounded-[24px] border border-red-100 bg-white px-4 py-4 transition hover:border-[#E31837]/30 hover:bg-red-50/40 hover:shadow-md"
           >
             <div className="flex items-start gap-3">
@@ -228,7 +304,7 @@ export default function GradingDashboard() {
               </div>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setSelectedGraded(submission); }}
+                onClick={(e) => { e.stopPropagation(); setSelectedGraded(submission); setAiResultForModal(null); }}
                 className="ml-1 shrink-0 rounded-full border border-red-100 bg-white p-2 text-red-400 shadow-sm transition hover:bg-red-50 hover:text-[#E31837]"
                 title="Xem chi tiết"
               >
@@ -331,7 +407,7 @@ export default function GradingDashboard() {
     return (
       <div
         className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
-        onClick={() => setSelectedGraded(null)}
+        onClick={() => { setSelectedGraded(null); setAiResultForModal(null); }}
       >
         <div
           className="relative my-8 w-full max-w-3xl overflow-hidden rounded-[30px] border border-red-100 bg-white shadow-[0_40px_120px_rgba(15,23,42,0.20)]"
@@ -349,7 +425,7 @@ export default function GradingDashboard() {
             </div>
             <button
               type="button"
-              onClick={() => setSelectedGraded(null)}
+              onClick={() => { setSelectedGraded(null); setAiResultForModal(null); }}
               className="rounded-full border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm hover:border-red-200 hover:bg-red-50 hover:text-[#E31837]"
             >
               <X className="h-5 w-5" />
@@ -396,6 +472,93 @@ export default function GradingDashboard() {
                 </div>
               </div>
             )}
+
+            {/* AI Feedback Section */}
+            <div className="rounded-[22px] border border-violet-100 bg-[linear-gradient(135deg,#f5f3ff_0%,#ffffff_100%)] p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-violet-500" />
+                  <p className="text-sm font-bold text-violet-700">Phân tích AI</p>
+                  {selectedGraded.grading.aiFeedback && !aiResultForModal && (
+                    <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-600">Đã lưu</span>
+                  )}
+                </div>
+                {selectedGraded.content && (
+                  <button
+                    type="button"
+                    onClick={handleRunAIForGraded}
+                    disabled={isLoadingAIForModal}
+                    className="inline-flex items-center gap-1.5 rounded-[14px] border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-600 shadow-sm transition hover:bg-violet-50 disabled:opacity-50"
+                  >
+                    {isLoadingAIForModal ? (
+                      <><LoaderCircle className="h-3.5 w-3.5 animate-spin" />Đang phân tích...</>
+                    ) : (
+                      <><Sparkles className="h-3.5 w-3.5" />{selectedGraded.grading.aiFeedback ? 'Chạy lại AI' : 'Chạy AI phân tích'}</>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Show saved AI feedback when no new result */}
+              {selectedGraded.grading.aiFeedback && !aiResultForModal && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-violet-200 bg-white">
+                      <span className="text-lg font-black text-violet-600">{selectedGraded.grading.aiFeedback.overall_band.toFixed(1)}</span>
+                    </div>
+                    <p className="text-sm leading-6 text-slate-700">{selectedGraded.grading.aiFeedback.overall_comment}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(['task_response', 'coherence_cohesion', 'lexical_resource', 'grammatical_range'] as const).map((k) => {
+                      const labels: Record<string, string> = { task_response: 'TR', coherence_cohesion: 'CC', lexical_resource: 'LR', grammatical_range: 'GRA' };
+                      const score = selectedGraded.grading.aiFeedback!.criteria_scores?.[k];
+                      return score ? (
+                        <div key={k} className="rounded-[14px] border border-violet-50 bg-white p-2 text-center">
+                          <p className="text-xs font-bold text-violet-400">{labels[k]}</p>
+                          <p className="mt-0.5 text-xl font-black text-violet-600">{score.band.toFixed(1)}</p>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* New AI result pending save */}
+              {aiResultForModal && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-violet-200 bg-white">
+                      <span className="text-lg font-black text-violet-600">{aiResultForModal.overall_band.toFixed(1)}</span>
+                    </div>
+                    <p className="text-sm leading-6 text-slate-700">{aiResultForModal.overall_comment}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(['task_response', 'coherence_cohesion', 'lexical_resource', 'grammatical_range'] as const).map((k) => {
+                      const labels: Record<string, string> = { task_response: 'TR', coherence_cohesion: 'CC', lexical_resource: 'LR', grammatical_range: 'GRA' };
+                      const score = aiResultForModal.criteria_scores?.[k];
+                      return score ? (
+                        <div key={k} className="rounded-[14px] border border-violet-50 bg-white p-2 text-center">
+                          <p className="text-xs font-bold text-violet-400">{labels[k]}</p>
+                          <p className="mt-0.5 text-xl font-black text-violet-600">{score.band.toFixed(1)}</p>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveAIForGraded}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-[16px] bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-violet-200 transition hover:bg-violet-700"
+                  >
+                    <Save className="h-4 w-4" />
+                    Lưu phân tích AI cho học viên
+                  </button>
+                </div>
+              )}
+
+              {!selectedGraded.grading.aiFeedback && !aiResultForModal && !isLoadingAIForModal && (
+                <p className="text-sm text-slate-500">Bài này chưa có phân tích AI. Bấm "Chạy AI phân tích" để tạo và lưu kết quả cho học viên.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

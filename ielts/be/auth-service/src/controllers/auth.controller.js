@@ -50,6 +50,7 @@ const register = async (req, res) => {
         name: user.name,
         role: user.role,
         plan: user.plan,
+        subscriptionPlan: user.subscriptionPlan || 'Free',
         vipValidUntil: user.vipValidUntil || null,
         avatar: user.avatar,
         token,

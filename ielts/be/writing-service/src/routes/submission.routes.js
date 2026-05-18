@@ -6,6 +6,7 @@ const {
   getGradedSubmissions,
   getSubmissionStats,
   gradeSubmission,
+  patchAiFeedback,
 } = require('../controllers/submission.controller');
 const { verifyToken, isTeacher, isTeacherOrAdmin } = require('../middlewares/auth.middleware');
 
@@ -28,5 +29,8 @@ router.get('/stats', verifyToken, isTeacherOrAdmin, getSubmissionStats);
 
 // Teacher grades a specific writing submission.
 router.put('/:id/grade', verifyToken, isTeacherOrAdmin, gradeSubmission);
+
+// Teacher adds / updates AI feedback on an already-graded submission.
+router.patch('/:id/ai-feedback', verifyToken, isTeacherOrAdmin, patchAiFeedback);
 
 module.exports = router;

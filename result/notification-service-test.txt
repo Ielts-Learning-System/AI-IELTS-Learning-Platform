@@ -1,0 +1,164 @@
+﻿node.exe : (node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+At C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notificat
+ion-service\node_modules\.bin\jest.ps1:24 char:5
++     & "node$exe"  "$basedir/../jest/bin/jest.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:21192) [M...fter'` instead. 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+PASS tests/integration/notification.test.js
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+PASS tests/api.test.js
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+PASS tests/regression.test.js
+  ΓùÅ Console
+
+    console.error
+      markAsRead error: CastError: Cast to ObjectId failed for value "notanid" 
+(type string) at path "_id" for model "NotificationLog"
+          at SchemaObjectId.Object.<anonymous>.SchemaObjectId.cast (C:\Users\tr
+anv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\no
+de_modules\mongoose\lib\schema\objectId.js:253:11)
+          at SchemaObjectId.Object.<anonymous>.SchemaType.applySetters (C:\User
+s\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-servic
+e\node_modules\mongoose\lib\schemaType.js:1279:12)
+          at SchemaObjectId.Object.<anonymous>.SchemaType.castForQuery (C:\User
+s\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-servic
+e\node_modules\mongoose\lib\schemaType.js:1705:17)
+          at cast (C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ie
+lts\be\notification-service\node_modules\mongoose\lib\cast.js:386:32)
+          at model.Query.Object.<anonymous>.Query.cast (C:\Users\tranv\Desktop\
+3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\node_modules\m
+ongoose\lib\query.js:5088:12)
+          at model.Query.Object.<anonymous>.Query._castConditions (C:\Users\tra
+nv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\nod
+e_modules\mongoose\lib\query.js:2376:10)
+          at model.Query._findOneAndUpdate (C:\Users\tranv\Desktop\3monthaythe\
+CCNLT_Seminar\09032026\ielts\be\notification-service\node_modules\mongoose\lib\
+query.js:3504:8)
+          at model.Query.exec (C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar
+\09032026\ielts\be\notification-service\node_modules\mongoose\lib\query.js:4687
+:80)
+          at processTicksAndRejections 
+(node:internal/process/task_queues:105:5)
+          at Object.<anonymous>.exports.markAsRead (C:\Users\tranv\Desktop\3mon
+thaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\src\controllers\no
+tification.controller.js:57:26) {
+        stringValue: '"notanid"',
+        messageFormat: undefined,
+        kind: 'ObjectId',
+        value: 'notanid',
+        path: '_id',
+        reason: BSONError: input must be a 24 character hex string, 12 byte 
+Uint8Array, or an integer
+            at new ObjectId (C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar\0
+9032026\ielts\be\notification-service\node_modules\bson\src\objectid.ts:113:15)
+            at castObjectId (C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar\0
+9032026\ielts\be\notification-service\node_modules\mongoose\lib\cast\objectid.j
+s:25:12)
+            at SchemaObjectId.Object.<anonymous>.SchemaObjectId.cast (C:\Users\
+tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\
+node_modules\mongoose\lib\schema\objectId.js:251:12)
+            at SchemaObjectId.Object.<anonymous>.SchemaType.applySetters (C:\Us
+ers\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-serv
+ice\node_modules\mongoose\lib\schemaType.js:1279:12)
+            at SchemaObjectId.Object.<anonymous>.SchemaType.castForQuery (C:\Us
+ers\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-serv
+ice\node_modules\mongoose\lib\schemaType.js:1705:17)
+            at cast (C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\
+ielts\be\notification-service\node_modules\mongoose\lib\cast.js:386:32)
+            at model.Query.Object.<anonymous>.Query.cast (C:\Users\tranv\Deskto
+p\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\node_modules
+\mongoose\lib\query.js:5088:12)
+            at model.Query.Object.<anonymous>.Query._castConditions (C:\Users\t
+ranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\n
+ode_modules\mongoose\lib\query.js:2376:10)
+            at model.Query._findOneAndUpdate (C:\Users\tranv\Desktop\3monthayth
+e\CCNLT_Seminar\09032026\ielts\be\notification-service\node_modules\mongoose\li
+b\query.js:3504:8)
+            at model.Query.exec (C:\Users\tranv\Desktop\3monthaythe\CCNLT_Semin
+ar\09032026\ielts\be\notification-service\node_modules\mongoose\lib\query.js:46
+87:80)
+            at processTicksAndRejections 
+(node:internal/process/task_queues:105:5)
+            at Object.<anonymous>.exports.markAsRead (C:\Users\tranv\Desktop\3m
+onthaythe\CCNLT_Seminar\09032026\ielts\be\notification-service\src\controllers\
+notification.controller.js:57:26),
+        valueType: 'string'
+      }
+
+    [0m [90m 67 |[39m     res[33m.[39mjson({ notification })[33m;[39m
+     [90m 68 |[39m   } [36mcatch[39m (err) {
+    [31m[1m>[22m[39m[90m 69 |[39m     
+console[33m.[39merror([32m'markAsRead error:'[39m[33m,[39m 
+err)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 70 |[39m     res[33m.[39mstatus([35m500[39m)[33m.[39mjson({ 
+message[33m:[39m [32m'Internal server error'[39m })[33m;[39m
+     [90m 71 |[39m   }
+     [90m 72 |[39m }[33m;[39m[0m
+
+      at error (src/controllers/notification.controller.js:69:13)
+
+(node:21192) [MONGOOSE] Warning: mongoose: the `new` option for 
+`findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use 
+`returnDocument: 'after'` instead.
+PASS tests/e2e.test.js
+PASS tests/schema.test.js
+PASS tests/unit.test.js
+PASS tests/unit/eventHandlers.test.js
+  ΓùÅ Console
+
+    console.log
+      ≡ƒô¿ Processing event: auth.user.created for user 
+507f1f77bcf86cd799439011
+
+      at log (src/handlers/eventHandlers.js:300:11)
+
+    console.log
+      ≡ƒô¿ Processing event: payment.transaction.approved for user 
+507f1f77bcf86cd799439011
+
+      at log (src/handlers/eventHandlers.js:300:11)
+
+    console.log
+      ≡ƒô¿ Processing event: writing.grading.completed for user 
+507f1f77bcf86cd799439011
+
+      at log (src/handlers/eventHandlers.js:300:11)
+
+    console.log
+      ≡ƒô¿ Processing event: speaking.grading.completed for user 
+507f1f77bcf86cd799439011
+
+      at log (src/handlers/eventHandlers.js:300:11)
+
+
+Test Suites: 7 passed, 7 total
+Tests:       52 passed, 52 total
+Snapshots:   0 total
+Time:        12.139 s
+Ran all test suites.

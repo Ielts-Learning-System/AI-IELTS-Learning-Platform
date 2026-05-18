@@ -8,6 +8,20 @@ jest.mock('../../src/services/rabbitmq.service', () => ({
   publishEvent: jest.fn(async () => true),
 }));
 
+jest.mock('../../src/config/reportingConnections', () => ({
+  getAuthUser: jest.fn(() => ({
+    find: jest.fn(() => ({ lean: jest.fn().mockResolvedValue([]) })),
+  })),
+  getTransaction: jest.fn(),
+  getAILog: jest.fn(),
+  getReadingAttempt: jest.fn(),
+  getReadingTest: jest.fn(),
+}));
+
+jest.mock('axios', () => ({
+  post: jest.fn().mockResolvedValue({ data: { data: [] } }),
+}));
+
 const app = require('../../app');
 const Plan = require('../../src/models/Plan');
 const Subscription = require('../../src/models/Subscription');
@@ -81,13 +95,15 @@ describe('Billing Routes — Integration (Dynamic Subscription)', () => {
   });
 
   describe('GET /my-subscription', () => {
-    it('returns 404 when subscription does not exist', async () => {
+    it('returns 200 with data:null when subscription does not exist (FREE plan)', async () => {
       const res = await request(app)
         .get('/my-subscription')
         .set('Authorization', `Bearer ${studentToken}`);
 
-      expect(res.status).toBe(404);
-      expect(res.body.success).toBe(false);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeNull();
+      expect(res.body.planFallback).toBeDefined();
     });
 
     it('returns populated subscription and auto-expires when validUntil is in the past', async () => {

@@ -670,6 +670,13 @@ class HealthResponse(BaseModel):
     model: str
 
 
+class GradeWritingRequest(BaseModel):
+    task_type: str          # e.g. "Academic Task 1", "Task 2"
+    prompt_text: str        # The writing question / prompt shown to the student
+    student_essay: str      # The student's submitted essay text
+    target_band: float = 7.0  # Desired band for the improved rewrite
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -1185,6 +1192,108 @@ PART 3 — Two-way Discussion (Follow-up discussion questions):
 }"""
 
 
+# ---------------------------------------------------------------------------
+# Writing grading system prompt (Expert IELTS Examiner)
+# ---------------------------------------------------------------------------
+
+_WRITING_GRADING_SYSTEM_PROMPT = """\
+You are an automated backend service acting as an Expert IELTS Examiner. \
+Your task is to pre-grade a student essay strictly according to the official \
+IELTS Writing Band Descriptors.
+
+LANGUAGE RULE: All analysis, feedback, and explanations in the JSON output MUST \
+be written in Vietnamese, except for English grammatical terms, vocabulary, and \
+the essay rewrite itself.
+
+GRADING RULES:
+  • Use 0.5 band increments only (e.g. 5.0, 5.5, 6.0 … 9.0).
+  • Feedback must be constructive and cite specific sentences from the student text.
+  • The improved_rewrite must retain the student's original ideas but upgrade \
+vocabulary, grammar, and cohesion to the requested target band.
+  • Overall band = average of the four criterion bands, rounded to the nearest 0.5.
+
+ABSOLUTE OUTPUT RULE:
+  Return ONLY a valid raw JSON object — no markdown fences (no ```json), no \
+commentary, no filler text before or after the JSON.
+
+JSON SCHEMA (follow exactly):
+{
+  "overall_band": <number>,
+  "overall_comment": "<string – Vietnamese>",
+  "criteria_scores": {
+    "task_response": {
+      "band": <number>,
+      "comment": "<string – Vietnamese>",
+      "evidence": "<string – Vietnamese, quote from essay>",
+      "limitation": "<string – Vietnamese>",
+      "improvement": "<string – Vietnamese>"
+    },
+    "coherence_cohesion": {
+      "band": <number>,
+      "comment": "<string – Vietnamese>",
+      "evidence": "<string – Vietnamese, quote from essay>",
+      "limitation": "<string – Vietnamese>",
+      "improvement": "<string – Vietnamese>"
+    },
+    "lexical_resource": {
+      "band": <number>,
+      "comment": "<string – Vietnamese>",
+      "evidence": "<string – Vietnamese, quote from essay>",
+      "limitation": "<string – Vietnamese>",
+      "improvement": "<string – Vietnamese>"
+    },
+    "grammatical_range": {
+      "band": <number>,
+      "comment": "<string – Vietnamese>",
+      "evidence": "<string – Vietnamese, quote from essay>",
+      "limitation": "<string – Vietnamese>",
+      "improvement": "<string – Vietnamese>"
+    }
+  },
+  "vocabulary_analysis": [
+    {
+      "original_phrase": "<string – exact phrase from essay>",
+      "evaluation": "<string – Vietnamese, e.g. Tốt / Chưa tự nhiên>",
+      "suggestion": "<string – English band-7+ alternative>",
+      "reason": "<string – Vietnamese>"
+    }
+  ],
+  "grammar_analysis": [
+    {
+      "original_sentence": "<string – exact sentence from essay>",
+      "issue": "<string – Vietnamese, e.g. Sai thì, thiếu mạo từ>",
+      "correction": "<string – corrected English sentence>",
+      "explanation": "<string – Vietnamese>"
+    }
+  ],
+  "logic_and_development": {
+    "task_fulfillment": "<string – Vietnamese>",
+    "idea_clarity": "<string – Vietnamese>",
+    "development": "<string – Vietnamese>",
+    "cohesion_issues": "<string – Vietnamese>"
+  },
+  "quick_boost_tips": ["<string – Vietnamese>", "<string – Vietnamese>"],
+  "improved_rewrite": "<string – full English rewrite at target band>"
+}"""
+
+
+def _build_grading_prompt(
+    task_type: str,
+    prompt_text: str,
+    student_essay: str,
+    target_band: float,
+) -> str:
+    """Inject student submission variables into the grading system prompt."""
+    return (
+        f"{_WRITING_GRADING_SYSTEM_PROMPT}\n\n"
+        f"<TASK_TYPE>{task_type}</TASK_TYPE>\n\n"
+        f"<WRITING_PROMPT>{prompt_text}</WRITING_PROMPT>\n\n"
+        f"<STUDENT_ESSAY>{student_essay}</STUDENT_ESSAY>\n\n"
+        f"<TARGET_BAND>{target_band}</TARGET_BAND>\n\n"
+        "JSON output:"
+    )
+
+
 def _build_extract_prompt(
     part_selection: str,
     test_type: str,
@@ -1669,3 +1778,86 @@ async def extract_test(
 
     result["_usage"] = usage
     return result
+
+
+# ---------------------------------------------------------------------------
+# Writing grading endpoint
+# ---------------------------------------------------------------------------
+
+@app.post("/api/ai/grade-writing")
+async def grade_writing(body: GradeWritingRequest):
+    """
+    Pre-grade an IELTS Writing submission using the Expert Examiner prompt.
+
+    Request body (JSON):
+      task_type     – e.g. "Academic Task 1" or "Task 2"
+      prompt_text   – the writing question shown to the student
+      student_essay – the student's submitted essay text
+      target_band   – desired band for the improved rewrite (default 7.0)
+
+    Returns a structured JSON grading report with:
+      overall_band, criteria_scores, vocabulary_analysis, grammar_analysis,
+      logic_and_development, quick_boost_tips, improved_rewrite
+    """
+    # Basic input sanitisation
+    task_type = body.task_type.strip()
+    prompt_text = body.prompt_text.strip()
+    student_essay = body.student_essay.strip()
+    target_band = body.target_band
+
+    if not task_type:
+        raise HTTPException(status_code=400, detail="task_type must not be empty.")
+    if not prompt_text:
+        raise HTTPException(status_code=400, detail="prompt_text must not be empty.")
+    if not student_essay:
+        raise HTTPException(status_code=400, detail="student_essay must not be empty.")
+    if not (1.0 <= target_band <= 9.0):
+        raise HTTPException(status_code=400, detail="target_band must be between 1.0 and 9.0.")
+
+    # Cap essay length to avoid runaway token usage
+    MAX_ESSAY_CHARS = 6000
+    if len(student_essay) > MAX_ESSAY_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"student_essay is too long ({len(student_essay)} chars). Maximum is {MAX_ESSAY_CHARS} characters.",
+        )
+
+    logger.info(
+        "grade-writing | task_type=%s | target_band=%.1f | essay_chars=%d",
+        task_type,
+        target_band,
+        len(student_essay),
+    )
+
+    grading_prompt = _build_grading_prompt(
+        task_type=task_type,
+        prompt_text=prompt_text,
+        student_essay=student_essay,
+        target_band=target_band,
+    )
+
+    raw_text = await _call_gemini_contents_with_rotation(
+        [grading_prompt],
+        max_output_tokens=8192,
+        temperature=0.2,
+    )
+
+    cleaned = _strip_markdown_fences(raw_text)
+    try:
+        result = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        logger.error("grade-writing | Gemini returned non-JSON: %s", exc)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Gemini did not return valid JSON. Please try again.",
+                "raw_snippet": raw_text[:800],
+            },
+        )
+
+    logger.info(
+        "grade-writing | success | overall_band=%s",
+        result.get("overall_band"),
+    )
+    return result
+

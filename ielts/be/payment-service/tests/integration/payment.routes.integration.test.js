@@ -1,5 +1,8 @@
+jest.mock('axios');
+
 const request = require('supertest');
 const mongoose = require('mongoose');
+const axios = require('axios');
 
 process.env.JWT_SECRET = 'test-jwt-secret';
 process.env.NODE_ENV = 'test';
@@ -19,6 +22,12 @@ describe('Payment Routes — Integration', () => {
 
   beforeAll(() => {
     userToken = generateTestToken(userId.toString(), 'student');
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    axios.patch = jest.fn().mockResolvedValue({ data: { success: true } });
+    axios.post = jest.fn().mockResolvedValue({ data: { users: [] } });
   });
 
   // ============================================================
@@ -157,10 +166,10 @@ describe('Payment Routes — Integration', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.status).toBe('Success');
 
-      // Verify user was upgraded
-      const user = await User.findById(userId);
-      expect(user.subscriptionPlan).toBe('VIP_1_MONTH');
-      expect(user.vipValidUntil).toBeDefined();
+      // Verify axios.patch was called to upgrade plan in auth-service
+      expect(axios.patch).toHaveBeenCalled();
+      const patchArgs = axios.patch.mock.calls[0][1];
+      expect(patchArgs.plan).toBe('PLUS');
     });
 
     it('should return 404 for non-existent transaction', async () => {

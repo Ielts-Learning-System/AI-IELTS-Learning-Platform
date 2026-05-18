@@ -1,0 +1,1631 @@
+﻿node.exe : PASS testing/regression.test.js
+At C:\Users\tranv\Desktop\3monthaythe\CCNLT_Seminar\09032026\ielts\be\reading-s
+ervice\node_modules\.bin\jest.ps1:24 char:5
++     & "node$exe"  "$basedir/../jest/bin/jest.js" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS testing/regression.test.js:S 
+   tring) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  ΓùÅ Console
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6728',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student', 'teacher', 'admin' ]  | Quyß╗ün cß╗ºa 
+User hiß╗çn tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6728',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student', 'teacher', 'admin' ]  | Quyß╗ün cß╗ºa 
+User hiß╗çn tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6728',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student', 'teacher', 'admin' ]  | Quyß╗ün cß╗ºa 
+User hiß╗çn tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6726',
+        role: 'teacher',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6726',
+        role: 'teacher',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.error
+      Γ¥î Get Test By ID Error: Cast to ObjectId failed for value 
+"not-a-valid-objectid" (type string) at path "_id" for model "ReadingTest"
+
+    [0m [90m 134 |[39m     })[33m;[39m
+     [90m 135 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 136 |[39m     console[33m.[39merror([32m'Γ¥î 
+Get Test By ID Error:'[39m[33m,[39m error[33m.[39mmessage)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 137 |[39m     res[33m.[39mstatus([35m500[39m)[33m.[39mjson({
+     [90m 138 |[39m       success[33m:[39m [36mfalse[39m[33m,[39m
+     [90m 139 |[39m       message[33m:[39m [32m'Lß╗ùi khi lß║Ñy chi 
+tiß║┐t ─æß╗ü thi'[39m[33m,[39m[0m
+
+      at error (src/controllers/reading.controller.js:136:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6726',
+        role: 'teacher',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5da9a235534c29c6727',
+        role: 'student',
+        iat: 1779086810,
+        exp: 1779090410
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+PASS tests/integration/reading.routes.integration.test.js
+  ΓùÅ Console
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a0',
+        role: 'teacher',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a0',
+        role: 'teacher',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a0',
+        role: 'teacher',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a1',
+        role: 'student',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a1',
+        role: 'student',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a1',
+        role: 'student',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a1',
+        role: 'student',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a1',
+        role: 'student',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a1',
+        role: 'student',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5de681d20ebd324e1a0',
+        role: 'teacher',
+        iat: 1779086814,
+        exp: 1779090414
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+PASS testing/e2e.test.js
+  ΓùÅ Console
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student', 'teacher', 'admin' ]  | Quyß╗ün cß╗ºa 
+User hiß╗çn tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student', 'teacher', 'admin' ]  | Quyß╗ün cß╗ºa 
+User hiß╗çn tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c7',
+        role: 'teacher',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e0e5731267f1b158c8',
+        role: 'student',
+        iat: 1779086816,
+        exp: 1779090416
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+PASS testing/api.test.js
+  ΓùÅ Console
+
+    console.error
+      Γ¥î Get Test By ID Error: Cast to ObjectId failed for value 
+"not-a-valid-objectid" (type string) at path "_id" for model "ReadingTest"
+
+    [0m [90m 134 |[39m     })[33m;[39m
+     [90m 135 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 136 |[39m     console[33m.[39merror([32m'Γ¥î 
+Get Test By ID Error:'[39m[33m,[39m error[33m.[39mmessage)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 137 |[39m     res[33m.[39mstatus([35m500[39m)[33m.[39mjson({
+     [90m 138 |[39m       success[33m:[39m [36mfalse[39m[33m,[39m
+     [90m 139 |[39m       message[33m:[39m [32m'Lß╗ùi khi lß║Ñy chi 
+tiß║┐t ─æß╗ü thi'[39m[33m,[39m[0m
+
+      at error (src/controllers/reading.controller.js:136:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8f',
+        role: 'admin',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: admin
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8f',
+        role: 'admin',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: admin
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e403bd4dd7a0838ffa',
+        role: 'teacher',
+        iat: 1779086820,
+        exp: 1779090420
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e403bd4dd7a083901f',
+        role: 'teacher',
+        iat: 1779086820,
+        exp: 1779090420
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student' ]  | Quyß╗ün cß╗ºa User hiß╗çn tß║íi: 
+student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'student', 'teacher', 'admin' ]  | Quyß╗ün cß╗ºa 
+User hiß╗çn tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8d',
+        role: 'teacher',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: teacher
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+    console.log
+      ≡ƒöì Nß╗Öi dung giß║úi m├ú tß╗½ Token: {
+        id: '6a0ab5e303bd4dd7a0838f8e',
+        role: 'student',
+        iat: 1779086819,
+        exp: 1779090419
+      }
+
+      at log (src/middlewares/auth.middleware.js:19:13)
+
+    console.log
+      Quyß╗ün y├¬u cß║ºu: [ 'admin', 'teacher' ]  | Quyß╗ün cß╗ºa User hiß╗çn 
+tß║íi: student
+
+      at log (src/middlewares/auth.middleware.js:43:13)
+
+PASS testing/schema.test.js
+PASS testing/unit.test.js
+  ΓùÅ Console
+
+    console.error
+      Γ¥î Submit Test Error: DB connection lost
+
+    [0m [90m 249 |[39m     })[33m;[39m
+     [90m 250 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 251 |[39m     console[33m.[39merror([32m'Γ¥î 
+Submit Test Error:'[39m[33m,[39m error[33m.[39mmessage)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 252 |[39m     res[33m.[39mstatus([35m500[39m)[33m.[39mjson({
+     [90m 253 |[39m       success[33m:[39m [36mfalse[39m[33m,[39m
+     [90m 254 |[39m       message[33m:[39m [32m'Lß╗ùi khi chß║Ñm 
+─æiß╗âm'[39m[33m,[39m[0m
+
+      at Object.error [as submitTest] 
+(src/controllers/reading.controller.js:251:13)
+      at Object.<anonymous> (testing/unit.test.js:395:7)
+
+
+Test Suites: 6 passed, 6 total
+Tests:       197 passed, 197 total
+Snapshots:   0 total
+Time:        15.297 s
+Ran all test suites.

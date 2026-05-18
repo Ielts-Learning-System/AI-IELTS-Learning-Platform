@@ -3,7 +3,7 @@ module.exports = {
   testMatch: [
     '<rootDir>/tests/**/*.test.js',
   ],
-  setupFilesAfterSetup: ['<rootDir>/tests/setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'src/**/*.js',

@@ -160,7 +160,7 @@ exports.createTest = async (req, res) => {
       description: description || '',
       passages,
       createdBy: userId,
-      isPublished: req.body.isPublished !== undefined ? req.body.isPublished : true,
+      isPublished: req.body.isPublished !== undefined ? req.body.isPublished : false,
     });
 
     await newTest.save();

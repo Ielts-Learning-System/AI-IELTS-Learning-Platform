@@ -2,6 +2,7 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: [
     '<rootDir>/tests/**/*.test.js',
+    '<rootDir>/testing/**/*.test.js',
   ],
   setupFilesAfterSetup: ['<rootDir>/tests/setup.js'],
   coverageDirectory: 'coverage',

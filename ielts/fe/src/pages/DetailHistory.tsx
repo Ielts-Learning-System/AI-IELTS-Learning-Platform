@@ -6,12 +6,16 @@ import { Toaster, toast } from 'react-hot-toast';
 import {
   ArrowLeft,
   BookOpenText,
+  Bot,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   FileText,
   LoaderCircle,
   MessageSquareQuote,
   Sparkles,
+  Zap,
 } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 
@@ -35,7 +39,45 @@ interface GradingInfo {
   criteria: GradingCriteria;
   overallBand: number;
   teacherFeedback?: TeacherFeedback | string;
+  aiFeedback?: AiFeedback;
   gradedAt: string;
+}
+
+interface AiCriteriaScore {
+  band: number;
+  comment: string;
+  evidence?: string;
+  limitation?: string;
+  improvement?: string;
+}
+
+interface AiVocabItem {
+  original_phrase: string;
+  evaluation: string;
+  suggestion: string;
+  reason: string;
+}
+
+interface AiGrammarItem {
+  original_sentence: string;
+  issue: string;
+  correction: string;
+  explanation: string;
+}
+
+interface AiFeedback {
+  overall_band?: number;
+  overall_comment?: string;
+  criteria_scores?: {
+    task_response: AiCriteriaScore;
+    coherence_cohesion: AiCriteriaScore;
+    lexical_resource: AiCriteriaScore;
+    grammatical_range: AiCriteriaScore;
+  };
+  vocabulary_analysis?: AiVocabItem[];
+  grammar_analysis?: AiGrammarItem[];
+  quick_boost_tips?: string[];
+  improved_rewrite?: string;
 }
 
 interface WritingRef {
@@ -87,6 +129,8 @@ export default function DetailHistory() {
   const [submission, setSubmission] = useState<WritingSubmission | null>(null);
   const [promptHtml, setPromptHtml] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [showAiFeedback, setShowAiFeedback] = useState(false);
+  const [aiSection, setAiSection] = useState<string | null>('tips');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -330,6 +374,214 @@ export default function DetailHistory() {
               )}
             </div>
           )}
+
+          {/* Row 4: AI Feedback toggle block */}
+          {grading && (() => {
+            const ai = grading.aiFeedback;
+            const hasAi = !!ai;
+            const toggle = (key: string) => setAiSection(prev => prev === key ? null : key);
+            return (
+              <div className="overflow-hidden rounded-[26px] border border-indigo-100 bg-gradient-to-br from-violet-50/50 via-white to-indigo-50/50 shadow-sm">
+
+                {/* Clickable header – always visible */}
+                <button
+                  type="button"
+                  onClick={() => setShowAiFeedback(prev => !prev)}
+                  className="flex w-full items-center justify-between gap-4 px-6 py-4 transition hover:bg-indigo-50/40"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`rounded-xl p-2 ${hasAi ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                      <Bot className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-black text-slate-900">Feedback chi tiết từ AI</p>
+                      <p className="text-xs text-slate-400">
+                        {hasAi
+                          ? 'Phân tích theo IELTS Band Descriptors – nhấn để xem'
+                          : 'Bài này chưa có phân tích AI'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {hasAi && (
+                      <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700">
+                        AI
+                      </span>
+                    )}
+                    {showAiFeedback
+                      ? <ChevronUp className="h-5 w-5 text-indigo-400" />
+                      : <ChevronDown className="h-5 w-5 text-indigo-400" />}
+                  </div>
+                </button>
+
+                {/* Expanded content */}
+                {showAiFeedback && (
+                  <div className="border-t border-indigo-100">
+                    {!hasAi ? (
+                      /* ── No AI feedback ── */
+                      <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+                        <div className="rounded-2xl bg-slate-100 p-4 text-slate-300">
+                          <Bot className="h-8 w-8" />
+                        </div>
+                        <p className="font-bold text-slate-600">Không có chi tiết feedback AI</p>
+                        <p className="max-w-sm text-sm text-slate-400">
+                          Giáo viên chấm bài này chưa sử dụng tính năng AI phân tích.
+                          Chỉ có nhận xét thủ công ở phần trên.
+                        </p>
+                      </div>
+                    ) : (
+                      /* ── Has AI feedback ── */
+                      <div className="space-y-1 p-4">
+
+                        {/* Criteria detail comments */}
+                        {ai!.criteria_scores && (
+                          <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                            <button type="button" onClick={() => toggle('criteria')} className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50">
+                              <span className="text-sm font-bold text-slate-800">Nhận xét từng tiêu chí</span>
+                              {aiSection === 'criteria' ? <ChevronUp className="h-4 w-4 text-indigo-400" /> : <ChevronDown className="h-4 w-4 text-indigo-400" />}
+                            </button>
+                            {aiSection === 'criteria' && (
+                              <div className="grid grid-cols-1 gap-3 border-t border-indigo-50 p-4 sm:grid-cols-2">
+                                {([
+                                  { key: 'task_response' as const, label: 'Task Response', short: 'TR' },
+                                  { key: 'coherence_cohesion' as const, label: 'Coherence & Cohesion', short: 'CC' },
+                                  { key: 'lexical_resource' as const, label: 'Lexical Resource', short: 'LR' },
+                                  { key: 'grammatical_range' as const, label: 'Grammatical Range', short: 'GRA' },
+                                ]).map(({ key, label, short }) => {
+                                  const c = ai!.criteria_scores![key];
+                                  if (!c) return null;
+                                  return (
+                                    <div key={key} className="rounded-[16px] border border-indigo-50 bg-indigo-50/30 p-4">
+                                      <div className="flex items-center justify-between">
+                                        <p className="font-bold text-slate-800">{short} · {label}</p>
+                                        <span className="rounded-lg bg-indigo-600 px-2.5 py-0.5 text-sm font-black text-white">{c.band.toFixed(1)}</span>
+                                      </div>
+                                      <p className="mt-2 text-xs leading-relaxed text-slate-600">{c.comment}</p>
+                                      {c.improvement && (
+                                        <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-700">
+                                          <span className="font-semibold">Cải thiện: </span>{c.improvement}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Quick boost tips */}
+                        {(ai!.quick_boost_tips?.length ?? 0) > 0 && (
+                          <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                            <button type="button" onClick={() => toggle('tips')} className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50">
+                              <div className="flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-amber-500" />
+                                <span className="text-sm font-bold text-slate-800">Quick Boost Tips – Nâng band nhanh</span>
+                              </div>
+                              {aiSection === 'tips' ? <ChevronUp className="h-4 w-4 text-indigo-400" /> : <ChevronDown className="h-4 w-4 text-indigo-400" />}
+                            </button>
+                            {aiSection === 'tips' && (
+                              <ul className="space-y-2 border-t border-indigo-50 p-4">
+                                {ai!.quick_boost_tips!.map((tip, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-700">{i + 1}</span>
+                                    {tip}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Grammar analysis */}
+                        {(ai!.grammar_analysis?.length ?? 0) > 0 && (
+                          <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                            <button type="button" onClick={() => toggle('grammar')} className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50">
+                              <span className="text-sm font-bold text-slate-800">Phân tích lỗi ngữ pháp</span>
+                              {aiSection === 'grammar' ? <ChevronUp className="h-4 w-4 text-indigo-400" /> : <ChevronDown className="h-4 w-4 text-indigo-400" />}
+                            </button>
+                            {aiSection === 'grammar' && (
+                              <div className="space-y-3 border-t border-indigo-50 p-4">
+                                {ai!.grammar_analysis!.map((item, i) => (
+                                  <div key={i} className="rounded-[16px] border border-red-50 bg-red-50/30 p-4">
+                                    <p className="text-xs font-semibold text-red-500">{item.issue}</p>
+                                    <p className="mt-1 text-sm italic text-slate-500 line-through">"{item.original_sentence}"</p>
+                                    <p className="mt-1 text-sm font-medium text-emerald-700">✓ {item.correction}</p>
+                                    <p className="mt-2 text-xs text-slate-500">{item.explanation}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Vocabulary analysis */}
+                        {(ai!.vocabulary_analysis?.length ?? 0) > 0 && (
+                          <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                            <button type="button" onClick={() => toggle('vocab')} className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50">
+                              <span className="text-sm font-bold text-slate-800">Cải thiện từ vựng</span>
+                              {aiSection === 'vocab' ? <ChevronUp className="h-4 w-4 text-indigo-400" /> : <ChevronDown className="h-4 w-4 text-indigo-400" />}
+                            </button>
+                            {aiSection === 'vocab' && (
+                              <div className="overflow-x-auto border-t border-indigo-50 p-4">
+                                <table className="min-w-full text-xs">
+                                  <thead>
+                                    <tr className="text-left text-slate-400">
+                                      <th className="pb-2 pr-4 font-semibold">Từ gốc</th>
+                                      <th className="pb-2 pr-4 font-semibold">Đánh giá</th>
+                                      <th className="pb-2 pr-4 font-semibold">Gợi ý band 7+</th>
+                                      <th className="pb-2 font-semibold">Lý do</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {ai!.vocabulary_analysis!.map((item, i) => (
+                                      <tr key={i}>
+                                        <td className="py-2 pr-4 italic text-slate-600">"{item.original_phrase}"</td>
+                                        <td className="py-2 pr-4">
+                                          <span className={`rounded-full px-2 py-0.5 font-semibold ${
+                                            item.evaluation.toLowerCase().includes('tốt')
+                                              ? 'bg-emerald-50 text-emerald-700'
+                                              : 'bg-amber-50 text-amber-700'
+                                          }`}>
+                                            {item.evaluation}
+                                          </span>
+                                        </td>
+                                        <td className="py-2 pr-4 font-medium text-indigo-700">{item.suggestion}</td>
+                                        <td className="py-2 text-slate-500">{item.reason}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Improved rewrite */}
+                        {ai!.improved_rewrite && (
+                          <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                            <button type="button" onClick={() => toggle('rewrite')} className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-violet-500" />
+                                <span className="text-sm font-bold text-slate-800">Bài viết nâng cấp (Band 7.0)</span>
+                              </div>
+                              {aiSection === 'rewrite' ? <ChevronUp className="h-4 w-4 text-indigo-400" /> : <ChevronDown className="h-4 w-4 text-indigo-400" />}
+                            </button>
+                            {aiSection === 'rewrite' && (
+                              <div className="border-t border-indigo-50 p-5">
+                                <p className="whitespace-pre-wrap text-sm leading-8 text-slate-700">{ai!.improved_rewrite}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </section>

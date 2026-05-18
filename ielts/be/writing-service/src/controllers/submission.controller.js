@@ -152,7 +152,7 @@ exports.getSubmissionStats = async (req, res) => {
 
 exports.gradeSubmission = async (req, res) => {
   try {
-    const { criteria, teacherFeedback } = req.body;
+    const { criteria, teacherFeedback, aiFeedback } = req.body;
 
     if (!criteria) {
       return res.status(400).json({
@@ -192,6 +192,7 @@ exports.gradeSubmission = async (req, res) => {
       },
       overallBand: calculateOverallBand(scores),
       teacherFeedback: teacherFeedback || { content: '', overall_feedback: '' },
+      aiFeedback: aiFeedback || undefined,
       gradedBy: req.user.id,
       gradedAt: new Date(),
     };
@@ -210,5 +211,31 @@ exports.gradeSubmission = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// PATCH /submissions/:id/ai-feedback — add/update aiFeedback on an already-graded submission
+exports.patchAiFeedback = async (req, res) => {
+  try {
+    const { aiFeedback } = req.body;
+    if (!aiFeedback || typeof aiFeedback !== 'object') {
+      return res.status(400).json({ success: false, message: 'aiFeedback object is required' });
+    }
+
+    const submission = await WritingSubmission.findById(req.params.id);
+    if (!submission) {
+      return res.status(404).json({ success: false, message: 'Submission not found' });
+    }
+    if (submission.status !== 'Graded') {
+      return res.status(400).json({ success: false, message: 'Submission is not graded yet' });
+    }
+
+    submission.grading.aiFeedback = aiFeedback;
+    submission.markModified('grading.aiFeedback');
+    await submission.save();
+
+    return res.json({ success: true, message: 'AI feedback saved', data: submission });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

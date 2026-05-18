@@ -6,11 +6,17 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
   ArrowLeft,
   BookOpenText,
+  Bot,
+  ChevronDown,
+  ChevronUp,
   LoaderCircle,
   MessageSquareText,
   PenSquare,
   Send,
   Sparkles,
+  ThumbsUp,
+  X,
+  Zap,
 } from 'lucide-react';
 import { useUserStore } from '../../store/useUserStore';
 import EssayEditor from '../../components/EssayEditor';
@@ -57,7 +63,51 @@ interface GradeFormState {
   };
 }
 
+interface AICriteriaScore {
+  band: number;
+  comment: string;
+  evidence: string;
+  limitation: string;
+  improvement: string;
+}
+
+interface AIVocabItem {
+  original_phrase: string;
+  evaluation: string;
+  suggestion: string;
+  reason: string;
+}
+
+interface AIGrammarItem {
+  original_sentence: string;
+  issue: string;
+  correction: string;
+  explanation: string;
+}
+
+interface AIGradingResult {
+  overall_band: number;
+  overall_comment: string;
+  criteria_scores: {
+    task_response: AICriteriaScore;
+    coherence_cohesion: AICriteriaScore;
+    lexical_resource: AICriteriaScore;
+    grammatical_range: AICriteriaScore;
+  };
+  vocabulary_analysis: AIVocabItem[];
+  grammar_analysis: AIGrammarItem[];
+  logic_and_development: {
+    task_fulfillment: string;
+    idea_clarity: string;
+    development: string;
+    cohesion_issues: string;
+  };
+  quick_boost_tips: string[];
+  improved_rewrite: string;
+}
+
 const WRITING_API_BASE = 'http://localhost:3000/api/writing';
+const AI_API_BASE = 'http://localhost:3000/api/ai';
 
 const defaultGradeForm: GradeFormState = {
   TR: 6,
@@ -106,6 +156,9 @@ const getPromptId = (writing: PendingSubmission['writingId']) =>
 const getPromptTitle = (writing: PendingSubmission['writingId']) =>
   typeof writing === 'string' ? 'Writing Prompt' : writing?.title || 'Writing Prompt';
 
+const stripHtmlTags = (html: string) =>
+  html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
 const getStudentLabel = (submission: PendingSubmission) => {
   const studentId = String(submission.studentId || '');
   if (!studentId) return 'Học viên chưa xác định';
@@ -139,6 +192,11 @@ export default function DetailGradingDashboard() {
   const [isSubmittingGrade, setIsSubmittingGrade] = useState(false);
   
   const [gradeForm, setGradeForm] = useState<GradeFormState>(defaultGradeForm);
+
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [aiResult, setAiResult] = useState<AIGradingResult | null>(null);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [aiExpandedSection, setAiExpandedSection] = useState<string | null>('criteria');
 
   const overallBand = useMemo(() => getOverallBand(gradeForm), [gradeForm]);
 
@@ -221,6 +279,54 @@ export default function DetailGradingDashboard() {
     return () => controller.abort();
   }, [selectedSubmission]);
 
+  const handleAISuggest = async () => {
+    if (!selectedSubmission || !selectedPrompt) {
+      toast.error('Chưa tải xong đề bài. Vui lòng thử lại sau vài giây.');
+      return;
+    }
+    try {
+      setIsLoadingAI(true);
+      setShowAIPanel(true);
+      setAiResult(null);
+      const promptText = stripHtmlTags(selectedPrompt.contentHtml || '');
+      const response = await axios.post(
+        `${AI_API_BASE}/grade-writing`,
+        {
+          task_type: selectedSubmission.taskType,
+          prompt_text: promptText,
+          student_essay: selectedSubmission.content,
+          target_band: 7.0,
+        },
+        { headers: { Authorization: `Bearer ${getToken(token)}` } },
+      );
+      setAiResult(response.data);
+      setAiExpandedSection('criteria');
+    } catch (error: any) {
+      console.error('AI grading error:', error);
+      toast.error(error.response?.data?.detail?.message || error.response?.data?.message || 'AI chấm bài thất bại. Vui lòng thử lại.');
+      setShowAIPanel(false);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
+
+  const handleApplyAIScores = () => {
+    if (!aiResult) return;
+    const { task_response, coherence_cohesion, lexical_resource, grammatical_range } = aiResult.criteria_scores;
+    setGradeForm((prev) => ({
+      ...prev,
+      TR: task_response.band,
+      CC: coherence_cohesion.band,
+      LR: lexical_resource.band,
+      GRA: grammatical_range.band,
+      teacherFeedback: {
+        ...prev.teacherFeedback,
+        overall_feedback: prev.teacherFeedback.overall_feedback || aiResult.overall_comment,
+      },
+    }));
+    toast.success('Đã áp dụng điểm AI gợi ý vào form chấm bài.');
+  };
+
   const handleCriteriaChange = (key: CriteriaKey, value: number) => {
     setGradeForm((current) => ({
       ...current,
@@ -252,6 +358,7 @@ export default function DetailGradingDashboard() {
             content: gradeForm.teacherFeedback.content.trim(),
             overall_feedback: gradeForm.teacherFeedback.overall_feedback.trim(),
           },
+          ...(aiResult && { aiFeedback: aiResult }),
         },
         {
           headers: {
@@ -306,9 +413,24 @@ export default function DetailGradingDashboard() {
             {/* Top: Grading Form & Overall Band */}
             <div className="rounded-[30px] border border-red-100 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)] flex flex-col xl:flex-row gap-6">
               <div className="flex-1 space-y-4">
-                <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-500">
-                  <PenSquare className="h-4 w-4" />
-                  Grading Form
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-red-500">
+                    <PenSquare className="h-4 w-4" />
+                    Grading Form
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAISuggest}
+                    disabled={isLoadingAI || isLoadingPrompt}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-200 transition hover:from-violet-700 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoadingAI ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Bot className="h-3.5 w-3.5" />
+                    )}
+                    {isLoadingAI ? 'AI đang chấm...' : 'AI Gợi ý chấm bài'}
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {criteriaConfig.map((criterion) => (
@@ -359,6 +481,227 @@ export default function DetailGradingDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* AI Grading Suggestion Panel */}
+            {showAIPanel && (
+              <div className="rounded-[30px] border border-indigo-100 bg-gradient-to-br from-violet-50 via-white to-indigo-50 shadow-[0_24px_60px_rgba(99,102,241,0.10)]">
+                {/* Panel header */}
+                <div className="flex items-center justify-between rounded-t-[30px] border-b border-indigo-100 bg-white/70 px-6 py-4 backdrop-blur">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl bg-indigo-50 p-2 text-indigo-600">
+                      <Bot className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900">Gợi ý chấm bài từ AI</p>
+                      <p className="text-xs text-slate-400">Dựa trên IELTS Band Descriptors – chỉ mang tính tham khảo</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {aiResult && (
+                      <button
+                        type="button"
+                        onClick={handleApplyAIScores}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700"
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                        Áp dụng điểm AI
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowAIPanel(false)}
+                      className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Loading state */}
+                {isLoadingAI && (
+                  <div className="flex min-h-[180px] items-center justify-center gap-4 text-indigo-600">
+                    <LoaderCircle className="h-6 w-6 animate-spin" />
+                    <span className="font-semibold">AI đang phân tích bài viết...</span>
+                  </div>
+                )}
+
+                {/* Result */}
+                {!isLoadingAI && aiResult && (
+                  <div className="space-y-1 p-4">
+
+                    {/* Overall band + comment */}
+                    <div className="flex items-center gap-4 rounded-[20px] bg-white px-5 py-4 shadow-sm ring-1 ring-indigo-50">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-[6px] border-indigo-100 bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-md">
+                        <span className="text-xl font-black">{aiResult.overall_band.toFixed(1)}</span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500">Overall Band (AI)</p>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-700">{aiResult.overall_comment}</p>
+                      </div>
+                    </div>
+
+                    {/* Criteria section */}
+                    <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                      <button
+                        type="button"
+                        onClick={() => setAiExpandedSection(aiExpandedSection === 'criteria' ? null : 'criteria')}
+                        className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50"
+                      >
+                        <span className="text-sm font-bold text-slate-800">Điểm từng tiêu chí</span>
+                        {aiExpandedSection === 'criteria' ? <ChevronUp className="h-4 w-4 text-indigo-500" /> : <ChevronDown className="h-4 w-4 text-indigo-500" />}
+                      </button>
+                      {aiExpandedSection === 'criteria' && (
+                        <div className="grid grid-cols-1 gap-3 border-t border-indigo-50 p-4 sm:grid-cols-2 xl:grid-cols-4">
+                          {(
+                            [
+                              { key: 'task_response', label: 'Task Response', short: 'TR' },
+                              { key: 'coherence_cohesion', label: 'Coherence & Cohesion', short: 'CC' },
+                              { key: 'lexical_resource', label: 'Lexical Resource', short: 'LR' },
+                              { key: 'grammatical_range', label: 'Grammatical Range', short: 'GRA' },
+                            ] as const
+                          ).map(({ key, label, short }) => {
+                            const c = aiResult.criteria_scores[key];
+                            return (
+                              <div key={key} className="rounded-[18px] border border-indigo-50 bg-gradient-to-b from-indigo-50/40 to-white p-4">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-bold text-slate-800">{short}</p>
+                                  <span className="rounded-lg bg-indigo-600 px-2.5 py-0.5 text-sm font-black text-white">{c.band.toFixed(1)}</span>
+                                </div>
+                                <p className="mt-0.5 text-[11px] text-slate-400">{label}</p>
+                                <p className="mt-2 text-xs leading-relaxed text-slate-600">{c.comment}</p>
+                                {c.improvement && (
+                                  <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-700">
+                                    <span className="font-semibold">Cải thiện: </span>{c.improvement}
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick boost tips */}
+                    {aiResult.quick_boost_tips?.length > 0 && (
+                      <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                        <button
+                          type="button"
+                          onClick={() => setAiExpandedSection(aiExpandedSection === 'tips' ? null : 'tips')}
+                          className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-bold text-slate-800">Quick Boost Tips</span>
+                          </div>
+                          {aiExpandedSection === 'tips' ? <ChevronUp className="h-4 w-4 text-indigo-500" /> : <ChevronDown className="h-4 w-4 text-indigo-500" />}
+                        </button>
+                        {aiExpandedSection === 'tips' && (
+                          <ul className="space-y-2 border-t border-indigo-50 p-4">
+                            {aiResult.quick_boost_tips.map((tip, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-700">{i + 1}</span>
+                                {tip}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Grammar analysis */}
+                    {aiResult.grammar_analysis?.length > 0 && (
+                      <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                        <button
+                          type="button"
+                          onClick={() => setAiExpandedSection(aiExpandedSection === 'grammar' ? null : 'grammar')}
+                          className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50"
+                        >
+                          <span className="text-sm font-bold text-slate-800">Phân tích ngữ pháp</span>
+                          {aiExpandedSection === 'grammar' ? <ChevronUp className="h-4 w-4 text-indigo-500" /> : <ChevronDown className="h-4 w-4 text-indigo-500" />}
+                        </button>
+                        {aiExpandedSection === 'grammar' && (
+                          <div className="space-y-3 border-t border-indigo-50 p-4">
+                            {aiResult.grammar_analysis.map((item, i) => (
+                              <div key={i} className="rounded-[16px] border border-red-50 bg-red-50/30 p-4">
+                                <p className="text-xs font-semibold text-red-500">{item.issue}</p>
+                                <p className="mt-1 text-sm italic text-slate-500 line-through">"{item.original_sentence}"</p>
+                                <p className="mt-1 text-sm font-medium text-emerald-700">✓ {item.correction}</p>
+                                <p className="mt-2 text-xs text-slate-500">{item.explanation}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Vocabulary analysis */}
+                    {aiResult.vocabulary_analysis?.length > 0 && (
+                      <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                        <button
+                          type="button"
+                          onClick={() => setAiExpandedSection(aiExpandedSection === 'vocab' ? null : 'vocab')}
+                          className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50"
+                        >
+                          <span className="text-sm font-bold text-slate-800">Phân tích từ vựng</span>
+                          {aiExpandedSection === 'vocab' ? <ChevronUp className="h-4 w-4 text-indigo-500" /> : <ChevronDown className="h-4 w-4 text-indigo-500" />}
+                        </button>
+                        {aiExpandedSection === 'vocab' && (
+                          <div className="overflow-x-auto border-t border-indigo-50 p-4">
+                            <table className="min-w-full text-xs">
+                              <thead>
+                                <tr className="text-left text-slate-400">
+                                  <th className="pb-2 pr-4 font-semibold">Gốc</th>
+                                  <th className="pb-2 pr-4 font-semibold">Đánh giá</th>
+                                  <th className="pb-2 pr-4 font-semibold">Gợi ý</th>
+                                  <th className="pb-2 font-semibold">Lý do</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {aiResult.vocabulary_analysis.map((item, i) => (
+                                  <tr key={i}>
+                                    <td className="py-2 pr-4 italic text-slate-600">"{item.original_phrase}"</td>
+                                    <td className="py-2 pr-4">
+                                      <span className={`rounded-full px-2 py-0.5 font-semibold ${item.evaluation.toLowerCase().includes('tốt') ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                                        {item.evaluation}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 pr-4 font-medium text-indigo-700">{item.suggestion}</td>
+                                    <td className="py-2 text-slate-500">{item.reason}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Improved rewrite */}
+                    {aiResult.improved_rewrite && (
+                      <div className="overflow-hidden rounded-[20px] bg-white shadow-sm ring-1 ring-indigo-50">
+                        <button
+                          type="button"
+                          onClick={() => setAiExpandedSection(aiExpandedSection === 'rewrite' ? null : 'rewrite')}
+                          className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-indigo-50/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-violet-500" />
+                            <span className="text-sm font-bold text-slate-800">Bài viết nâng cấp (Band 7.0)</span>
+                          </div>
+                          {aiExpandedSection === 'rewrite' ? <ChevronUp className="h-4 w-4 text-indigo-500" /> : <ChevronDown className="h-4 w-4 text-indigo-500" />}
+                        </button>
+                        {aiExpandedSection === 'rewrite' && (
+                          <div className="border-t border-indigo-50 p-5">
+                            <p className="whitespace-pre-wrap text-sm leading-8 text-slate-700">{aiResult.improved_rewrite}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Middle: Test Prompt & Student Essay */}
             <Split
