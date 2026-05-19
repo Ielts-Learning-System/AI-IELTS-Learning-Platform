@@ -76,7 +76,7 @@
 | **Tổng** | — | **850** | **🟢 850/850 PASS** |
 
 > Framework: Jest 29 · Supertest · mongodb-memory-server · 0 failures  
-> Chạy thực tế ngày 2026-05-18 — 850/850 PASS trên 11 service (61 test file)
+> Chạy thực tế ngày 2026-05-18 — 850/850 PASS trên 11 service (65 test file)
 
 ---
 
@@ -106,4 +106,4 @@
 - **Kiến trúc Database-per-service** — 11 database hoàn toàn độc lập, không cross-DB
 - **Rate limiting + JWT rotation** — Redis + refresh token, bảo mật theo OWASP
 - **RabbitMQ async pipeline** — grading nặng không block API response
-- **Test coverage toàn hệ backend** — 850 testcase PASS trên 11 service (bao gồm cloud-media-service), 61 test file, 0 failures
+- **Test coverage toàn hệ backend** — 850 testcase PASS trên 11 service (bao gồm cloud-media-service), 65 test file, 0 failures
