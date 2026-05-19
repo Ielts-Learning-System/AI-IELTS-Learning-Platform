@@ -53,6 +53,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Pre-download MongoDB binary
+        # Runs outside Jest so the download is not bounded by testTimeout (30 s).
+        # MongoMemoryServer.create() in beforeAll would time-out waiting for the
+        # binary if this step is skipped and the cache is cold.
+        run: >
+          node -e
+          "const {MongoMemoryServer}=require('mongodb-memory-server');
+          MongoMemoryServer.create()
+            .then(s=>s.stop())
+            .then(()=>console.log('MongoDB binary ready'))
+            .catch(e=>{console.error(e);process.exit(1)})"
+        timeout-minutes: 5
+
       - name: Run tests with coverage
         run: npm run test:coverage
 
