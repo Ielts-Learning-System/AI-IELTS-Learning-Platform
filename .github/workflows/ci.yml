@@ -396,6 +396,7 @@ jobs:
       MONGO_URI: mongodb://localhost:27017/speaking_test
       JWT_SECRET: ci-test-secret
       NODE_ENV: test
+      MONGOMS_VERSION: '7.0.14'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -403,6 +404,11 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: ielts/be/speaking-service/package-lock.json
+      - name: Cache mongodb-memory-server binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-memory-server/mongodb-binaries
+          key: mongodb-binary-${{ runner.os }}-7.0.14
       - run: npm ci
       - run: npm run test:coverage
       - if: always()
