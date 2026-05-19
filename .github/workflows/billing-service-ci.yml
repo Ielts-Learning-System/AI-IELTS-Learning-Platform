@@ -1,0 +1,59 @@
+name: Billing Service CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ielts/be/billing-service/**'
+  workflow_dispatch:
+
+jobs:
+  billing-service-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/billing-service
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      MONGO_URI: mongodb://localhost:27017/billing_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+      RABBITMQ_URL: amqp://localhost:5672
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ielts/be/billing-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-service-coverage
+          path: ielts/be/billing-service/coverage/
+          retention-days: 14

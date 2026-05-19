@@ -1,0 +1,42 @@
+name: AI Service CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ielts/be/ai-service/**'
+  workflow_dispatch:
+
+jobs:
+  ai-service-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/ai-service
+
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install lightweight dependencies (skip heavy ML packages)
+        # Install only non-ML packages for syntax/import checking in CI.
+        # PaddleOCR and paddlepaddle are excluded — they are > 1 GB and
+        # require GPU drivers not available on GitHub-hosted runners.
+        run: |
+          pip install --upgrade pip
+          grep -v -E "paddlepaddle|paddleocr|pdf2image|numpy" requirements.txt > requirements-ci.txt
+          pip install --no-cache-dir -r requirements-ci.txt
+
+      - name: Syntax check — all Python source files
+        run: python -m py_compile main.py grading_utils.py

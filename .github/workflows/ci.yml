@@ -1,0 +1,524 @@
+name: CI — All Services
+
+# This is the PRIMARY required check for branch protection.
+# It runs ALL service test suites in parallel on every push to main
+# and on every pull request targeting main — regardless of which files changed.
+# All jobs must pass before a merge is allowed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Reusable MongoDB health options (referenced per-job via YAML anchors — GitHub
+# Actions does not support YAML anchors, so options are inlined per job).
+# ──────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════════
+  # Node.js microservices — each runs on an isolated ubuntu-latest VM
+  # ════════════════════════════════════════════════════════════════════════════
+
+  auth-service:
+    name: Auth Service (105 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/auth-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/auth_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/auth-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-service-coverage
+          path: ielts/be/auth-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  billing-service:
+    name: Billing Service (130 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/billing-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/billing_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+      RABBITMQ_URL: amqp://localhost:5672
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/billing-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-service-coverage
+          path: ielts/be/billing-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  cloud-media-service:
+    name: Cloud Media Service (11 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/cloud-media-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/media_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/cloud-media-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-media-service-coverage
+          path: ielts/be/cloud-media-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  exam-service:
+    name: Exam Service (26 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/exam-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/exam_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+      RABBITMQ_URL: amqp://localhost:5672
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/exam-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-service-coverage
+          path: ielts/be/exam-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  lesson-service:
+    name: Lesson Service (25 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/lesson-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/lesson_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/lesson-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lesson-service-coverage
+          path: ielts/be/lesson-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  listening-service:
+    name: Listening Service (67 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/listening-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/listening_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/listening-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: listening-service-coverage
+          path: ielts/be/listening-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  notification-service:
+    name: Notification Service (52 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/notification-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/notification_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+      RABBITMQ_URL: amqp://localhost:5672
+      EMAIL_PROVIDER: nodemailer
+      SMTP_HOST: localhost
+      SMTP_PORT: "587"
+      SMTP_USER: test@example.com
+      SMTP_PASS: ci-test-pass
+      EMAIL_FROM: noreply@example.com
+      VAPID_PUBLIC_KEY: ci-vapid-public-key
+      VAPID_PRIVATE_KEY: ci-vapid-private-key
+      VAPID_SUBJECT: mailto:test@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/notification-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notification-service-coverage
+          path: ielts/be/notification-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  payment-service:
+    name: Payment Service (95 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/payment-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/payment_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/payment-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-service-coverage
+          path: ielts/be/payment-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  reading-service:
+    name: Reading Service (197 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/reading-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/reading_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/reading-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reading-service-coverage
+          path: ielts/be/reading-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  speaking-service:
+    name: Speaking Service (64 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/speaking-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/speaking_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/speaking-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: speaking-service-coverage
+          path: ielts/be/speaking-service/coverage/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────
+
+  writing-service:
+    name: Writing Service (78 tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/writing-service
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MONGO_URI: mongodb://localhost:27017/writing_test
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/be/writing-service/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: writing-service-coverage
+          path: ielts/be/writing-service/coverage/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # Python AI Service — syntax check (no ML tests; PaddleOCR excluded from CI)
+  # ════════════════════════════════════════════════════════════════════════════
+
+  ai-service:
+    name: AI Service (syntax check)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/be/ai-service
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install lightweight dependencies
+        run: |
+          pip install --upgrade pip
+          grep -v -E "paddlepaddle|paddleocr|pdf2image|numpy" requirements.txt > requirements-ci.txt
+          pip install --no-cache-dir -r requirements-ci.txt
+      - name: Syntax check
+        run: python -m py_compile main.py grading_utils.py
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # Frontend — lint + build
+  # ════════════════════════════════════════════════════════════════════════════
+
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ielts/fe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ielts/fe/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # Required gate — all jobs above must succeed.
+  # Add this job name to GitHub branch-protection "required status checks".
+  # ════════════════════════════════════════════════════════════════════════════
+
+  all-checks-pass:
+    name: All checks passed
+    runs-on: ubuntu-latest
+    needs:
+      - auth-service
+      - billing-service
+      - cloud-media-service
+      - exam-service
+      - lesson-service
+      - listening-service
+      - notification-service
+      - payment-service
+      - reading-service
+      - speaking-service
+      - writing-service
+      - ai-service
+      - frontend
+    steps:
+      - name: Report
+        run: echo "All 850 Jest tests + AI syntax check + frontend build passed."
