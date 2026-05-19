@@ -42,6 +42,7 @@ jobs:
 
   # ──────────────────────────────────────────────
   # Job 2: Deploy to Vercel (only on push to main)
+  # Skipped gracefully when VERCEL_TOKEN secret is not configured.
   # ──────────────────────────────────────────────
   deploy:
     name: Deploy to Vercel
@@ -51,11 +52,6 @@ jobs:
     defaults:
       run:
         working-directory: ./ielts/fe
-
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
     steps:
       - name: Checkout repository
@@ -74,11 +70,16 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-
-      - name: Build with Vercel
-        run: vercel build --prod --token=$VERCEL_TOKEN
-
       - name: Deploy to Vercel (Production)
-        run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::notice::VERCEL_TOKEN secret not configured — skipping Vercel deployment."
+            exit 0
+          fi
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
