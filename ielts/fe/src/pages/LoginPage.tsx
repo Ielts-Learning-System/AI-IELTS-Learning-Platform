@@ -1,15 +1,54 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useUserStore } from '../store/useUserStore';
+import { apiClient } from '../lib/api/client';
+
+const DEMO_ACCOUNTS = [
+  { label: 'Student', email: 'student3@gmail.com', password: '123456', color: 'bg-blue-600 hover:bg-blue-700' },
+  { label: 'Teacher', email: 'teacher@gmail.com', password: '123456', color: 'bg-green-600 hover:bg-green-700' },
+  { label: 'Admin', email: 'admin@gmail.com', password: '123456', color: 'bg-purple-600 hover:bg-purple-700' },
+] as const;
 
 export default function LoginPage() {
   const { setAuth } = useUserStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  const processLoginResponse = (data: any) => {
+    const { _id, email: userEmail, name, avatar, plan, role, vipValidUntil, token } = data;
+    const normalizedRole = (role || 'student').toLowerCase();
+    const user = {
+      id: _id,
+      name,
+      email: userEmail,
+      avatar,
+      role: normalizedRole,
+      plan: (plan || 'FREE').toUpperCase(),
+      isVip: !!(plan && plan.toUpperCase() !== 'FREE'),
+      vipValidUntil: vipValidUntil || null,
+    };
+    setAuth(user, token);
+    if (normalizedRole === 'admin') navigate('/admin');
+    else if (normalizedRole === 'teacher') navigate('/teacher');
+    else navigate('/dashboard');
+  };
+
+  const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
+    setError('');
+    setDemoLoading(demoEmail);
+    try {
+      const response = await apiClient.post('/auth/login', { email: demoEmail, password: demoPassword });
+      processLoginResponse(response.data.data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Demo login failed. Please try again.');
+    } finally {
+      setDemoLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,43 +56,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
+      const response = await apiClient.post('/auth/login', {
         email,
         password,
       });
-
-      const {
-        _id,
-        email: userEmail,
-        name,
-        avatar,
-        plan,
-        role,
-        vipValidUntil,
-        token,
-      } = response.data.data;
-
-      const normalizedRole = (role || 'student').toLowerCase();
-      const user = {
-        id: _id,
-        name,
-        email: userEmail,
-        avatar,
-        role: normalizedRole,
-        plan: (plan || 'FREE').toUpperCase(),
-        isVip: !!(plan && plan.toUpperCase() !== 'FREE'),
-        vipValidUntil: vipValidUntil || null,
-      };
-
-      setAuth(user, token);
-
-      if (normalizedRole === 'admin') {
-        navigate('/admin');
-      } else if (normalizedRole === 'teacher') {
-        navigate('/teacher');
-      } else {
-        navigate('/dashboard');
-      }
+      processLoginResponse(response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
@@ -149,6 +156,34 @@ export default function LoginPage() {
               Đăng ký ngay
             </Link>
           </p>
+
+          {/* Demo Accounts */}
+          <div className="mt-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Tài khoản demo</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {DEMO_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => handleDemoLogin(acc.email, acc.password)}
+                  disabled={demoLoading !== null || isLoading}
+                  className={`py-2 px-3 ${acc.color} text-white text-sm font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5`}
+                >
+                  {demoLoading === acc.email ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : null}
+                  {acc.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
