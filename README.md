@@ -1,197 +1,222 @@
-# 🎯 IELTS Master Platform
+﻿# IELTS-Mate Platform
 
-> Nền tảng học tập IELTS được cá nhân hóa bằng AI, thiết kế theo quy chuẩn quốc tế.
+> AI-powered IELTS practice platform — full mock tests, automated grading, and learning analytics.
 
-![IELTS Master Banner](ielts/fe/src/assets/logo.png)
-
-## 📋 Giới thiệu
-
-**IELTS Master** là một nền tảng luyện thi IELTS toàn diện, tích hợp **Google Gemini AI** để tạo ra các bài tập chất lượng cao với hiệu suất luyện tập tối ưu. Hệ thống được xây dựng trên kiến trúc **Microservices**, cho phép mở rộng dễ dàng và quản lý độc lập các thành phần.
-
----
-
-## ✨ Tính Năng Chính
-
-### 🤖 AI-Generated Reading Tests
-**Dành cho: Giáo viên**
-
-Tự động tạo đề thi IELTS Reading tiêu chuẩn trong vài giây.
-
-| Tính năng | Mô tả |
-|----------|-------|
-| **Tích hợp Gemini AI** | Sinh bài đọc theo band điểm (Band 5.0 - 9.0), chủ đề, và độ khó (Passage 1-3) |
-| **JSON Cấu trúc** | Định dạng JSON nghiêm ngặt tách biệt nội dung (HTML) và câu hỏi (MCQ, TFNG, Matching) |
-| **Tiptap Editor** | Chỉnh sửa trực tiếp với trình soạn thảo Rich Text siêu tốc |
-| **Auto-Grading** | Chấm điểm tự động và lưu trữ kết quả |
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-20_LTS-green.svg)](https://nodejs.org)
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://docker.com)
 
 ---
 
-### 🎧 Dictation Practice
-**Dành cho: Học viên**
+## Screenshots
 
-Phương pháp "Bottom-up Listening" tiên tiến để tăng cường phản xạ nghe.
+| Auth & Dashboard | Reading Test |
+|---|---|
+| ![Login](screenshots/01-auth-login-modal.png) | ![Reading](screenshots/03-reading-exam.png) |
 
-| Tính năng | Chi tiết |
-|----------|---------|
-| **Smart Auto-Grading** | Chuẩn hóa đầu vào (loại bỏ dấu, khoảng trắng, không phân biệt hoa/thường) → Chấm điểm chính xác |
-| **Dynamic Hints** | Gợi ý thông minh, ẩn từ dần (ví dụ: `I _ a s______`) |
-| **Analytics** | Thống kê độ chính xác (%) và lịch sử replay cho mỗi câu hỏi |
+| Listening Dictation | Writing Grading |
+|---|---|
+| ![Listening](screenshots/04-dictation.png) | ![Writing](screenshots/05-writing-exam.png) |
 
----
+| Speaking Practice | Mock Exam |
+|---|---|
+| ![Speaking](screenshots/06-speaking-practice.png) | ![Mock](screenshots/07-mock-list.png) |
 
-### 🔐 Kiểm Soát Truy Cập Thứ Bậc (RBAC)
-
-```
-┌─────────────────────────────────────────┐
-│  Admin                                  │
-│  • Quản lý người dùng & hệ thống      │
-├─────────────────────────────────────────┤
-│  Teacher (Giáo viên)                    │
-│  • Tạo bài tập với AI                 │
-│  • Xem kết quả học viên                │
-├─────────────────────────────────────────┤
-│  Student (Học viên)                    │
-│  • Làm bài tập                         │
-│  • Xem kết quả cá nhân                 │
-└─────────────────────────────────────────┘
-```
-
-**Bảo mật:** API Gateway + JWT Token verification
+| Teacher Dashboard | Admin Analytics |
+|---|---|
+| ![Teacher](screenshots/11-teacher-dashboard.png) | ![Admin](screenshots/12-admin-analytics.png) |
 
 ---
 
-## 🛠️ Tech Stack
+## Features
 
-### Frontend
-```
-React.js / Next.js
-├── Tailwind CSS (Theme: Đỏ & Trắng)
-├── Lucide React (Icons)
-├── Axios (HTTP Client)
-└── Tiptap (Rich Text Editor)
-```
-
-### Backend (Microservices)
-```
-API Gateway (Express.js)
-├── Auth Service (JWT + RBAC)
-├── Reading Service (Gemini SDK + MongoDB)
-├── Listening Service (Audio Management + Streaming)
-└── Database Layer (MongoDB + Mongoose)
-```
-
-### DevOps
-- Docker & Docker Compose
-- Multi-container orchestration
+- **AI Reading Tests** — Gemini AI generates IELTS-standard passages with MCQ, True/False/NG, Matching Headings, and Fill-in-the-blank at configurable band levels (5.0–9.0).
+- **Listening & Dictation** — 4-section audio tests with punctuation-aware auto-grading.
+- **AI Writing Grading** — Task 1 & Task 2 scored against official criteria via async RabbitMQ pipeline.
+- **Speaking Assessment** — Recorded responses evaluated by Gemini with per-criterion band scores.
+- **Full Mock Exams** — Combined 4-skill timed exams with aggregate band score calculation.
+- **Lesson Library** — Video-based courses with progress tracking.
+- **Subscription Billing** — VietQR-based payment, plan enforcement, and per-user API key quotas.
+- **Teacher Tools** — PDF extraction, test builder, manual grading override.
+- **Admin Panel** — User management, AI model configuration, platform analytics.
 
 ---
 
-## 📂 Cấu Trúc Dự Án
+## Architecture
 
 ```
-ielts-master/
-├── api-gateway/              # Điều hướng request
-├── auth-service/             # Xác thực & phân quyền
-├── reading-service/          # Bài tập Reading + Gemini
-├── listening-service/        # Dictation + Audio files
-├── frontend/                 # UI/UX React
-└── docker-compose.yml        # Orchest config
+[React SPA (Vite)]
+        | HTTPS
+        v
+[API Gateway :3000]  --REST-->  [Auth / Reading / Listening / Writing /
+        |                        Speaking / Billing / Payment /
+        |                        Notification / Lesson / Media / Exam]
+        +--AMQP-->  [RabbitMQ]
+                         |
+                         +-->  [AI Service (FastAPI :8000)]
+                                    |
+                                    +-->  [Google Gemini API / PaddleOCR]
+```
+
+Each service owns its own MongoDB database. No cross-service direct DB access.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Tailwind CSS, Zustand, TanStack Query, Recharts |
+| API Gateway | Node.js 20, Express 5 |
+| Backend Services | Node.js 20, Express 5, Mongoose 8 |
+| AI Service | Python 3.11, FastAPI, Pydantic v2, Google Gemini |
+| OCR | PaddleOCR |
+| Auth | JWT + refresh token rotation |
+| Cache / Rate Limit | Redis + ioredis |
+| Message Broker | RabbitMQ (AMQP) |
+| Storage / CDN | Cloudinary |
+| Database | MongoDB Atlas (database-per-service) |
+| Containerisation | Docker + Docker Compose |
+
+---
+
+## Project Structure
+
+```
+ielts/
++-- fe/                       # React SPA (Vite + TypeScript)
++-- be/
+    +-- docker-compose.yml    # Full stack orchestration
+    +-- api-gateway/          # :3000 — request routing & auth proxy
+    +-- auth-service/         # :3001 — JWT, RBAC, API key quotas
+    +-- reading-service/      # :3002 — tests, AI generation, auto-grading
+    +-- listening-service/    # :3003 — audio tests, dictation
+    +-- writing-service/      # :3004 — AI grading via RabbitMQ
+    +-- billing-service/      # :3005 — subscriptions, plan enforcement
+    +-- speaking-service/     # :3006 — recording upload, AI scoring
+    +-- lesson-service/       # :3007 — courses, video content
+    +-- payment-service/      # :3008 — VietQR payment gateway
+    +-- notification-service/ # :3009 — email / push via RabbitMQ
+    +-- cloud-media-service/  # :3010 — file uploads, presigned URLs
+    +-- exam-service/         # :3013 — full mock exams
+    +-- ai-service/           # :8000 — FastAPI, Gemini, OCR
 ```
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt
+## Getting Started
 
-### Yêu Cầu Hệ Thống
-- **Node.js**: v18+ 
-- **Docker**: v20+
-- **MongoDB**: v5.0+
-- **Google Gemini API Key**
+### Prerequisites
 
-### Các Bước Khởi Chạy
+- Docker 24+ and Docker Compose v2
+- Node.js 20 LTS (frontend only)
+- Google Gemini API key ([get one here](https://aistudio.google.com/app/apikey))
+- MongoDB Atlas cluster (free tier works)
 
-#### 1️⃣ Clone Repository
+### 1. Clone
+
 ```bash
 git clone https://github.com/Ielts-Learning-System/09032026.git
 cd 09032026
 ```
 
-#### 2️⃣ Cấu Hình Biến Môi Trường
+### 2. Configure environment variables
 
-Tạo file `.env` tại gốc và các thư mục service:
-```env
-# .env (Gateway)
-JWT_SECRET=your_secret_key_here
-GEMINI_API_KEY=your_google_ai_key_here
-NEXT_PUBLIC_API_URL=http://localhost:3000
+```bash
+# Root config (docker-compose variable substitution)
+cp ielts/be/.env.example ielts/be/.env
+
+# Per-service configs
+for svc in auth-service billing-service cloud-media-service exam-service \
+           lesson-service listening-service notification-service payment-service \
+           reading-service speaking-service writing-service ai-service; do
+  cp ielts/be/$svc/.env.example ielts/be/$svc/.env
+done
+
+# Frontend
+cp ielts/fe/.env.example ielts/fe/.env
 ```
 
-#### 3️⃣ Khởi Chạy Microservices
+Edit each `.env` with your real credentials (MongoDB URI, Gemini API key, JWT secret, etc.).
+
+### 3. Start all services
+
 ```bash
-docker-compose up -d
+cd ielts/be
+docker compose up -d --build
 ```
 
-#### 4️⃣ Khởi Chạy Frontend
+Services start in dependency order: MongoDB → Redis → RabbitMQ → microservices.
+
+### 4. Start frontend (development)
+
 ```bash
-cd frontend
-npm install
+cd ielts/fe
+npm ci
 npm run dev
 ```
 
-**Hệ thống sẵn sàng tại:** `http://localhost:5173`
+Frontend available at `http://localhost:5173`.
 
 ---
 
-## 🧠 Các Thách Thức Kỹ Thuật Đã Giải Quyết
+## Frontend Deployment (Vercel)
 
-### 1. Xung Đột Định Tuyến (Route Conflicts)
-**Vấn đề:** Phân luồng `/api/dictation` vs request RESTful động
-**Giải pháp:** Cấu hình prioritize route tại API Gateway
+The `ielts/fe` folder is a Vite SPA configured for one-click Vercel deployment.
 
-### 2. Quản Lý Vòng Đời React
-**Vấn đề:** Lỗi undefined/null khi fetch dữ liệu bất đồng bộ
-**Giải pháp:** Kiến trúc "bulletproof" với error boundaries + lazy loading
+Vercel settings (auto-detected via `vercel.json`):
 
-### 3. Ép Kiểu Dữ Liệu AI
-**Vấn đề:** Gemini trả JSON không khớp schema
-**Giải pháp:** System prompt chuẩn → Nested JSON 100% khớp Mongoose
+| Setting | Value |
+|---|---|
+| Framework | Vite |
+| Root Directory | `ielts/fe` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
 
----
-
-## 📊 Hiệu Suất
-
-| Metric | Target |
-|--------|--------|
-| Reading Test Generation | < 10 giây |
-| API Response Time | < 200ms |
-| Dictation Accuracy | 99% |
-| Uptime | 99.9% |
+Set the environment variable `VITE_API_URL` in your Vercel project dashboard to point to your deployed API Gateway.
 
 ---
 
-## 👥 Đóng Góp
+## Environment Variables Reference
 
-Chúng tôi hoan nghênh các pull request! Vui lòng:
-1. Fork dự án
-2. Tạo branch feature (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Mở Pull Request
+### Backend root (`.env`)
+
+| Variable | Description |
+|---|---|
+| `MONGO_URI_*` | MongoDB Atlas URI for each service's database |
+| `JWT_SECRET` | Shared JWT signing secret |
+| `RABBITMQ_URL` | RabbitMQ connection string |
+| `REDIS_URL` | Redis connection string |
+| `CLOUDINARY_*` | Cloudinary credentials for file uploads |
+| `VIETQR_*` | VietQR bank account details |
+
+### AI Service
+
+| Variable | Description |
+|---|---|
+| `GEMINI_API_KEY` | Google AI Studio API key |
+| `GEMINI_MODEL` | Model name (default: `gemini-2.5-flash`) |
+| `INTERNAL_SECRET` | Shared service-to-service auth token |
+
+### Frontend
+
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Full URL of the API Gateway |
 
 ---
 
-## 📜 Giấy Phép
+## Health Checks
 
-MIT License © 2026 - IELTS Learning System
+Every service exposes `GET /health`:
 
----
-
-## 📞 Hỗ Trợ
-
-- 📧 Email: support@ieltsmaster.com
-- 🐛 Issues: [GitHub Issues](https://github.com/Ielts-Learning-System/09032026/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/Ielts-Learning-System/09032026/discussions)
+```json
+{ "status": "ok", "service": "auth-service", "timestamp": "2026-05-20T10:00:00.000Z" }
+```
 
 ---
 
-**Developed with ❤️ by IELTS Learning System**
+## License
+
+MIT © 2026 IELTS Learning System
