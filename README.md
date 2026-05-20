@@ -45,21 +45,15 @@
 
 ## Architecture
 
-```
-[React SPA (Vite)]
-        | HTTPS
-        v
-[API Gateway :3000]  --REST-->  [Auth / Reading / Listening / Writing /
-        |                        Speaking / Billing / Payment /
-        |                        Notification / Lesson / Media / Exam]
-        +--AMQP-->  [RabbitMQ]
-                         |
-                         +-->  [AI Service (FastAPI :8000)]
-                                    |
-                                    +-->  [Google Gemini API / PaddleOCR]
-```
+[![System Architecture](screenshots/System-architecture.png)](screenshots/System-architecture.png)
 
 Each service owns its own MongoDB database. No cross-service direct DB access.
+
+---
+
+## Proposed Method
+
+[![Proposed Method](screenshots/Proposed-method.png)](screenshots/Proposed-method.png)
 
 ---
 
